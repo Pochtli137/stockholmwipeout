@@ -1,0 +1,2 @@
+// Cesium ion-token för stockholmwipeout (hobbyspel, publik). Rotera i Cesium ion vid behov.
+window.ION_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJhMDhlYTY4Ni05NzgxLTQzNTctYjM3NC0yNzdmNWZjZThiYmMiLCJpZCI6NDQzODExLCJpc3MiOiJodHRwczovL2FwaS5jZXNpdW0uY29tIiwiYXVkIjoidW5kZWZpbmVkX2RlZmF1bHQiLCJpYXQiOjE3ODEyOTcwMTl9.E4AEt4W5bEBsiE9XgxtWgQrm3ZgzjKYfrtbAHZSBg5U";

@@ -1,0 +1,965 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<title>STOCKHOLM GRAND TOUR 2097 — Photoreal</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- delningskort (Signal / sociala medier) -->
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://stockholmwipeout.vercel.app/">
+<meta property="og:title" content="STOCKHOLM WIPEOUT 2097">
+<meta property="og:description" content="Anti-grav-racing genom det fotorealistiska Stockholm. Kör varvet runt Söder, Gamla stan, Norrmalm, Östermalm och Kungsholmen i 600 km/h.">
+<meta property="og:image" content="https://stockholmwipeout.vercel.app/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="STOCKHOLM WIPEOUT 2097">
+<meta name="twitter:description" content="Anti-grav-racing genom det fotorealistiska Stockholm i 600 km/h.">
+<meta name="twitter:image" content="https://stockholmwipeout.vercel.app/og.png">
+<style>
+  html, body { margin:0; padding:0; height:100%; overflow:hidden; background:#0a1420;
+    font-family:"Avenir Next Condensed","Arial Narrow",Arial,sans-serif;
+    color:#eaf4ff; user-select:none; }
+  #c { display:block; width:100%; height:100%; }
+  #fx { position:fixed; inset:0; z-index:6; pointer-events:none; }
+  .hud { position:fixed; z-index:10; text-shadow:0 1px 3px rgba(0,0,0,.9), 0 0 10px rgba(0,0,0,.6);
+    letter-spacing:.1em; }
+  #speed { right:36px; bottom:28px; text-align:right; }
+  #speed .num { font-size:62px; font-weight:bold; color:#fff; line-height:1; }
+  #speed .unit { font-size:13px; color:#cfe4ff; }
+  #lapbox { left:28px; top:22px; font-size:15px; }
+  #lapbox .big { font-size:30px; color:#fff; }
+  #posbox { right:36px; top:22px; text-align:right; font-size:15px; }
+  #posbox .big { font-size:40px; color:#ffd24a; }
+  #msg { left:0; right:0; top:33%; text-align:center; font-size:74px; font-weight:bold; color:#fff;
+    text-shadow:0 2px 6px rgba(0,0,0,.9), 0 0 30px rgba(0,160,255,.8); pointer-events:none; }
+  #sub { left:0; right:0; top:calc(33% + 88px); text-align:center; font-size:17px; color:#dceaff; pointer-events:none; }
+  #help { left:28px; bottom:22px; font-size:12px; color:#b8cce0; line-height:1.7; }
+  #help b { color:#fff; }
+  #minimap { position:fixed; left:50%; transform:translateX(-50%); bottom:16px; z-index:10; opacity:.9; }
+  #boostbar { right:36px; bottom:104px; width:160px; height:8px; border:1px solid #8ab; background:rgba(10,20,40,.5); }
+  #boostfill { height:100%; width:0%; background:linear-gradient(90deg,#3df,#fa3); }
+  #attrib { position:fixed; right:8px; bottom:4px; z-index:11; font-size:10px; color:#fff;
+    text-shadow:0 1px 2px #000; opacity:.85; font-family:Arial; letter-spacing:0; }
+  #results, #keyveil, #loadveil { position:fixed; inset:0; z-index:20; display:none;
+    align-items:center; justify-content:center; background:rgba(6,12,22,.88); }
+  .panel { border:1px solid #4a7aa8; padding:34px 50px; background:rgba(10,18,32,.96);
+    box-shadow:0 0 40px rgba(0,0,0,.6); text-align:center; max-width:560px; }
+  .panel h1 { margin:0 0 18px; font-size:30px; color:#fff; letter-spacing:.16em; }
+  .panel p { font-size:14px; color:#c4d8ec; line-height:1.6; text-align:left; }
+  .panel ol { text-align:left; font-size:14px; color:#c4d8ec; line-height:1.7; }
+  .panel a { color:#6cf; }
+  #keyinput { width:100%; box-sizing:border-box; padding:10px; font-size:14px; margin:10px 0;
+    background:#0a1626; border:1px solid #4a7aa8; color:#fff; font-family:monospace; }
+  #keybtn { padding:10px 26px; font-size:15px; background:#1466b8; color:#fff; border:0;
+    cursor:pointer; letter-spacing:.1em; }
+  #results table { margin:0 auto 18px; border-collapse:collapse; font-size:16px; }
+  #results td { padding:4px 16px; text-align:left; }
+  #results .you { color:#ffd24a; }
+  #loadbar { width:340px; height:10px; border:1px solid #4a7aa8; margin:16px auto 8px; }
+  #loadfill { height:100%; width:0%; background:#3da6ff; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<canvas id="fx"></canvas>
+<div class="hud" id="lapbox">LAP <span class="big" id="lap">1</span>/1<br>
+  TIME <span id="time">0:00.00</span><br>BEST <span id="best">--</span></div>
+<div class="hud" id="posbox"><span class="big" id="pos">1</span><span id="posOrd">st</span><br>OF 6</div>
+<div class="hud" id="speed"><span class="num" id="spd">0</span><br><span class="unit">KM/H · GRAND TOUR</span></div>
+<div class="hud" id="boostbar"><div id="boostfill"></div></div>
+<div class="hud" id="msg"></div>
+<div class="hud" id="sub"></div>
+<div class="hud" id="help">
+  <b>↑/W</b> gas &nbsp;<b>↓/S</b> broms &nbsp;<b>←→/A D</b> styr<br>
+  <b>Q / E</b> luftbroms &nbsp;<b>SHIFT</b> boost &nbsp;<b>M</b> ljud &nbsp;<b>R</b> om &nbsp;<b>P</b> paus
+</div>
+<canvas id="minimap" width="220" height="220"></canvas>
+<div id="attrib"></div>
+
+<div id="keyveil"><div class="panel">
+  <h1>STOCKHOLM GRAND TOUR 2097</h1>
+  <p>Den här versionen streamar <b>Google Photorealistic 3D Tiles via Cesium ion</b> —
+  riktiga Stockholm i fotogrammetri. Gratis Cesium ion-konto, inget kort:</p>
+  <ol>
+    <li>Skapa konto på <a href="https://ion.cesium.com/signup" target="_blank">ion.cesium.com/signup</a></li>
+    <li>Gå till <a href="https://ion.cesium.com/assetdepot" target="_blank">Asset Depot</a>,
+      sök <b>Google Photorealistic 3D Tiles</b>, klicka <b>Add to my assets</b></li>
+    <li>Fliken <b>Access Tokens</b> → kopiera din default-token (börjar med eyJ)</li>
+  </ol>
+  <p>Tokenen sparas bara i din webbläsares localStorage, skickas endast till Cesium.
+  Rensa med <code>?reset</code> i URL:en.</p>
+  <input id="keyinput" type="password" placeholder="eyJhbGci...">
+  <div id="keyerr" style="color:#ff8a8a;font-size:13px;margin-bottom:8px"></div>
+  <button id="keybtn">STARTA STREAMING</button>
+</div></div>
+
+<div id="loadveil" style="display:flex"><div class="panel">
+  <h1>STREAMAR STOCKHOLM</h1>
+  <p style="text-align:center">Google Photorealistic 3D Tiles · kalibrerar banhöjd mot gatunivå<br>
+  GRAND TOUR · Södermalm → Gamla stan → Norrmalm → Östermalm → Kungsholmen · 16 km</p>
+  <div id="loadbar"><div id="loadfill"></div></div>
+  <div id="loadtxt" style="font-size:13px;color:#9ec4e8">väntar på tiles ...</div>
+</div></div>
+
+<div id="results"><div class="panel">
+  <h1 id="resTitle">RACE COMPLETE</h1>
+  <table id="resTable"></table>
+  <div style="color:#c4d8ec;font-size:14px">TRYCK <b>R</b> FÖR NYTT RACE</div>
+</div></div>
+
+<script src="config.js"></script>
+<script type="importmap">
+{ "imports": {
+  "three": "https://unpkg.com/three@0.170.0/build/three.module.js",
+  "three/addons/": "https://unpkg.com/three@0.170.0/examples/jsm/",
+  "3d-tiles-renderer": "https://unpkg.com/3d-tiles-renderer@0.4.28/build/index.js",
+  "3d-tiles-renderer/plugins": "https://unpkg.com/3d-tiles-renderer@0.4.28/build/index.plugins.js"
+} }
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { TilesRenderer } from '3d-tiles-renderer';
+import { CesiumIonAuthPlugin, TileCompressionPlugin, TilesFadePlugin,
+         UnloadTilesPlugin, GLTFExtensionsPlugin, ReorientationPlugin } from '3d-tiles-renderer/plugins';
+import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
+
+/* ============================== API KEY ============================== */
+if (location.search.includes('reset')) { localStorage.removeItem('ionKey'); history.replaceState(null,'',location.pathname); }
+const DEMO = location.search.includes('demo'); // kör utan tiles, platt mark
+// token: inbäddad via config.js (genereras från Vercel-env) → annars localStorage-prompt
+const API_KEY = DEMO ? '' : (window.ION_TOKEN || localStorage.getItem('ionKey') || '');
+const keyveil=document.getElementById('keyveil'), loadveil=document.getElementById('loadveil');
+document.getElementById('keybtn').onclick=()=>{
+  const v=document.getElementById('keyinput').value.trim();
+  if(!v){ document.getElementById('keyerr').textContent='Klistra in en token.'; return; }
+  localStorage.setItem('ionKey', v); location.reload();
+};
+if(!API_KEY&&!DEMO){ loadveil.style.display='none'; keyveil.style.display='flex'; }
+
+/* ============================== SETUP ============================== */
+const canvas=document.getElementById('c');
+const renderer=new THREE.WebGLRenderer({ canvas, antialias:true });
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+const scene=new THREE.Scene();
+scene.background=new THREE.Color(0x9ec8e8);
+scene.fog=new THREE.Fog(0xaccbe6, 2500, 11000);
+const camera=new THREE.PerspectiveCamera(72,1,0.3,200000);
+camera.position.set(0,80,120);
+const fxCanvas=document.getElementById('fx'), fxc=fxCanvas.getContext('2d');
+function resize(){ renderer.setSize(innerWidth,innerHeight,false);
+  camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix();
+  fxCanvas.width=innerWidth; fxCanvas.height=innerHeight; }
+addEventListener('resize',resize); resize();
+// fart-FX: speed lines + kant-vinjett som växer med farten (känns livsfarligt snabbt)
+let fxSeed=1234;
+function fxRnd(){ fxSeed=(fxSeed*1664525+1013904223)|0; return ((fxSeed>>>8)&0xffff)/0xffff; }
+function drawSpeedFX(intensity){
+  const w=fxCanvas.width,h=fxCanvas.height; fxc.clearRect(0,0,w,h);
+  if(intensity<=0.02) return;
+  const cx=w/2, cy=h*0.52, maxR=Math.hypot(w,h)*0.5;
+  // diskret kant-vinjett (lätt mörkning, tar inte över)
+  const vg=fxc.createRadialGradient(cx,cy,maxR*0.7,cx,cy,maxR);
+  vg.addColorStop(0,'rgba(0,0,0,0)'); vg.addColorStop(1,`rgba(2,6,16,${0.1+intensity*0.16})`);
+  fxc.fillStyle=vg; fxc.fillRect(0,0,w,h);
+  // sparsamma, svaga speed lines långt ut mot kanterna
+  const n=Math.floor(intensity*26), inner=maxR*0.52;
+  fxc.lineCap='round';
+  for(let i=0;i<n;i++){
+    const a=fxRnd()*Math.PI*2, len=maxR*(0.1+fxRnd()*0.26)*intensity;
+    const r0=inner+fxRnd()*maxR*0.3;
+    const x0=cx+Math.cos(a)*r0, y0=cy+Math.sin(a)*r0;
+    const x1=cx+Math.cos(a)*(r0+len), y1=cy+Math.sin(a)*(r0+len);
+    fxc.strokeStyle=`rgba(${190+fxRnd()*65|0},${230+fxRnd()*25|0},255,${0.03+intensity*0.12*fxRnd()})`;
+    fxc.lineWidth=1+intensity*0.7;
+    fxc.beginPath(); fxc.moveTo(x0,y0); fxc.lineTo(x1,y1); fxc.stroke();
+  }
+}
+
+/* ============================== GOOGLE TILES ============================== */
+// origin: Medborgarplatsen — local frame: +X väst, +Z norr, +Y upp
+const ORIGIN={ lat:59.32800, lon:18.06000, h:45 };
+const D2R=THREE.MathUtils.DEG2RAD;
+let tiles=null, rootLoaded=false;
+if(API_KEY){
+  tiles=new TilesRenderer();
+  tiles.registerPlugin(new CesiumIonAuthPlugin({ apiToken:API_KEY, assetId:'2275207', autoRefreshToken:true }));
+  tiles.registerPlugin(new TileCompressionPlugin());
+  tiles.registerPlugin(new TilesFadePlugin());
+  tiles.registerPlugin(new UnloadTilesPlugin());
+  tiles.registerPlugin(new GLTFExtensionsPlugin({
+    dracoLoader:new DRACOLoader().setDecoderPath('https://unpkg.com/three@0.170.0/examples/jsm/libs/draco/gltf/')
+  }));
+  tiles.registerPlugin(new ReorientationPlugin({ lat:ORIGIN.lat*D2R, lon:ORIGIN.lon*D2R, height:ORIGIN.h }));
+  tiles.setCamera(camera);
+  tiles.setResolutionFromRenderer(camera, renderer);
+  tiles.errorTarget=10; // full detalj från start → korrekta gatuhöjder (ingen grov skräpgeometri)
+  tiles.addEventListener('load-tile-set',()=>{
+    if(!rootLoaded){ rootLoaded=true; loadStartTime=performance.now(); } });
+  scene.add(tiles.group);
+  // invalid key detection
+  setTimeout(()=>{ if(!rootLoaded){
+    keyveil.style.display='flex'; loadveil.style.display='none';
+    document.getElementById('keyerr').textContent='Inga tiles efter 15 s — fel token, eller är Google Photorealistic 3D Tiles inte tillagd i My Assets?';
+  }},15000);
+}
+
+/* ============================== RUTT (riktiga gatan) ============================== */
+const ROUTE=[ // STOCKHOLM GRAND TOUR — 5 stadsdelar, OSM-gatunät
+  [59.320191,18.071831],[59.320327,18.072572],[59.320603,18.073099],[59.320970,18.073431],
+  [59.321337,18.073763],[59.321710,18.074063],[59.321869,18.074501],[59.322260,18.074701],
+  [59.322650,18.074906],[59.323041,18.075106],[59.323437,18.075267],[59.323833,18.075421],
+  [59.324231,18.075554],[59.324630,18.075689],[59.325031,18.075778],[59.325434,18.075717],
+  [59.325810,18.075440],[59.326173,18.075090],[59.326532,18.074736],[59.326884,18.074347],
+  [59.327232,18.073943],[59.327580,18.073539],[59.327927,18.073133],[59.328311,18.073021],
+  [59.328713,18.073112],[59.329114,18.073202],[59.329515,18.073300],[59.329661,18.073866],
+  [59.329639,18.074645],[59.329439,18.075329],[59.329299,18.075729],[59.329527,18.075076],
+  [59.329638,18.074340],[59.329634,18.073563],[59.329888,18.073296],[59.330273,18.073053],
+  [59.330665,18.072862],[59.331054,18.072649],[59.331443,18.072430],[59.331829,18.072199],
+  [59.332217,18.071973],[59.332239,18.071960],[59.332247,18.072637],[59.332338,18.073409],
+  [59.332265,18.074028],[59.332018,18.074650],[59.331807,18.075311],[59.331539,18.075903],
+  [59.331828,18.076034],[59.332184,18.076375],[59.332397,18.077032],[59.332350,18.077791],
+  [59.332160,18.078491],[59.331971,18.079191],[59.331779,18.079889],[59.331588,18.080587],
+  [59.331408,18.081295],[59.331362,18.082073],[59.331383,18.082865],[59.331382,18.083656],
+  [59.331380,18.084448],[59.331416,18.085238],[59.331448,18.086027],[59.331474,18.086818],
+  [59.331499,18.087609],[59.331524,18.088400],[59.331549,18.089191],[59.331575,18.089982],
+  [59.331598,18.090773],[59.331620,18.091564],[59.331646,18.092354],[59.331671,18.093145],
+  [59.331423,18.093616],[59.331538,18.093684],[59.331938,18.093681],[59.332327,18.093463],
+  [59.332715,18.093244],[59.333103,18.093023],[59.333492,18.092802],[59.333879,18.092577],
+  [59.334267,18.092353],[59.334655,18.092129],[59.335041,18.091899],[59.335429,18.091674],
+  [59.335817,18.091450],[59.336204,18.091225],[59.336591,18.090996],[59.336978,18.090768],
+  [59.337302,18.090968],[59.337676,18.091248],[59.338042,18.091093],[59.338291,18.090493],
+  [59.338301,18.089708],[59.338052,18.089158],[59.338131,18.088469],[59.338277,18.087730],
+  [59.338430,18.086996],[59.338584,18.086264],[59.338734,18.085528],[59.338885,18.084793],
+  [59.339037,18.084059],[59.339186,18.083322],[59.339311,18.082603],[59.338938,18.082300],
+  [59.338564,18.081999],[59.338262,18.081630],[59.338413,18.080895],[59.338565,18.080160],
+  [59.338715,18.079425],[59.338864,18.078689],[59.339014,18.077952],[59.339163,18.077216],
+  [59.338825,18.076881],[59.338699,18.076372],[59.338849,18.075637],[59.338805,18.075061],
+  [59.338432,18.074759],[59.338060,18.074450],[59.337686,18.074147],[59.337314,18.073836],
+  [59.336943,18.073521],[59.336570,18.073215],[59.336258,18.072753],[59.336155,18.071999],
+  [59.336141,18.071210],[59.336099,18.070422],[59.336063,18.069632],[59.336027,18.068843],
+  [59.335990,18.068054],[59.335953,18.067265],[59.335917,18.066476],[59.335879,18.065687],
+  [59.335818,18.064905],[59.335683,18.064160],[59.335521,18.063433],[59.335357,18.062710],
+  [59.335174,18.062003],[59.334990,18.061297],[59.334806,18.060592],[59.334626,18.059883],
+  [59.334445,18.059174],[59.334263,18.058466],[59.334081,18.057759],[59.333899,18.057052],
+  [59.333752,18.056331],[59.333571,18.055623],[59.333391,18.054914],[59.333213,18.054202],
+  [59.333036,18.053490],[59.332864,18.052773],[59.332695,18.052053],[59.332538,18.051323],
+  [59.332402,18.050577],[59.332281,18.049822],[59.332339,18.049045],[59.332439,18.048277],
+  [59.332539,18.047509],[59.332670,18.046846],[59.332584,18.046793],[59.332687,18.046027],
+  [59.332790,18.045261],[59.332888,18.044492],[59.332985,18.043723],[59.333089,18.042957],
+  [59.333187,18.042189],[59.333285,18.041420],[59.333384,18.040652],[59.333484,18.039884],
+  [59.333584,18.039116],[59.333685,18.038349],[59.333784,18.037581],[59.333884,18.036813],
+  [59.333985,18.036045],[59.333893,18.035501],[59.333511,18.035277],[59.333455,18.034642],
+  [59.333449,18.034001],[59.333060,18.033782],[59.332777,18.033633],[59.332386,18.033432],
+  [59.332296,18.032692],[59.332255,18.031904],[59.332177,18.031180],[59.331791,18.030943],
+  [59.331405,18.030712],[59.331235,18.030265],[59.331392,18.029534],[59.331543,18.028800],
+  [59.331544,18.028077],[59.331192,18.027703],[59.330837,18.027330],[59.330470,18.026996],
+  [59.330105,18.026654],[59.329745,18.026293],[59.329499,18.026816],[59.329276,18.027477],
+  [59.329048,18.028131],[59.328814,18.028776],[59.328646,18.029487],[59.328533,18.030248],
+  [59.328409,18.031002],[59.328286,18.031069],[59.328374,18.030296],[59.328478,18.029531],
+  [59.328587,18.028768],[59.328721,18.028025],[59.328927,18.027344],[59.329135,18.026664],
+  [59.329342,18.025983],[59.329550,18.025303],[59.329757,18.024623],[59.329964,18.023943],
+  [59.330172,18.023263],[59.330371,18.022574],[59.330568,18.021881],[59.330499,18.021369],
+  [59.330169,18.020912],[59.329835,18.020477],[59.329463,18.020663],[59.329153,18.021172],
+  [59.328841,18.021673],[59.328532,18.022184],[59.328208,18.022660],[59.327878,18.023116],
+  [59.327544,18.023562],[59.327197,18.023967],[59.326861,18.024407],[59.326519,18.024831],
+  [59.326176,18.025249],[59.325832,18.025666],[59.325489,18.026084],[59.325145,18.026501],
+  [59.324801,18.026919],[59.324458,18.027336],[59.324114,18.027754],[59.323771,18.028171],
+  [59.323426,18.028586],[59.323082,18.029000],[59.322737,18.029415],[59.322393,18.029829],
+  [59.322043,18.030228],[59.321676,18.030559],[59.321296,18.030829],[59.320908,18.031046],
+  [59.320518,18.031254],[59.320127,18.031462],[59.319737,18.031670],[59.319347,18.031877],
+  [59.318971,18.032087],[59.319058,18.032859],[59.319410,18.033192],[59.319663,18.033587],
+  [59.319821,18.034317],[59.320182,18.034211],[59.320573,18.034009],[59.320549,18.033266],
+  [59.320219,18.032895],[59.320150,18.032125],[59.320100,18.031351],[59.319988,18.030590],
+  [59.320053,18.031009],[59.320158,18.031775],[59.320162,18.032561],[59.320408,18.033099],
+  [59.320591,18.033695],[59.320356,18.034112],[59.319967,18.034333],[59.319734,18.033913],
+  [59.319580,18.033180],[59.319195,18.033077],[59.319007,18.032433],[59.318759,18.032120],
+  [59.318367,18.032312],[59.317983,18.032556],[59.317598,18.032797],[59.317209,18.033011],
+  [59.316820,18.033226],[59.316441,18.033497],[59.316059,18.033756],[59.315685,18.034051],
+  [59.315335,18.034197],[59.315609,18.033842],[59.315412,18.033957],[59.315370,18.034596],
+  [59.315472,18.035363],[59.315573,18.036130],[59.315675,18.036897],[59.315772,18.037666],
+  [59.315869,18.038435],[59.315967,18.039204],[59.316064,18.039973],[59.316163,18.040741],
+  [59.316261,18.041510],[59.316359,18.042279],[59.316457,18.043047],[59.316555,18.043816],
+  [59.316650,18.044586],[59.316746,18.045356],[59.316851,18.046121],[59.316955,18.046886],
+  [59.317049,18.047657],[59.317143,18.048428],[59.317236,18.049199],[59.317332,18.049969],
+  [59.317435,18.050735],[59.317530,18.051504],[59.317623,18.052276],[59.317722,18.053044],
+  [59.317824,18.053811],[59.317923,18.054579],[59.318018,18.055349],[59.318113,18.056119],
+  [59.318210,18.056888],[59.318299,18.057661],[59.318393,18.058432],[59.318487,18.059202],
+  [59.318526,18.059913],[59.318137,18.060124],[59.317745,18.060314],[59.317352,18.060500],
+  [59.317319,18.061114],[59.317417,18.061883],[59.317515,18.062651],[59.317612,18.063420],
+  [59.317709,18.064190],[59.317807,18.064958],[59.317908,18.065726],[59.318242,18.065728],
+  [59.318635,18.065541],[59.319027,18.065355],[59.319259,18.065690],[59.319356,18.066459],
+  [59.319453,18.067228],[59.319555,18.067995],[59.319680,18.068744],[59.319783,18.069511],
+  [59.319892,18.070273],[59.320083,18.070955],[59.320178,18.071725],
+];
+const M_LAT=111320, M_LON=111320*Math.cos(ORIGIN.lat*D2R);
+const CP=ROUTE.map(([la,lo])=>new THREE.Vector3(
+  -(lo-ORIGIN.lon)*M_LON,   // öst = -X
+  12,                       // gissning, snappas mot fotogrammetrin
+  (la-ORIGIN.lat)*M_LAT     // norr = +Z
+));
+// trimma punkter i slutet som nästan sammanfaller med startpunkten — annars blir den slutna
+// kurvans stäng-segment degenererat (nära noll i XZ) och tangenten där pekar rakt ner
+while(CP.length>8 && Math.hypot(CP[CP.length-1].x-CP[0].x, CP[CP.length-1].z-CP[0].z)<35) CP.pop();
+// HÅRNÅLSKURVOR: OSM-gatunätet dubblar ibland tillbaka i ~180°-spikar som blir oåkbara
+// i racingfart. tre steg: (1) slå ihop nära-sammanfallande punkter (degenererade segment
+// ger spik-tangenter), (2) global Laplacian-utjämning som rundar bort spikarna, (3) extra
+// riktade pass på kvarvarande skarpa punkter. mål: minsta svängradie blir åkbar.
+// minimal bearbetning så banan LIGGER KVAR på gatorna: slå bara ihop nära-sammanfallande
+// punkter (källan till sub-meter-cusparna) och jämna ENBART de allra skarpaste punkterna lätt.
+const dedupe=(min)=>{ for(let i=CP.length-1;i>=0;i--){ const N=CP.length; if(N<=16) break;
+  const n=CP[(i+1)%N]; if(Math.hypot(CP[i].x-n.x,CP[i].z-n.z)<min) CP.splice(i,1); } };
+dedupe(8);
+for(let pass=0;pass<2;pass++) for(let i=0;i<CP.length;i++){ const N=CP.length;
+  const a=CP[(i-1+N)%N], b=CP[i], c=CP[(i+1)%N];
+  const d1x=b.x-a.x,d1z=b.z-a.z,d2x=c.x-b.x,d2z=c.z-b.z;
+  const l1=Math.hypot(d1x,d1z)||1, l2=Math.hypot(d2x,d2z)||1;
+  if((d1x*d2x+d1z*d2z)/(l1*l2) < -0.3){ // bara de allra skarpaste 180°-vändningarna
+    b.x=b.x*0.6+(a.x+c.x)/2*0.4; b.z=b.z*0.6+(a.z+c.z)/2*0.4; } }
+// centripetal Catmull-Rom: konstruerad för att INTE skapa öglor/cusps vid skarpa punkter.
+const curve=new THREE.CatmullRomCurve3(CP, true, 'centripetal');
+let TRACK_LEN=curve.getLength();
+const HALF_W=8, CLEARANCE=6;
+
+const UP=new THREE.Vector3(0,1,0);
+function frameAt(t,out){ t=((t%1)+1)%1;
+  curve.getPointAt(t,out.p); curve.getTangentAt(t,out.fwd).normalize();
+  out.right.crossVectors(out.fwd,UP).normalize();
+  out.up.crossVectors(out.right,out.fwd).normalize(); return out; }
+const mkFrame=()=>({p:new THREE.Vector3(),fwd:new THREE.Vector3(),
+  right:new THREE.Vector3(),up:new THREE.Vector3()});
+
+/* ============================== HÖJDSNAPPNING ============================== */
+const ray=new THREE.Raycaster(); ray.firstHitOnly=false; // behöver alla träffar → välj gatunivån, inte taket
+const DOWN=new THREE.Vector3(0,-1,0);
+const snapped=new Array(CP.length).fill(false);
+const groundY=new Array(CP.length).fill(null);
+let snapDone=false, lastSnapWalk=0, lastRebuild=0, loadStartTime=null, loadT=0;
+function fillMissing(){ // interpolera punkter som aldrig fick raycast-träff
+  const N=CP.length;
+  for(let i=0;i<N;i++){
+    if(snapped[i]) continue;
+    let a=i,b=i,da=0,db=0;
+    while(!snapped[a]&&da<=N){ a=(a-1+N)%N; da++; }
+    while(!snapped[b]&&db<=N){ b=(b+1)%N; db++; }
+    if(snapped[a]&&snapped[b]) groundY[i]=(groundY[a]*db+groundY[b]*da)/(da+db);
+    else if(snapped[a]) groundY[i]=groundY[a];
+    else if(snapped[b]) groundY[i]=groundY[b];
+    else groundY[i]=CP[i].y-CLEARANCE;
+  }
+}
+const START_PTS=Math.min(CP.length, Math.ceil(1700/TRACK_LEN*CP.length)); // ~startområdet
+// lägsta giltiga träffen längs en nedåtstråle = gatunivå under hustaken (första är ett tak)
+function raycastGround(i){
+  ray.set(new THREE.Vector3(CP[i].x,800,CP[i].z), DOWN);
+  const hits=ray.intersectObject(tiles.group,true);
+  let gy=null;
+  for(const h of hits){ const y=h.point.y; if(Math.abs(y)<250 && (gy===null||y<gy)) gy=y; }
+  return gy;
+}
+const inStart=i=> i<START_PTS || i>=CP.length-6; // framför start + rutnätet bakom mållinjen
+function snapTick(now){
+  if(!tiles||!rootLoaded) return;
+  if(now-lastSnapWalk<200) return; lastSnapWalk=now;
+  const N=CP.length, cam=camera.position;
+  if(!snapDone){
+    // re-snappa HELA startområdet varje tick (icke-låsande) → grova värden korrigeras mot finare tiles
+    let have=0, tot=0;
+    for(let i=0;i<N;i++) if(inStart(i)){ tot++;
+      const gy=raycastGround(i); if(gy!==null){ groundY[i]=gy; snapped[i]=true; }
+      if(snapped[i]) have++; }
+    const elapsed=(now-loadStartTime)/1000;
+    document.getElementById('loadfill').style.width=(have/tot*100)+'%';
+    document.getElementById('loadtxt').textContent=`startområde ${have}/${tot} · kalibrerar mot gatunivå`;
+    // starta när hela startområdet har gatuhöjd och tiles hunnit skärpas, eller hård cap 18 s
+    if((have>=tot && elapsed>4) || elapsed>18){
+      fillMissing(); snapDone=true; applyHeights(true); startRace(); lastRebuild=now;
+    }
+  } else {
+    // under loppet: re-snappa kommande ~800 m (icke-låsande) för att förfina mot finare tiles
+    const pt=shipT(player());
+    const ahead=[...Array(N).keys()].filter(i=>{ let d=i/N-pt; d-=Math.round(d);
+      return d>=-0.03 && d*TRACK_LEN<800; })
+      .sort((a,b)=>((CP[a].x-cam.x)**2+(CP[a].z-cam.z)**2)-((CP[b].x-cam.x)**2+(CP[b].z-cam.z)**2))
+      .slice(0,10);
+    let changed=false;
+    for(const i of ahead){ const gy=raycastGround(i);
+      if(gy!==null && (!snapped[i]||Math.abs(gy-groundY[i])>1.5)){ groundY[i]=gy; snapped[i]=true; changed=true; } }
+    if(changed && now-lastRebuild>1200){ applyHeights(true); lastRebuild=now; }
+  }
+}
+function applyHeights(force){
+  const N=CP.length;
+  let g=new Array(N);
+  for(let i=0;i<N;i++) g[i]=(groundY[i]??CP[i].y-CLEARANCE);
+  // medianfilter: dra in enstaka djupa hål (Slussens underdäck) och taktoppar mot grannarna
+  const med=new Array(N);
+  for(let i=0;i<N;i++){ const s=[g[(i-1+N)%N],g[i],g[(i+1)%N]].sort((x,y)=>x-y); med[i]=s[1]; }
+  g=med;
+  // lågpass: gatan ska inte hacka
+  for(let pass=0;pass<3;pass++){ const c=g.slice();
+    for(let i=0;i<N;i++) g[i]=(c[(i-1+N)%N]+2*c[i]+c[(i+1)%N])/4; }
+  // utjämna sömmen (t=0/1): rutnätet står på det korta stäng-segmentet, en höjdskillnad
+  // mellan banans början och slut ger annars en vertikal tangent → skeppet pekar rakt ner
+  { const K=5, s=[]; for(let k=-K;k<=K;k++) s.push(g[(k+N)%N]);
+    const mean=s.reduce((a,b)=>a+b,0)/s.length;
+    for(let k=-K;k<=K;k++){ const i=(k+N)%N, w=1-Math.abs(k)/(K+1); g[i]=g[i]*(1-w)+mean*w; } }
+  // kuperingslager: ENBART uppåt (0..28) så banan aldrig dyker under gatan → ingen clipping.
+  // dalar = återgång till gatunivå, krön = upp till 28 m. start/mål plattas ut (win→0).
+  const HILLS=t=>11.25*(1+Math.sin(Math.PI*2*30*t))+6.25*(1+Math.sin(Math.PI*2*69*t+1.7));
+  const win=t=>{ t=((t%1)+1)%1; const e=0.06; return Math.min(1, t/e, (1-t)/e); };
+  const target=new Array(N);
+  for(let i=0;i<N;i++) target[i]=g[i]+CLEARANCE+HILLS(i/N)*win(i/N);
+  let maxD=0;
+  for(let i=0;i<N;i++) maxD=Math.max(maxD,Math.abs(CP[i].y-target[i]));
+  if(!force&&maxD<1.5) return false;
+  for(let i=0;i<N;i++) CP[i].y=target[i];
+  curve.updateArcLengths(); TRACK_LEN=curve.getLength();
+  buildTrackVisuals();
+  return true;
+}
+
+if(DEMO){ // platt mark istället för fotogrammetri — testar bara körkänslan
+  const ground=new THREE.Mesh(new THREE.PlaneGeometry(8000,8000),
+    new THREE.MeshBasicMaterial({ color:0x394a5a }));
+  ground.rotation.x=-Math.PI/2; ground.position.y=0; scene.add(ground);
+  const grid=new THREE.GridHelper(8000,160,0x6688aa,0x4a5f74);
+  grid.position.y=0.1; scene.add(grid);
+  setTimeout(()=>{ for(let i=0;i<CP.length;i++){ groundY[i]=6; snapped[i]=true; }
+    snapDone=true; applyHeights(true); startRace(); },300);
+}
+
+/* krökningskarta för AI:ns kurvbromsning och racinglinje */
+const CSAMP=600, CURV=new Float32Array(CSAMP);
+function rebuildCurvature(){
+  const f1=mkFrame(), f2=mkFrame();
+  for(let i=0;i<CSAMP;i++){
+    frameAt(i/CSAMP,f1); frameAt((i+1)/CSAMP,f2);
+    const a1=Math.atan2(f1.fwd.x,f1.fwd.z), a2=Math.atan2(f2.fwd.x,f2.fwd.z);
+    let d=a2-a1; while(d>Math.PI)d-=Math.PI*2; while(d<-Math.PI)d+=Math.PI*2;
+    CURV[i]=d/(TRACK_LEN/CSAMP); // rad/m, tecken = svängriktning
+  }
+}
+function curvAhead(t,dist){
+  let m=0, signed=0;
+  const steps=Math.max(1,Math.ceil(dist/(TRACK_LEN/CSAMP)));
+  const i0=Math.floor((((t%1)+1)%1)*CSAMP);
+  for(let k=0;k<steps;k++){ const c=CURV[(i0+k)%CSAMP];
+    if(Math.abs(c)>m){ m=Math.abs(c); signed=c; } }
+  return {m, signed};
+}
+
+/* ============================== BANVISUALER ============================== */
+let trackGroup=null;
+const PADS=Array.from({length:135},(_,i)=>({ t:(i+0.55)/135, lat:[-3.5,0,3.5][i%3] }));
+function buildTrackVisuals(){
+  if(trackGroup){ scene.remove(trackGroup);
+    trackGroup.traverse(o=>{ o.geometry?.dispose(); o.material?.dispose?.(); }); }
+  trackGroup=new THREE.Group();
+  rebuildCurvature();
+  const SEG=900, f=mkFrame();
+  { // halvtransparent vägbana — fotogrammetrin ska synas igenom
+    const pos=[],idx=[];
+    for(let i=0;i<=SEG;i++){ frameAt(i/SEG,f);
+      const l=f.p.clone().addScaledVector(f.right,-HALF_W);
+      const r=f.p.clone().addScaledVector(f.right,HALF_W);
+      pos.push(l.x,l.y,l.z, r.x,r.y,r.z);
+      if(i<SEG){ const a=i*2; idx.push(a,a+1,a+2,a+1,a+3,a+2); } }
+    const g=new THREE.BufferGeometry();
+    g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3)); g.setIndex(idx);
+    trackGroup.add(new THREE.Mesh(g,new THREE.MeshBasicMaterial({ color:0x0a1828,
+      transparent:true, opacity:0.32, side:THREE.DoubleSide, depthWrite:false })));
+  }
+  for(const side of [-1,1]){ // kantljus
+    const pos=[],idx=[];
+    for(let i=0;i<=SEG;i++){ frameAt(i/SEG,f);
+      const b=f.p.clone().addScaledVector(f.right,side*HALF_W);
+      const t2=b.clone().addScaledVector(f.up,1.0);
+      pos.push(b.x,b.y,b.z,t2.x,t2.y,t2.z);
+      if(i<SEG){ const a=i*2; idx.push(a,a+1,a+2,a+1,a+3,a+2); } }
+    const g=new THREE.BufferGeometry();
+    g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3)); g.setIndex(idx);
+    trackGroup.add(new THREE.Mesh(g,new THREE.MeshBasicMaterial({
+      color:side<0?0x00d5ff:0xff45c8, transparent:true, opacity:0.75,
+      blending:THREE.AdditiveBlending, depthWrite:false, side:THREE.DoubleSide })));
+  }
+  { // chevroner
+    const geo=new THREE.PlaneGeometry(2.6,0.9);
+    const mat=new THREE.MeshBasicMaterial({ color:0x66e8ff, transparent:true, opacity:0.55,
+      blending:THREE.AdditiveBlending, depthWrite:false });
+    const n=Math.floor(TRACK_LEN/24), inst=new THREE.InstancedMesh(geo,mat,n);
+    const m=new THREE.Matrix4(), q=new THREE.Quaternion(), basis=new THREE.Matrix4();
+    for(let i=0;i<n;i++){ frameAt(i/n,f);
+      basis.makeBasis(f.right,f.up,f.fwd.clone().negate()); q.setFromRotationMatrix(basis);
+      const p=f.p.clone().addScaledVector(f.up,0.1);
+      m.compose(p,q.multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.PI/2,0,0))),
+        new THREE.Vector3(1,1,1));
+      inst.setMatrixAt(i,m); }
+    trackGroup.add(inst);
+  }
+  { // boostpads
+    const geo=new THREE.PlaneGeometry(5,9);
+    for(const pad of PADS){ frameAt(pad.t,f);
+      const mesh=new THREE.Mesh(geo,new THREE.MeshBasicMaterial({ color:0x2bff7a,
+        transparent:true, opacity:0.55, blending:THREE.AdditiveBlending,
+        depthWrite:false, side:THREE.DoubleSide }));
+      const basis=new THREE.Matrix4().makeBasis(f.right,f.up,f.fwd.clone().negate());
+      mesh.quaternion.setFromRotationMatrix(basis); mesh.rotateX(-Math.PI/2);
+      mesh.position.copy(f.p).addScaledVector(f.right,pad.lat).addScaledVector(f.up,0.12);
+      trackGroup.add(mesh); pad.pulse=mesh; }
+  }
+  { // startportal vid Slussen
+    frameAt(0,f);
+    const mat=new THREE.MeshBasicMaterial({ color:0x00d5ff });
+    for(const s of [-1,1]){ const py=new THREE.Mesh(new THREE.BoxGeometry(1,14,1),mat);
+      py.position.copy(f.p).addScaledVector(f.right,s*(HALF_W+1)).addScaledVector(f.up,7);
+      trackGroup.add(py); }
+    const beam=new THREE.Mesh(new THREE.BoxGeometry(HALF_W*2+2,0.8,0.8),mat);
+    const basis=new THREE.Matrix4().makeBasis(f.right,f.up,f.fwd.clone().negate());
+    beam.quaternion.setFromRotationMatrix(basis);
+    beam.position.copy(f.p).addScaledVector(f.up,14); trackGroup.add(beam);
+  }
+  scene.add(trackGroup);
+}
+
+/* ============================== SHIPS ============================== */
+function glowTexture(){ const cv=document.createElement('canvas'); cv.width=cv.height=64;
+  const g=cv.getContext('2d'); const gr=g.createRadialGradient(32,32,2,32,32,30);
+  gr.addColorStop(0,'rgba(255,255,255,1)'); gr.addColorStop(0.35,'rgba(140,220,255,0.8)');
+  gr.addColorStop(1,'rgba(0,0,0,0)'); g.fillStyle=gr; g.fillRect(0,0,64,64);
+  return new THREE.CanvasTexture(cv); }
+const glowTex=glowTexture();
+function buildCraft(color){
+  const grp=new THREE.Group();
+  const hull=new THREE.Mesh(new THREE.ConeGeometry(1.5,6.4,6),
+    new THREE.MeshBasicMaterial({ color:0x222e3e }));
+  hull.rotation.x=Math.PI/2; hull.scale.set(1.6,1,0.5); grp.add(hull);
+  const he=new THREE.LineSegments(new THREE.EdgesGeometry(hull.geometry),
+    new THREE.LineBasicMaterial({ color }));
+  he.rotation.copy(hull.rotation); he.scale.copy(hull.scale); grp.add(he);
+  for(const s of [-1,1]){
+    const pod=new THREE.Mesh(new THREE.BoxGeometry(1,0.6,4),
+      new THREE.MeshBasicMaterial({ color:0x18222e }));
+    pod.position.set(s*2.1,-0.1,1); grp.add(pod);
+    const pe=new THREE.LineSegments(new THREE.EdgesGeometry(pod.geometry),
+      new THREE.LineBasicMaterial({ color, transparent:true, opacity:0.85 }));
+    pe.position.copy(pod.position); grp.add(pe);
+    const eng=new THREE.Sprite(new THREE.SpriteMaterial({ map:glowTex, color,
+      blending:THREE.AdditiveBlending, depthWrite:false }));
+    eng.position.set(s*2.1,-0.1,3.1); eng.scale.set(2,2,1); grp.add(eng);
+    grp.userData['eng'+(s>0?'R':'L')]=eng;
+  }
+  const canopy=new THREE.Mesh(new THREE.SphereGeometry(0.7,10,8),
+    new THREE.MeshBasicMaterial({ color:0x9adfff, transparent:true, opacity:0.9 }));
+  canopy.scale.set(0.8,0.5,1.4); canopy.position.set(0,0.5,0.2); grp.add(canopy);
+  return grp;
+}
+const SHIP_NAMES=['YOU','VALKYRIA','AURORA-X','MÄLAR FANG','NORRSKEN','ICEBREAKER'];
+const SHIP_COLS=[0x00d5ff,0xff45c8,0x2bff7a,0xffb300,0xa06bff,0xff5050];
+const TOTAL_LAPS=1;
+function makeShip(i){ return {
+  name:SHIP_NAMES[i], isPlayer:i===0, color:SHIP_COLS[i], mesh:buildCraft(SHIP_COLS[i]),
+  t:1-((i+1)*9)/TRACK_LEN, lat:(i%2===0?-1:1)*(2+(i>>1)*1.8),
+  speed:0, vlat:0, lap:1, crossedStart:false, done:false, finishTime:0,
+  boost:0, yaw:0, roll:0, aiMax:60+i*1.2+((i*37)%3), aiPhase:i*2.3,
+  skill:[1.0,1.2,0.85,1.1,0.75,0.95][i], frame:mkFrame(),
+  pos:new THREE.Vector3(), heading:0, frac:0, prevFrac:0, wallTouch:false }; }
+let ships=[];
+function initPlayerFree(s){ const f=mkFrame(); frameAt(shipT(s),f);
+  s.pos.copy(f.p).addScaledVector(f.right,s.lat).addScaledVector(f.up,1.6);
+  s.heading=Math.atan2(f.fwd.x,f.fwd.z); s.frac=shipT(s); s.prevFrac=s.frac; }
+function spawnShips(){ for(const s of ships) scene.remove(s.mesh);
+  ships=[]; for(let i=0;i<6;i++){ const s=makeShip(i); ships.push(s); scene.add(s.mesh); } }
+window.__dbg=()=>({ state, ships:ships.map(s=>({n:s.name,v:+s.speed.toFixed(1),t:+s.t.toFixed(4),
+  lat:+s.lat.toFixed(1), curv:curvAhead(shipT(s),90).m })) });
+const player=()=>ships[0];
+
+window.__state=()=>({ state, countT:+countT.toFixed(2), raceTime:+raceTime.toFixed(2), paused });
+
+window.__heights=()=>{ const N=CP.length;
+  const samp=i=>({i, snapped:snapped[i], gy:groundY[i]==null?null:+groundY[i].toFixed(1), cy:+CP[i].y.toFixed(1)});
+  let raw=null;
+  if(tiles){ ray.set(new THREE.Vector3(CP[0].x,800,CP[0].z),DOWN);
+    raw=ray.intersectObject(tiles.group,true).map(h=>+h.point.y.toFixed(1)); }
+  return { front:[0,1,2,3].map(samp), back:[N-3,N-2,N-1].map(samp), rawHitsAtStart:raw }; };
+window.__cam=()=>{ const p=player(); const f=p.frame;
+  return { state, camPos:camera.position.toArray().map(x=>+x.toFixed(1)),
+    shipPos:p.mesh.position.toArray().map(x=>+x.toFixed(1)),
+    fwd:f.fwd.toArray().map(x=>+x.toFixed(2)), up:f.up.toArray().map(x=>+x.toFixed(2)),
+    heading:+p.heading.toFixed(3), speed:+p.speed.toFixed(1), lat:+p.lat.toFixed(1),
+    shipT:+shipT(p).toFixed(4) }; };
+window.__clip=()=>{ const p=player(); const sp=p.mesh.position;
+  ray.set(new THREE.Vector3(sp.x,800,sp.z),DOWN);
+  const hits=ray.intersectObject(tiles.group,true);
+  let gy=null; for(const h of hits){ const y=h.point.y; if(Math.abs(y)<250&&(gy===null||y<gy)) gy=y; }
+  return { shipY:+sp.y.toFixed(1), groundUnder:gy==null?null:+gy.toFixed(1),
+    clearanceAboveGround: gy==null?null:+(sp.y-gy).toFixed(1) }; };
+
+/* ============================== INPUT / AUDIO ============================== */
+const keys={};
+addEventListener('keydown',e=>{ keys[e.code]=true;
+  if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code)) e.preventDefault();
+  if(e.code==='KeyM') toggleAudio();
+  if(e.code==='KeyP') paused=!paused;
+  if(e.code==='KeyR'&&snapDone) restart();
+  ensureAudio(); });
+addEventListener('keyup',e=>{ keys[e.code]=false; });
+let actx=null,engGain=null,oscs=[],audioOn=true;
+let musicGain=null,mFilter=null,musAnalyser=null,sharedNoise=null,distCurve=null,nextStep=0,mstep=0;
+const BPM=130, STEPDUR=60/BPM/4; // 16-delar, big beat-tempo
+const BUILD_BARS=112, CYCLE_STEPS=2048; // ~4 min stegring (128 takter) innan omstart
+function ensureAudio(){
+  if(actx){ if(actx.state==='suspended') actx.resume(); return; }
+  if(!audioOn) return;
+  try{ actx=new (window.AudioContext||window.webkitAudioContext)();
+    if(actx.state==='suspended') actx.resume();
+    distCurve=new Float32Array(1024); for(let i=0;i<1024;i++) distCurve[i]=Math.tanh((i/1024*2-1)*2.2);
+    const len=actx.sampleRate, b=actx.createBuffer(1,len,actx.sampleRate), ch=b.getChannelData(0);
+    for(let i=0;i<len;i++) ch[i]=Math.random()*2-1; sharedNoise=b;
+    // motorljud
+    engGain=actx.createGain(); engGain.gain.value=0;
+    const lp=actx.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=600;
+    engGain.connect(lp); lp.connect(actx.destination);
+    for(const det of [0,7]){ const o=actx.createOscillator(); o.type='sawtooth';
+      o.frequency.value=55; o.detune.value=det; o.connect(engGain); o.start(); oscs.push(o); }
+    // big beat-musikbuss (Chemical Brothers-anda, originalslinga)
+    musAnalyser=actx.createAnalyser(); musAnalyser.fftSize=512; musAnalyser.connect(actx.destination);
+    // master-filter: öppnar sig från dovt till ljust när stegringen växer
+    mFilter=actx.createBiquadFilter(); mFilter.type='lowpass'; mFilter.frequency.value=520; mFilter.Q.value=0.7; mFilter.connect(musAnalyser);
+    musicGain=actx.createGain(); musicGain.gain.value=0; musicGain.connect(mFilter);
+    nextStep=actx.currentTime+0.2; mstep=0;
+  }catch(e){ audioOn=false; } }
+function noiseSrc(){ const s=actx.createBufferSource(); s.buffer=sharedNoise; s.loop=true; return s; }
+function mKick(t){ const o=actx.createOscillator(),g=actx.createGain();
+  o.frequency.setValueAtTime(140,t); o.frequency.exponentialRampToValueAtTime(45,t+0.11);
+  g.gain.setValueAtTime(0.0001,t); g.gain.linearRampToValueAtTime(0.95,t+0.004); g.gain.exponentialRampToValueAtTime(0.0001,t+0.22);
+  o.connect(g); g.connect(musicGain); o.start(t); o.stop(t+0.24); }
+function mSnare(t){ const s=noiseSrc(),hp=actx.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=1400;
+  const g=actx.createGain(); g.gain.setValueAtTime(0.0001,t); g.gain.linearRampToValueAtTime(0.5,t+0.005); g.gain.exponentialRampToValueAtTime(0.0001,t+0.18);
+  s.connect(hp); hp.connect(g); g.connect(musicGain); s.start(t); s.stop(t+0.2);
+  const o=actx.createOscillator(); o.type='triangle'; o.frequency.setValueAtTime(220,t); o.frequency.exponentialRampToValueAtTime(140,t+0.1);
+  const g2=actx.createGain(); g2.gain.setValueAtTime(0.22,t); g2.gain.exponentialRampToValueAtTime(0.0001,t+0.12); o.connect(g2); g2.connect(musicGain); o.start(t); o.stop(t+0.13); }
+function mHat(t,lvl){ const s=noiseSrc(),hp=actx.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=8000;
+  const g=actx.createGain(); g.gain.setValueAtTime(0.0001,t); g.gain.linearRampToValueAtTime(lvl,t+0.003); g.gain.exponentialRampToValueAtTime(0.0001,t+0.04);
+  s.connect(hp); hp.connect(g); g.connect(musicGain); s.start(t); s.stop(t+0.05); }
+function mAcid(t,f,accent,dur,e){ const o=actx.createOscillator(); o.type='sawtooth'; o.frequency.value=f;
+  const ws=actx.createWaveShaper(); ws.curve=distCurve;
+  const lp=actx.createBiquadFilter(); lp.type='lowpass'; lp.Q.value=12;
+  const top=(1100+(e||0)*2400)*(accent?1.7:1); // ljusare acid när stegringen växer
+  lp.frequency.setValueAtTime(top,t); lp.frequency.exponentialRampToValueAtTime(240,t+dur*0.9);
+  const g=actx.createGain(); g.gain.setValueAtTime(0.0001,t); g.gain.linearRampToValueAtTime(accent?0.28:0.18,t+0.012);
+  g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+  o.connect(ws); ws.connect(lp); lp.connect(g); g.connect(musicGain); o.start(t); o.stop(t+dur+0.02); }
+function mRiser(t){ const s=noiseSrc(),bp=actx.createBiquadFilter(); bp.type='bandpass'; bp.Q.value=1.5;
+  bp.frequency.setValueAtTime(300,t); bp.frequency.exponentialRampToValueAtTime(6000,t+1.8);
+  const g=actx.createGain(); g.gain.setValueAtTime(0.0001,t); g.gain.linearRampToValueAtTime(0.1,t+1.7); g.gain.exponentialRampToValueAtTime(0.0001,t+1.95);
+  s.connect(bp); bp.connect(g); g.connect(musicGain); s.start(t); s.stop(t+2); }
+const ACID_A=[55,0,110,55, 0,55,0,82.41, 55,0,110,55, 0,65.41,0,82.41];   // grund-riff
+const ACID_B=[110,0,110,130.8, 110,164.8,110,0, 110,0,98,110, 130.8,0,164.8,196]; // peak-riff
+function mStab(t,dur){ for(const f of [220,261.63,329.63]){ const o=actx.createOscillator(); o.type='sawtooth'; o.frequency.value=f;
+  const lp=actx.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=2600; lp.Q.value=2;
+  const g=actx.createGain(); g.gain.setValueAtTime(0.0001,t); g.gain.linearRampToValueAtTime(0.05,t+0.01); g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+  o.connect(lp); lp.connect(g); g.connect(musicGain); o.start(t); o.stop(t+dur+0.02); } }
+function mPad(t,dur){ for(const f of [110,164.81,220]){ const o=actx.createOscillator(); o.type='sawtooth'; o.frequency.value=f;
+  const lp=actx.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=900;
+  const g=actx.createGain(); g.gain.setValueAtTime(0.0001,t); g.gain.linearRampToValueAtTime(0.045,t+0.4);
+  g.gain.setValueAtTime(0.045,t+dur*0.7); g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+  o.connect(lp); lp.connect(g); g.connect(musicGain); o.start(t); o.stop(t+dur+0.05); } }
+function mImpact(t){ const s=noiseSrc(),hp=actx.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=2000;
+  const g=actx.createGain(); g.gain.setValueAtTime(0.0001,t); g.gain.linearRampToValueAtTime(0.38,t+0.005); g.gain.exponentialRampToValueAtTime(0.0001,t+0.6);
+  s.connect(hp); hp.connect(g); g.connect(musicGain); s.start(t); s.stop(t+0.65);
+  const o=actx.createOscillator(); o.type='sine'; o.frequency.setValueAtTime(90,t); o.frequency.exponentialRampToValueAtTime(40,t+0.4);
+  const g2=actx.createGain(); g2.gain.setValueAtTime(0.5,t); g2.gain.exponentialRampToValueAtTime(0.0001,t+0.5); o.connect(g2); g2.connect(musicGain); o.start(t); o.stop(t+0.55); }
+// energidriven stegring över ~4 min: lager läggs på efterhand, master-filtret öppnas
+function musicEnergy(){ return Math.min(1, (mstep/16)/BUILD_BARS); }
+function scheduleStep(t,step){
+  const i=step%16, bar=(step/16|0), e=Math.min(1, bar/BUILD_BARS);
+  // blockövergångar var 16:e takt: impact in i nästa nivå + riser takten innan
+  if(bar%16===0 && i===0 && bar>0) mImpact(t);
+  if(bar%16===15 && i===0 && e<0.97) mRiser(t);
+  // pad-atmosfär tidigt, tonar ut när trummorna tar över
+  if(e<0.6 && i===0 && bar%2===0) mPad(t, STEPDUR*32);
+  // hattar (täthet ökar med energin)
+  if(i%2===0) mHat(t, i%4===2?0.16:0.09); else if(e>0.4) mHat(t,0.05);
+  // kick kommer in tidigt, dubbleras högt upp
+  if(e>0.06 && (i===0||i===4||i===8||i===12)) mKick(t);
+  if(e>0.72 && (i===6||i===14)) mKick(t);
+  // snare-backbeat från lite längre upp, roll nära toppen
+  if(e>0.22 && (i===4||i===12)) mSnare(t);
+  if(e>0.85 && bar%8===7 && i%2===0) mSnare(t);
+  // acid: in vid ~15% energi, byter till busigare riff och ljusnar mot toppen
+  if(e>0.15){ const pat=e>0.6?ACID_B:ACID_A, f=pat[i];
+    if(f>0) mAcid(t,f, i===0||i===8, STEPDUR*(i%2?1:1.4), e); }
+  // stabbar i övre halvan, tätare nära toppen
+  if(e>0.5 && (i===0||i===8 || (e>0.8&&(i===6||i===10)))) mStab(t, STEPDUR*3);
+}
+function toggleAudio(){ audioOn=!audioOn;
+  if(!audioOn){ if(engGain) engGain.gain.value=0; if(musicGain) musicGain.gain.value=0; }
+  else ensureAudio(); }
+function updateAudio(){ if(!actx||!audioOn||!engGain) return;
+  if(actx.state==='suspended') actx.resume();
+  const p=player(); if(!p){ engGain.gain.value=0; return; }
+  engGain.gain.value=paused||state!=='race'?0.012:0.026+p.speed*0.0004;
+  for(const o of oscs) o.frequency.setTargetAtTime(45+p.speed*1.5,actx.currentTime,0.05);
+  if(musicGain){
+    const e=musicEnergy();
+    // master-filtret öppnar sig med energin (dovt → ljust), volymen växer något
+    mFilter.frequency.setTargetAtTime(520+e*e*15500, actx.currentTime, 0.5);
+    musicGain.gain.setTargetAtTime(paused?0.05:(state==='race'?0.24+e*0.13:0.2), actx.currentTime, 0.5);
+    if(!paused){ const la=actx.currentTime+0.13;
+      if(nextStep<actx.currentTime-0.4) nextStep=actx.currentTime+0.05;
+      while(nextStep<la){ scheduleStep(nextStep,mstep); mstep=(mstep+1)%CYCLE_STEPS; nextStep+=STEPDUR; } }
+  } }
+window.__mus=()=>{ if(!musAnalyser) return {state:actx?actx.state:'no actx'};
+  const buf=new Float32Array(musAnalyser.fftSize); musAnalyser.getFloatTimeDomainData(buf);
+  let s=0,pk=0; for(const v of buf){ s+=v*v; if(Math.abs(v)>pk)pk=Math.abs(v); }
+  return { state:actx.state, rms:+Math.sqrt(s/buf.length).toFixed(4), peak:+pk.toFixed(3),
+    bar:(mstep/16|0), e:+musicEnergy().toFixed(2), filterHz:Math.round(mFilter?mFilter.frequency.value:0) }; };
+window.__setbar=(b)=>{ mstep=b*16; return {bar:b}; };
+
+/* ============================== RACE STATE ============================== */
+let state='loading', countT=3.999, raceTime=0, paused=false;
+let lapTimes=[], lapStart=0, bestLap=null;
+const msg=document.getElementById('msg'), sub=document.getElementById('sub');
+function startRace(){
+  loadveil.style.display='none';
+  if(actx){ mstep=0; nextStep=actx.currentTime+0.1; } // stegringen börjar om med loppet
+  spawnShips(); camSnap=true; state='count'; countT=3.999; raceTime=0; lapTimes=[]; lapStart=0;
+}
+function restart(){ document.getElementById('results').style.display='none';
+  if(actx){ mstep=0; nextStep=actx.currentTime+0.1; }
+  spawnShips(); camSnap=true; state='count'; countT=3.999; raceTime=0; lapTimes=[]; lapStart=0;
+  msg.textContent=''; sub.textContent=''; }
+function fmt(t){ const m=Math.floor(t/60),s=t-m*60; return m+':'+s.toFixed(2).padStart(5,'0'); }
+
+/* ============================== FYSIK ============================== */
+const MAXV=66, ACCEL=27, BRAKE=46, DRAG=0.34;
+let boostMeter=50, shake=0, fovKick=0;
+function shipT(s){ return ((s.t%1)+1)%1; }
+function stepShip(s,dt){
+  if(s.done){ s.speed=Math.max(18,s.speed-10*dt); advance(s,dt); return; }
+  if(s.isPlayer){
+    // RAILIG styrning: gas/broms + sidled längs splinen, skeppet följer banans riktning
+    const thrust=keys['ArrowUp']||keys['KeyW'], brake=keys['ArrowDown']||keys['KeyS'];
+    let steer=(keys['ArrowLeft']||keys['KeyA']?-1:0)+(keys['ArrowRight']||keys['KeyD']?1:0);
+    const abL=keys['KeyQ'], abR=keys['KeyE'];
+    if(state==='race'){
+      if(thrust) s.speed+=ACCEL*dt;
+      if(brake) s.speed-=BRAKE*dt;
+      if((keys['ShiftLeft']||keys['ShiftRight'])&&boostMeter>0){ s.speed+=38*dt; boostMeter=Math.max(0,boostMeter-45*dt); }
+    }
+    s.speed-=s.speed*DRAG*dt; s.speed=Math.max(0,Math.min(MAXV+s.boost,s.speed));
+    let latAcc=steer*44;
+    if(abL) latAcc-=56, s.speed-=8*dt;
+    if(abR) latAcc+=56, s.speed-=8*dt;
+    // GREPPGRÄNS: kör du för fort genom en kurva tappar du greppet och dras utåt mot väggen.
+    // måste bromsa eller luftbromsa inför svängarna — annars wall-ride och fartförlust.
+    const pcv=curvAhead(shipT(s),45);
+    if(pcv.m>1e-4){ const grip=Math.sqrt(70/pcv.m);
+      if(s.speed>grip){ const over=s.speed-grip;
+        latAcc+=Math.sign(pcv.signed)*Math.min(over,28)*2.6; } }
+    s.vlat+=latAcc*dt; s.vlat-=s.vlat*4.2*dt;
+    s.yaw=THREE.MathUtils.lerp(s.yaw,-s.vlat*0.035,10*dt);
+    s.roll=THREE.MathUtils.lerp(s.roll,-s.vlat*0.06-steer*0.18,8*dt);
+  } else {
+    const tn0=shipT(s);
+    let overtakeBias=0;
+    if(state==='race'){
+      // balanserat: kompetenta men inte perfekta. bromsar måttligt i kurvor, toppfart runt spelarens.
+      const look=curvAhead(tn0, 22+s.speed*1.2);
+      const cornerV=look.m>1e-4 ? Math.sqrt((80+s.skill*28)/look.m) : 1e9;
+      let target=Math.min(s.aiMax*(1+0.02*Math.sin(raceTime*0.5+s.aiPhase)), Math.max(32,cornerV));
+      for(const o of ships){ if(o===s) continue;
+        let dT=o.t-s.t; if(dT>0 && dT*TRACK_LEN<20 && Math.abs(o.lat-s.lat)<4.5){
+          target+=7; // slipstream
+          overtakeBias=(o.lat>=0?-1:1)*(HALF_W-2.5); break; } }
+      s.speed+=(target-s.speed)*(target<s.speed?3.6:1.9)*dt;
+      // mild jakt om långt bakom spelaren, så fältet inte tappas helt (lätt gummiband)
+      const gap=player().t-s.t;
+      if(gap>0) s.speed+=Math.min(gap*0.9,1.4)*dt*10;
+    } else s.speed=0;
+    const c60=curvAhead(tn0,70);
+    let wantLat=Math.abs(c60.signed)>0.0018 ? -Math.sign(c60.signed)*(HALF_W-2.6) : 0;
+    if(overtakeBias) wantLat=wantLat*0.35+overtakeBias*0.65;
+    for(const pad of PADS){ let dT=pad.t-tn0; dT-=Math.round(dT);
+      if(dT>0 && dT*TRACK_LEN<140){ wantLat=wantLat*0.2+pad.lat*0.8; break; } }
+    s.vlat+=(wantLat-s.lat)*(3.0+s.skill)*dt; s.vlat-=s.vlat*2.8*dt;
+    s.roll=THREE.MathUtils.lerp(s.roll,-s.vlat*0.05,6*dt);
+  }
+  s.lat+=s.vlat*dt;
+  const lim=HALF_W-2;
+  if(Math.abs(s.lat)>lim){ s.lat=Math.sign(s.lat)*lim; s.vlat*=-0.35; s.speed*=Math.pow(0.4,dt*3);
+    if(s.isPlayer) shake=Math.min(shake+0.4,1.2); }
+  s.boost=Math.max(0,s.boost-22*dt);
+  const tn=shipT(s);
+  for(const pad of PADS){ let dT=Math.abs(tn-pad.t); dT=Math.min(dT,1-dT);
+    if(dT*TRACK_LEN<6&&Math.abs(s.lat-pad.lat)<3.6){ const had=s.boost; s.boost=Math.max(s.boost,24);
+      if(s.isPlayer){ boostMeter=Math.min(100,boostMeter+30); if(had<12) fovKick=1; } } }
+  advance(s,dt);
+}
+function advance(s,dt){
+  const prev=shipT(s);
+  s.t+=(s.speed+s.boost)*dt/TRACK_LEN;
+  const now=shipT(s);
+  if(prev>0.9&&now<0.1&&state==='race'){
+    if(!s.crossedStart){ s.crossedStart=true; if(s.isPlayer) lapStart=raceTime; }
+    else {
+      if(s.isPlayer){ const lt=raceTime-lapStart; lapTimes.push(lt); lapStart=raceTime;
+        if(bestLap===null||lt<bestLap) bestLap=lt; flash('LAP '+fmt(lt)); }
+      s.lap++;
+      if(s.lap>TOTAL_LAPS&&!s.done){ s.done=true; s.finishTime=raceTime;
+        if(s.isPlayer) finishRace(); } } }
+  frameAt(now,s.frame); const f=s.frame;
+  s.mesh.position.copy(f.p).addScaledVector(f.right,s.lat)
+    .addScaledVector(f.up,1.5+Math.sin(performance.now()*0.004+s.aiPhase*7)*0.15);
+  const basis=new THREE.Matrix4().makeBasis(f.right,f.up,f.fwd.clone().negate());
+  s.mesh.quaternion.setFromRotationMatrix(basis);
+  s.mesh.rotateY(s.yaw); s.mesh.rotateZ(s.roll);
+  const glow=0.8+Math.min(1,(s.speed+s.boost)/MAXV)*1.6;
+  s.mesh.userData.engL.scale.set(glow,glow,1);
+  s.mesh.userData.engR.scale.set(glow,glow,1);
+}
+function separate(dt){
+  for(let i=0;i<ships.length;i++) for(let j=i+1;j<ships.length;j++){
+    const a=ships[i],b=ships[j];
+    const d=a.mesh.position.distanceTo(b.mesh.position);
+    if(d<3.0){ const push=(3.0-d)*6*dt;
+      if(a.lat<b.lat){ a.vlat-=push*8; b.vlat+=push*8; } else { a.vlat+=push*8; b.vlat-=push*8; }
+      a.speed*=1-0.4*dt; b.speed*=1-0.4*dt;
+      if(a.isPlayer||b.isPlayer) shake=Math.min(shake+0.25,1); } }
+}
+let flashT=0;
+function flash(text){ msg.textContent=text; msg.style.fontSize='40px'; flashT=1.6; }
+function finishRace(){
+  state='done';
+  const order=[...ships].sort((a,b)=>{
+    if(a.done&&b.done) return a.finishTime-b.finishTime;
+    if(a.done) return -1; if(b.done) return 1; return b.t-a.t; });
+  const tbl=document.getElementById('resTable'); tbl.innerHTML='';
+  order.forEach((s,i)=>{ const tr=document.createElement('tr');
+    if(s.isPlayer) tr.className='you';
+    tr.innerHTML=`<td>${i+1}.</td><td>${s.name}</td><td>${s.done?fmt(s.finishTime):'+'+(order[0].t-s.t).toFixed(2)+' lap'}</td>`;
+    tbl.appendChild(tr); });
+  const p=order.indexOf(player())+1;
+  document.getElementById('resTitle').textContent=
+    p===1?'SEGER — SÖDERMALM':p<=3?'PALLPLATS':'RACE COMPLETE';
+  document.getElementById('results').style.display='flex';
+}
+
+/* ============================== KAMERA ============================== */
+const camPos=new THREE.Vector3(0,60,150), camLook=new THREE.Vector3();
+const loadFrame=mkFrame(), lookFrame=mkFrame();
+let camSnap=true; // snäpp kameran rätt vid race-start, inget svep från default-läget
+function updateCamera(dt){
+  const p=player(); if(!p) return;
+  const f=p.frame;
+  // platta ut framåtriktningen så kameran inte stirrar rakt upp i branta backar
+  const backLevel=new THREE.Vector3(-f.fwd.x,-f.fwd.y*0.3,-f.fwd.z).normalize();
+  const fwdLevel=new THREE.Vector3(f.fwd.x,f.fwd.y*0.3,f.fwd.z).normalize();
+  const target=p.mesh.position.clone().addScaledVector(backLevel,12).addScaledVector(UP,4.6)
+    .addScaledVector(f.right,p.lat*0.08);
+  const lookT=p.mesh.position.clone().addScaledVector(fwdLevel,12).addScaledVector(UP,1.4);
+  if(camSnap){ camPos.copy(target); camLook.copy(lookT); camSnap=false; }
+  camPos.lerp(target,1-Math.pow(0.0008,dt));
+  if(shake>0){ shake-=dt*2.4;
+    camPos.x+=(Math.random()-0.5)*shake; camPos.y+=(Math.random()-0.5)*shake; }
+  // fart-skak: en lätt darrning som växer med hastigheten
+  const sf=(p.speed+p.boost)/MAXV;
+  if(state==='race'&&sf>0.5){ const j=(sf-0.5)*0.5;
+    camPos.x+=(Math.random()-0.5)*j; camPos.y+=(Math.random()-0.5)*j; }
+  camera.position.copy(camPos);
+  camLook.lerp(lookT,1-Math.pow(0.0005,dt));
+  camera.lookAt(camLook);
+  fovKick=Math.max(0,fovKick-dt*1.6);
+  // punchigare FOV: bredare synfält vid fart + kraftigt ryck vid boost
+  camera.fov=THREE.MathUtils.lerp(camera.fov,67+sf*20+fovKick*12,7*dt);
+  camera.updateProjectionMatrix();
+}
+
+/* ============================== HUD / MINIMAP ============================== */
+const elSpd=document.getElementById('spd'), elLap=document.getElementById('lap'),
+  elTime=document.getElementById('time'), elBest=document.getElementById('best'),
+  elPos=document.getElementById('pos'), elOrd=document.getElementById('posOrd'),
+  elBoost=document.getElementById('boostfill'), elAttrib=document.getElementById('attrib');
+const ORD=['st','nd','rd','th','th','th'];
+const mm=document.getElementById('minimap').getContext('2d');
+let mmScale,mmOX,mmOY;
+function mmCalib(){ let minX=1e9,maxX=-1e9,minZ=1e9,maxZ=-1e9;
+  for(const p of CP){ minX=Math.min(minX,p.x);maxX=Math.max(maxX,p.x);
+    minZ=Math.min(minZ,p.z);maxZ=Math.max(maxZ,p.z); }
+  mmScale=190/Math.max(maxX-minX,maxZ-minZ);
+  mmOX=15-minX*mmScale+(190-(maxX-minX)*mmScale)/2;
+  mmOY=15-minZ*mmScale+(190-(maxZ-minZ)*mmScale)/2; }
+mmCalib();
+function drawMinimap(){
+  mm.clearRect(0,0,220,220);
+  mm.strokeStyle='rgba(255,255,255,0.75)'; mm.lineWidth=2; mm.beginPath();
+  for(let i=0;i<=100;i++){ const p=curve.getPointAt(i/100);
+    const px=p.x*mmScale+mmOX, py=p.z*mmScale+mmOY;
+    i===0?mm.moveTo(px,py):mm.lineTo(px,py); }
+  mm.stroke();
+  for(let i=ships.length-1;i>=0;i--){ const s=ships[i];
+    const px=s.mesh.position.x*mmScale+mmOX, py=s.mesh.position.z*mmScale+mmOY;
+    mm.fillStyle='#'+s.color.toString(16).padStart(6,'0');
+    mm.beginPath(); mm.arc(px,py,s.isPlayer?4:2.6,0,7); mm.fill(); }
+}
+function updateHUD(dt){
+  const p=player(); if(!p) return;
+  elSpd.textContent=Math.round((p.speed+p.boost)*8.5);
+  elLap.textContent=Math.min(p.lap,TOTAL_LAPS);
+  elTime.textContent=fmt(state==='race'?raceTime-lapStart:0);
+  elBest.textContent=bestLap?fmt(bestLap):'--';
+  const order=[...ships].sort((a,b)=>b.t-a.t);
+  const pos=order.indexOf(p)+1;
+  elPos.textContent=pos; elOrd.textContent=ORD[pos-1];
+  elBoost.style.width=boostMeter+'%';
+  if(flashT>0){ flashT-=dt; if(flashT<=0&&state==='race'){ msg.textContent=''; msg.style.fontSize='74px'; } }
+}
+let lastAttrib=0;
+function updateAttrib(now){ if(!tiles||now-lastAttrib<2000) return; lastAttrib=now;
+  const a=tiles.getAttributions?.()||[];
+  elAttrib.textContent=(a[0]?.value||'')+' · Google'; }
+
+/* ============================== LOOP ============================== */
+let last=performance.now();
+function loop(now){
+  requestAnimationFrame(loop);
+  let dt=Math.min((now-last)/1000,0.05); last=now;
+  if(tiles){ camera.updateMatrixWorld();
+    tiles.setResolutionFromRenderer(camera,renderer); tiles.update(); }
+  snapTick(now); updateAttrib(now);
+  if(paused){ msg.textContent='PAUS'; msg.style.fontSize='52px';
+    renderer.render(scene,camera); return; }
+  if(state==='count'){
+    countT-=dt; const n=Math.ceil(countT);
+    if(countT<=0){ state='race'; msg.textContent='KÖR'; msg.style.fontSize='90px'; flashT=0.8;
+      sub.textContent=''; lapStart=0; raceTime=0; }
+    else { msg.textContent=n; msg.style.fontSize='110px';
+      sub.textContent='STOCKHOLM GRAND TOUR · 5 STADSDELAR · 1 VARV'; } }
+  if(state==='race') raceTime+=dt;
+  if(state!=='loading'){
+    for(const s of ships) stepShip(s,dt);
+    separate(dt); updateCamera(dt);
+    for(const pad of PADS) if(pad.pulse) pad.pulse.material.opacity=0.4+0.25*Math.sin(now*0.005);
+    updateHUD(dt); drawMinimap();
+    { const p=player(); const sf=(p.speed+p.boost)/MAXV;
+      drawSpeedFX(state==='race'?Math.min(0.7,Math.max(0,(sf-0.6)/0.4)):0); }
+  } else if(rootLoaded){
+    // loading: sväva över startområdet så tiles där streamas in snabbt
+    const a=loadStartTime?(now-loadStartTime)*0.0004:0;
+    frameAt(0,loadFrame); frameAt(0.015,lookFrame);
+    camera.position.copy(loadFrame.p).addScaledVector(loadFrame.up,110)
+      .addScaledVector(loadFrame.fwd,-60).addScaledVector(loadFrame.right,Math.sin(a)*28);
+    camera.lookAt(lookFrame.p);
+  } else {
+    const a=now*0.0001;
+    camera.position.set(Math.cos(a)*250,170,Math.sin(a)*250);
+    camera.lookAt(0,20,0);
+  }
+  updateAudio();
+  renderer.render(scene,camera);
+}
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
