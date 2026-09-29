@@ -1,5 +1,12 @@
 # TODO
 
+## Läge 2026-09-29, sent
+**Live (`ae0b0bd`):** stadsdelsportar (9/varv, båda teman), ENTERING-titel, ett unikt move per stadsdel på takten, Rez-musik som
+bygger ett lager per stadsdel ovanpå den deployade big beat-slingan (`SFX.rezLayers`). Ingen flourish vid upplockningar.
+Mobil: responsiv HUD, spelbart stående.
+**Öppet:** eget skepp syns inte i full fart på mobil (kamera eller pekkontroller, ej undersökt). Långholmens halvrulle visar
+undersidans emitters ljust ett ögonblick. Kims riktiga iPhone-test. Ion-tokenen.
+
 ## Läge 2026-09-29, kväll
 **Deployat:** `crafts` sammanslagen till `main` (`fd889c6`), pushad och live på stockholmwipeout.vercel.app. Båda temana
 verifierade i produktion utan fel; `CLAUDE.md`, `TODO.md`, `blender/` och pipelinen ger 404. Punkt 1 och 2 nedan är klara.
