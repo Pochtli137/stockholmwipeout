@@ -4,8 +4,10 @@
 **Live (`ae0b0bd`):** stadsdelsportar (9/varv, båda teman), ENTERING-titel, ett unikt move per stadsdel på takten, Rez-musik som
 bygger ett lager per stadsdel ovanpå den deployade big beat-slingan (`SFX.rezLayers`). Ingen flourish vid upplockningar.
 Mobil: responsiv HUD, spelbart stående.
-**Öppet:** eget skepp syns inte i full fart på mobil (kamera eller pekkontroller, ej undersökt). Långholmens halvrulle visar
-undersidans emitters ljust ett ögonblick. Kims riktiga iPhone-test. Ion-tokenen.
+**Fixat (`6be353c`):** skeppet syns på mobil i alla farter (kameran släpade till 25 m och FOV öppnades till 108°; nu fast avstånd
+och tak på FOV i mobilläge). Undersidans glöd tonas ner under moves.
+**Öppet:** Kims riktiga iPhone-test. Ion-tokenen. Maskinen mätte 30 fps 2026-09-29 kväll även på juni-versionen, alltså miljö,
+inte regression: mät igen på vilad maskin.
 
 ## Läge 2026-09-29, kväll
 **Deployat:** `crafts` sammanslagen till `main` (`fd889c6`), pushad och live på stockholmwipeout.vercel.app. Båda temana
