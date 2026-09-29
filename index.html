@@ -269,6 +269,7 @@
 <canvas id="minimap" width="240" height="240"></canvas>
 <div id="attrib"></div>
 <div id="rotate"><div><div class="ph"></div>VÄND TELEFONEN<small>STOCKHOLM WIPEOUT KÖRS LIGGANDE</small></div></div>
+<div id="grepT" class="hud" style="display:none;position:fixed;left:0;right:0;top:calc(33% + 90px);text-align:center;font-size:18px;letter-spacing:.2em;color:#ffd24a;cursor:pointer;z-index:12;pointer-events:auto"></div>
 <div id="touch"><div id="tpad"><div id="tknob"></div></div>
   <button class="tb" id="tbAbL">AB L</button><button class="tb" id="tbAbR">AB R</button>
   <button class="tb" id="tbThrust">GAS</button><button class="tb" id="tbBrake">BRAKE</button>
@@ -1313,6 +1314,7 @@ addEventListener('keydown',e=>{ keys[e.code]=true;
   if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code)) e.preventDefault();
   if(e.code==='KeyM') toggleAudio();
   if(e.code==='KeyP'&&(state==='count'||state==='race')) paused=!paused;   // pause only means something on the grid and in the race
+  if(e.code==='KeyG'&&paused) setHard(!HARD);
   if(e.code==='KeyR'&&snapDone) restart();
   if(e.code==='Space'&&state==='race'&&!paused) fireWeapon();
   ensureAudio(); });
@@ -1323,12 +1325,12 @@ const TOUCH={ steer:0, tilt:false, tiltSteer:0 };
 if(MOBILE){ const $=id=>document.getElementById(id), buzz=ms=>{ try{ navigator.vibrate&&navigator.vibrate(ms); }catch(e){} };
   addEventListener('pointerdown',()=>ensureAudio());   // the first tap unlocks audio
   const pad=$('tpad'), knob=$('tknob'); let padId=null, padX=0;
-  pad.addEventListener('pointerdown',e=>{ padId=e.pointerId; padX=pad.getBoundingClientRect().left+pad.offsetWidth/2; pad.setPointerCapture(e.pointerId); move(e); });
+  pad.addEventListener('pointerdown',e=>{ padId=e.pointerId; padX=pad.getBoundingClientRect().left+pad.offsetWidth/2; try{ pad.setPointerCapture(e.pointerId); }catch(_){} move(e); });
   const move=e=>{ if(e.pointerId!==padId) return; const dx=Math.max(-1,Math.min(1,(e.clientX-padX)/60)); TOUCH.steer=Math.sign(dx)*Math.pow(Math.abs(dx),1.3); knob.style.transform=`translateX(${dx*46}px)`; };
   pad.addEventListener('pointermove',move);
   const release=e=>{ if(e.pointerId!==padId) return; padId=null; TOUCH.steer=0; knob.style.transform=''; };
   pad.addEventListener('pointerup',release); pad.addEventListener('pointercancel',release);
-  const hold=(id,code,ms)=>{ const b=$(id); const on=e=>{ keys[code]=true; b.classList.add('on'); b.setPointerCapture(e.pointerId); if(ms) buzz(ms); e.preventDefault(); };
+  const hold=(id,code,ms)=>{ const b=$(id); const on=e=>{ keys[code]=true; b.classList.add('on'); try{ b.setPointerCapture(e.pointerId); }catch(_){} if(ms) buzz(ms); e.preventDefault(); };
     const off=()=>{ keys[code]=false; b.classList.remove('on'); };
     b.addEventListener('pointerdown',on); for(const ev of ['pointerup','pointercancel','lostpointercapture']) b.addEventListener(ev,off); };
   hold('tbThrust','ArrowUp'); hold('tbBrake','ArrowDown'); hold('tbTurbo','ShiftLeft',12); hold('tbAbL','KeyQ'); hold('tbAbR','KeyE');
@@ -1622,7 +1624,7 @@ function startRace(){
   if(actx){ mstep=0; nextStep=actx.currentTime+0.1; } // stegringen börjar om med loppet
   spawnShips(); camSnap=true; state='count'; countT=3.999; raceTime=0; lapTimes=[]; lapStart=0; resetKit();
 }
-function restart(){ document.getElementById('results').style.display='none'; paused=false; pauseMsg=null;
+function restart(){ document.getElementById('results').style.display='none'; paused=false; pauseMsg=null; wallT=0; wallHits=0; for(const x of ships) x.psi=0;
   if(actx){ mstep=0; nextStep=actx.currentTime+0.1; }
   spawnShips(); camSnap=true; state='count'; countT=3.999; raceTime=0; lapTimes=[]; lapStart=0; resetKit();
   msg.textContent=''; sub.innerHTML=''; }
@@ -1631,6 +1633,18 @@ function fmt(t){ const m=Math.floor(t/60),s=t-m*60; return m+':'+s.toFixed(2).pa
 
 /* ============================== FYSIK ============================== */
 const MAXV=66, ACCEL=27, BRAKE=46, DRAG=0.34;
+// GREPP HÅRT (?grepp=hart, or G in the pause) = FREE STEERING. The player's craft keeps its own heading: psi is the angle
+// between the craft and the track tangent. The track turns under you (psi drifts outward at curvature*v), so you must
+// steer through every bend; let go and you reach the outer wall in about a second. Grip caps how tight you can turn at
+// speed (k/v rad/s, k=40), the airbrakes add yaw and drag and lift the cap x1.35. The AI stays on rails, braking for the
+// same tighter corners. Normal mode is the old rail, unchanged.
+// Default OFF: live play is unchanged unless the player asks for it. ?grepp=normal forces it off.
+let HARD=(()=>{ const q=new URLSearchParams(location.search).get('grepp'); if(q==='hart'||q==='hard') return true; if(q==='normal') return false;
+  try{ return localStorage.getItem('sw_grepp')==='hart'; }catch(e){ return false; } })();
+function setHard(v){ HARD=!!v; try{ localStorage.setItem('sw_grepp',HARD?'hart':'normal'); }catch(e){} const g=document.getElementById('grepT'); if(g) g.textContent='G · GREPP: '+(HARD?'HÅRT':'NORMAL'); }
+const GRIP_K=()=>HARD?40:70;   // hard: also caps how tight the free-steering craft can turn at speed (k/v rad/s)
+let wallT=0, wallHits=0;   // hard mode accounting (and the checker's)
+const grepT=document.getElementById('grepT'); setHard(HARD); grepT.addEventListener('pointerdown',e=>{ e.preventDefault(); e.stopPropagation(); setHard(!HARD); });
 let boostMeter=50, shake=0, fovKick=0;
 // 2097 kit: shield energy (the walls eat it), one weapon slot, missiles in flight, flashes for the FX layer
 let energy=100, weapon=null, shieldT=0, boostFlash=0, hitFlash=0, critT=0; const missiles=[];
@@ -1652,6 +1666,22 @@ function stepMissiles(dt){ for(let i=missiles.length-1;i>=0;i--){ const m=missil
     if(hit){ m.tgt.speed*=m.tgt.ph?m.tgt.ph.hitKeep+0.1:0.35; m.tgt.hitT=1.2; sfxAt('hit',m.tgt.mesh.position); burstAt(m.tgt.mesh.position); if(m.tgt.mesh.position.distanceTo(camera.position)<200) shake=Math.min(shake+0.5,1.4); hitFlash=0.6; }
     if(hit||m.life<=0){ scene.remove(m.spr); m.spr.material.dispose(); missiles.splice(i,1); } } }
 function shipT(s){ return ((s.t%1)+1)%1; }
+// FREE STEERING (hard mode, player only). CURV's sign: + means the outside of the bend is +lat, so with no input the
+// track turning under the craft rotates psi toward +lat at curvature*v. psi_dot = omega + signed*v - align*psi.
+const FS={ align:0.25, auth:1.25, authV:170, abYaw:0.55, abDrag:12, abCap:1.35, cross:0.4 };
+function freeSteer(s,dt,steer,abL,abR){
+  const v=Math.max(0,s.speed+s.boost), kap=curvAhead(shipT(s),1).signed;
+  const auth=FS.auth/(1+v/FS.authV)*s.ph.steer;                 // steering falls off a little at very high speed
+  let w=steer*auth + ((abR?1:0)-(abL?1:0))*FS.abYaw;
+  const cap=GRIP_K()*s.ph.grip*((abL||abR)?FS.abCap:1)/Math.max(v,12);   // grip: no tighter than k/v
+  w=Math.max(-cap,Math.min(cap,w));
+  if(abL) s.speed-=FS.abDrag*dt; if(abR) s.speed-=FS.abDrag*dt;
+  s.psi=(s.psi||0)+(w+kap*v-FS.align*(s.psi||0))*dt;
+  s.psi=Math.max(-1.2,Math.min(1.2,s.psi));
+  s.speed-=s.speed*FS.cross*Math.sin(s.psi)**2*dt;               // crossways is slow
+  s.vlat=v*Math.sin(s.psi);                                     // lat moves with the heading (integrated below)
+  s.yaw=THREE.MathUtils.lerp(s.yaw,-s.psi,14*dt);               // the mesh points where the craft points
+  s.roll=THREE.MathUtils.lerp(s.roll,-w*0.35-steer*0.12,8*dt); }
 function stepShip(s,dt){
   if(s.done){ s.speed=Math.max(18,s.speed-10*dt); advance(s,dt); return; }
   if(s.isPlayer){
@@ -1666,6 +1696,8 @@ function stepShip(s,dt){
       if((keys['ShiftLeft']||keys['ShiftRight'])&&boostMeter>0){ s.speed+=38*s.ph.acc*dt; boostMeter=Math.max(0,boostMeter-45*dt); }
     }
     s.speed-=s.speed*DRAG*dt; s.speed=Math.max(0,Math.min(MAXV*s.ph.vmax+s.boost,s.speed));
+    if(HARD){ freeSteer(s,dt,steer,abL,abR); }
+    else {
     let latAcc=steer*44*s.ph.steer;
     if(abL) latAcc-=56, s.speed-=8*dt;
     if(abR) latAcc+=56, s.speed-=8*dt;
@@ -1677,20 +1709,20 @@ function stepShip(s,dt){
         latAcc+=Math.sign(pcv.signed)*Math.min(over,28)*2.6; } }
     s.vlat+=latAcc*dt; s.vlat-=s.vlat*4.2*dt;
     s.yaw=THREE.MathUtils.lerp(s.yaw,-s.vlat*0.035,10*dt);
-    s.roll=THREE.MathUtils.lerp(s.roll,-s.vlat*0.06-steer*0.18,8*dt);
+    s.roll=THREE.MathUtils.lerp(s.roll,-s.vlat*0.06-steer*0.18,8*dt); }
   } else {
     const tn0=shipT(s);
     let overtakeBias=0;
     if(state==='race'){
       // balanserat: kompetenta men inte perfekta. bromsar måttligt i kurvor, toppfart runt spelarens.
       const look=curvAhead(tn0, 22+s.speed*1.2);
-      const cornerV=look.m>1e-4 ? Math.sqrt((80+s.skill*28)*s.ph.grip/look.m) : 1e9;
+      const cornerV=look.m>1e-4 ? Math.sqrt((80+s.skill*28)*(HARD?GRIP_K()*1.3/70:1)*s.ph.grip/look.m) : 1e9;   // hard: the AI brakes and airbrakes into the same tighter grip
       let target=Math.min(s.aiMax*s.ph.vmax*(1+0.02*Math.sin(raceTime*0.5+s.aiPhase)), Math.max(32,cornerV));
       for(const o of ships){ if(o===s) continue;
         let dT=o.t-s.t; if(dT>0 && dT*TRACK_LEN<20 && Math.abs(o.lat-s.lat)<4.5){
           target+=7; // slipstream
           overtakeBias=(o.lat>=0?-1:1)*(HALF_W-2.5); break; } }
-      s.braking=target<s.speed-6; s.speed+=(target-s.speed)*(target<s.speed?3.6:1.9)*dt;
+      s.braking=target<s.speed-(HARD?3:6); s.speed+=(target-s.speed)*(target<s.speed?(HARD?4.6:3.6):1.9)*dt;
       // mild jakt om långt bakom spelaren, så fältet inte tappas helt (lätt gummiband)
       const gap=player().t-s.t;
       if(gap>0) s.speed+=Math.min(gap*0.9,1.4)*dt*10;
@@ -1705,11 +1737,19 @@ function stepShip(s,dt){
   }
   s.lat+=s.vlat*dt;
   const lim=HALF_W-2;
-  if(Math.abs(s.lat)>lim){ s.lat=Math.sign(s.lat)*lim; s.vlat*=-0.35; s.speed*=Math.pow(0.4,dt*3);
-    if(s.isPlayer) shake=Math.min(shake+0.4,1.2); }
+  if(Math.abs(s.lat)>lim){ const hitNow=!s.onWall; s.onWall=true; s.lat=Math.sign(s.lat)*lim;
+    if(HARD&&s.isPlayer){ const into=Math.sign(s.psi||0)===Math.sign(s.lat)?Math.abs(s.psi||0):0;
+      if(into>0.22){ if(hitNow){ s.speed*=0.72; s.boost*=0.4; energy=Math.max(0,energy-8); shake=Math.min(shake+0.9,1.4); wallHits++; }   // head-on: bounce and slow
+        s.psi=-s.psi*0.35; }
+      else { if(hitNow){ s.speed*=0.93; wallHits++; } s.psi*=0.3; }                                  // glancing: slide along it
+      s.vlat=0; s.speed*=Math.pow(0.55,dt); }
+    else { if(HARD&&hitNow){ s.speed*=0.86; s.boost*=0.5; s.vlat*=-0.6; } else s.vlat*=-0.35;       // the AI keep the rail's bounce
+      s.speed*=Math.pow(HARD?0.3:0.4,dt*3); }
+    if(s.isPlayer){ shake=Math.min(shake+0.4,1.2); if(state==='race') wallT+=dt; } }
+  else s.onWall=false;
   s.boost=Math.max(0,s.boost-22*dt);
   if(s.isPlayer){ const wall=Math.abs(s.lat)>=HALF_W-2.01;
-    if(wall&&shieldT<=0) energy=Math.max(0,energy-26*s.ph.drain*dt); else energy=Math.min(100,energy+1.8*dt);
+    if(wall&&shieldT<=0) energy=Math.max(0,energy-(HARD?40:26)*s.ph.drain*dt); else energy=Math.min(100,energy+1.8*dt);
     shieldT=Math.max(0,shieldT-dt);
     if(energy<=0){ s.speed=Math.min(s.speed,MAXV*s.ph.vmax*0.7); critT+=dt; } else critT=0;
     if(!weapon) for(const w of WPADS){ let dT=Math.abs(shipT(s)-w.t); dT=Math.min(dT,1-dT); if(dT*TRACK_LEN<4&&Math.abs(s.lat-w.lat)<3.2){ pickWeapon(); break; } } }
@@ -1722,7 +1762,7 @@ function stepShip(s,dt){
 }
 function advance(s,dt){
   const prev=shipT(s);
-  s.t+=(s.speed+s.boost)*dt/TRACK_LEN;
+  s.t+=(s.speed+s.boost)*(HARD&&s.isPlayer?Math.cos(s.psi||0):1)*dt/TRACK_LEN;
   const now=shipT(s);
   if(prev>0.9&&now<0.1&&state==='race'){
     if(!s.crossedStart){ s.crossedStart=true; if(s.isPlayer) lapStart=raceTime; }
@@ -1793,8 +1833,9 @@ function updateCamera(dt){
   const p=player(); if(!p) return;
   const f=p.frame;
   // platta ut framåtriktningen så kameran inte stirrar rakt upp i branta backar
-  const backLevel=new THREE.Vector3(-f.fwd.x,-f.fwd.y*0.3,-f.fwd.z).normalize();
-  const fwdLevel=new THREE.Vector3(f.fwd.x,f.fwd.y*0.3,f.fwd.z).normalize();
+  const ps=HARD?(p.psi||0)*0.7:0, hx=f.fwd.x*Math.cos(ps)+f.right.x*Math.sin(ps), hz=f.fwd.z*Math.cos(ps)+f.right.z*Math.sin(ps);   // hard: the chase camera swings with the craft's own heading
+  const backLevel=new THREE.Vector3(-hx,-f.fwd.y*0.3,-hz).normalize();
+  const fwdLevel=new THREE.Vector3(hx,f.fwd.y*0.3,hz).normalize();
   // PHONES: a stiff chase at a fixed distance. The desktop follow lags ~2x its offset at top speed (12 m -> 25 m) and the
   // speed FOV opens to ~105 deg; on a phone that shrank the craft to 4 % of the width. Here the lag stays under a metre,
   // the lens is capped, and the camera sits a touch higher so the craft rides in the lower-middle third above the thumbs.
@@ -1903,7 +1944,8 @@ function loop(now){
   if(state==='select'){ updateAudio(); selectTick(dt); return; }
   if(paused){ if(!pauseMsg) pauseMsg={t:msg.textContent,fs:msg.style.fontSize,c:msg.className};   // what the banner said before the pause
     msg.className='hud'; msg.textContent='PAUSE'; msg.style.fontSize='64px';
-    composer.render(); return; }
+    grepT.style.display='block'; composer.render(); return; }
+  if(grepT.style.display!=='none') grepT.style.display='none';
   if(pauseMsg){ if(msg.textContent==='PAUSE'){ msg.textContent=pauseMsg.t==='PAUSE'?'':pauseMsg.t; msg.style.fontSize=pauseMsg.fs; msg.className=pauseMsg.c; }
     pauseMsg=null; }   // resumed: give the banner back, never leave PAUSE on screen
   if(state==='count'){
@@ -1946,6 +1988,7 @@ if(location.search.includes('check')) window.__SUN=SUN_DIR;
 window.__theme=THEME;
 if(location.search.includes('check')) window.__sw={
   frameAt, mkFrame, hitsAt:(x,z)=>tiles?hitsAt(x,z):[], tilesIdle:()=>tiles?tilesIdle():true, player, ships:()=>ships, keys,
+  stats:()=>({ hard:HARD, energy, wallT, wallHits, raceTime, state }), setHard, grip:()=>GRIP_K(),
   passes:()=>composer.passes, bloomPass:bloom, flickN:()=>flickMats.length, state:()=>state, len:()=>TRACK_LEN, HALF_W, MAXV, curvAhead, camera, setPaused:v=>{ paused=v; },
   placeAt(t,lat=0){ const p=player(); p.t=t; p.lat=lat; p.speed=0; p.vlat=0; advance(p,0); camSnap=true; updateCamera(1/60); camera.updateMatrixWorld(); },
   // where a material sits in the track glb: the first triangle of its group (a board, a wall chunk), for close-up shots

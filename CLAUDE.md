@@ -20,6 +20,9 @@ Publikt repo `Pochtli137/stockholmwipeout`. Live https://stockholmwipeout.vercel
   (`FX.particles`, `SFX.padSound`, `SFX.newPlayerEngine`, `SFX.spatial`, `SFX.hangar`).
 - **Runor (yngre futharken) i stället för katakana**, Noto Sans Runic inbäddad.
 - WebGPU provat och avvisat: tiles-biblioteket kräver WebGLRenderer.
+- **Grepp hårt = fri styrning** bakom `?grepp=hart` (och G i pausen), av som standard. Kim: räls-versionen "railar ändå".
+  Detaljer i `wo2097/pipeline/README.md`.
+- **Used-asfalten är grå** (inte brun), med spricknät, lagningar och påhittade taggar i ytterfilerna, aldrig över plattorna.
 
 ## Grenar
 - `main`: live, neon-2097-versionen.

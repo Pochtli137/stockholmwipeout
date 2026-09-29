@@ -126,12 +126,12 @@ def fbm(h,w,cell,seed,oct=5):
     for k in range(oct): c=max(1,cell>>k); s+=a*vnoise(h,w,c,seed+k*31); t+=a; a*=0.5
     return s/t
 def to_im(a): return Image.fromarray(np.clip(a,0,255).astype(np.uint8))
-def grime(im,amt=0.45,seed=1,cell=64,rust=0.0,runs=0.0):
+def grime(im,amt=0.45,seed=1,cell=64,rust=0.0,runs=0.0,tint=(0.62,0.53,0.42)):
     """darken the pores, water stains, rust runs from the top edge: the look of a surface left outside since 1997"""
     a=np.asarray(im.convert('RGB')).astype(np.float32); h,w=a.shape[:2]
     g=fbm(h,w,cell,seed); big=fbm(h,w,cell*4,seed+9,3)
     a*=(1-amt)+amt*(0.55+0.7*g)[...,None]
-    stain=np.clip((big-0.55)/0.25,0,1)[...,None]*amt; a=a*(1-stain)+a*np.array([0.62,0.53,0.42])*stain
+    stain=np.clip((big-0.55)/0.25,0,1)[...,None]*amt; a=a*(1-stain)+a*np.array(tint)*stain
     if runs>0:
         cols=RNG.random(w)<runs/60; ln=(RNG.random(w)*0.8+0.2)*h
         yy=np.arange(h)[:,None]; m=(cols[None,:]&(yy<ln[None,:])).astype(np.float32)*(1-yy/h)
@@ -177,19 +177,28 @@ for P in PARTIES: P['k']=runes(P['n']); P['neon']=tuple(min(255,int(c*1.15+30)) 
 
 # ============================================================ the deck: old Slussen concrete and asphalt
 # u across the 17 m track, v along it, one tile = 32 m: 1024 x 2048 px, 1.7 cm a pixel
+# Kim 2026-09-29: GREY, not brown. The albedo is neutral asphalt and concrete grey (the sodium light may warm it),
+# with crack networks, patches, and invented graffiti tags here and there in the outer lanes (never over the pads).
 w,h=1024,2048
 agg=fbm(h,w,48,3); fine=RNG.random((h,w)).astype(np.float32)
-base=92+44*agg+18*(fine-0.5)
-a=np.stack([base*1.03,base*0.99,base*0.92],-1)
+base=96+46*agg+18*(fine-0.5)
+a=np.stack([base*0.99,base*1.0,base*1.03],-1)
 im=to_im(a); d=ImageDraw.Draw(im,'RGBA'); r=random.Random(11)
 for _ in range(34):   # patches: newer black asphalt and older grey concrete, cut square
     x=r.randrange(w); y=r.randrange(h); pw=r.randint(80,420); ph=r.randint(60,500)
-    d.rectangle([x,y,x+pw,y+ph],fill=(38,36,34,150) if r.random()<0.55 else (150,146,136,95))
-    d.rectangle([x,y,x+pw,y+ph],outline=(20,19,18,120),width=2)
-for _ in range(110):  # cracks
-    x,y=r.randrange(w),r.randrange(h); pts=[(x,y)]
-    for k in range(r.randint(5,12)): x+=r.randint(-40,40); y+=r.randint(-60,60); pts.append((x,y))
-    d.line(pts,fill=(18,16,15,170),width=r.choice((1,2,2,3)))
+    d.rectangle([x,y,x+pw,y+ph],fill=(40,41,43,150) if r.random()<0.55 else (150,151,152,95))
+    d.rectangle([x,y,x+pw,y+ph],outline=(20,20,21,120),width=2)
+def crack(x,y,n,depth=0):   # a branching crack: the trunk wanders, now and then it forks
+    pts=[(x,y)]
+    for k in range(n):
+        x+=r.randint(-34,34); y+=r.randint(-52,52); pts.append((x,y))
+        if depth<2 and r.random()<0.22: crack(x,y,max(3,n//2),depth+1)
+    d.line(pts,fill=(14,14,15,190 if depth==0 else 150),width=(3 if depth==0 else 2) if r.random()<0.6 else 1)
+for _ in range(140): crack(r.randrange(w),r.randrange(h),r.randint(5,12))
+for _ in range(9):    # alligator cracking: a tight net of cells where the old asphalt gave up
+    cx,cy=r.randrange(60,w-60),r.randrange(h); R=r.randint(50,120)
+    for k in range(r.randint(14,24)):
+        x0,y0=cx+r.randint(-R,R),cy+r.randint(-R,R); d.line([(x0,y0),(x0+r.randint(-26,26),y0+r.randint(-26,26))],fill=(16,16,17,170),width=2)
 for _ in range(28):   # skid marks along the racing line
     x=r.randint(220,800); y=r.randrange(h); L=r.randint(200,900); cx=x+r.randint(-60,60)
     for o in (-22,22): d.line([(x+o,y),(cx+o,y+L//2),(x+o+r.randint(-40,40),y+L)],fill=(10,9,8,r.randint(60,120)),width=r.randint(14,22))
@@ -213,7 +222,22 @@ for y in range(64,h,h//6):   # drain grates by both kerbs
         d.rectangle([x,y,x+60,y+34],fill=(26,24,22,255))
         for k in range(1,6): d.rectangle([x+k*10,y+3,x+k*10+3,y+31],fill=(70,66,60,255))
         d.rectangle([x,y,x+60,y+34],outline=(52,48,44,255),width=2)
-im=grime(im,0.35,5,96)
+# graffiti, sparse and invented (never real crews): tags and one throw-up per tile, painted in the OUTER lanes only
+# (u 0.08-0.25 and 0.75-0.92), clear of the pads, which sit at -3.5, 0 and +3.5 m (u 0.29-0.71)
+TAGS=['SLSN','KRÅK','NOLL7','BRÖÖL','ZKRAP','MÖRK','FJÄLL','T-BANA','GRÅ','VÄGSKÄL']
+def tag(txt,cx,cy,sz,col,rot,throw=False):
+    t=Image.new('RGBA',(sz*len(txt)+60,int(sz*1.9)),(0,0,0,0)); td=ImageDraw.Draw(t); f=orb(sz,900)
+    if throw: td.text((t.width//2,t.height//2),txt,font=f,fill=col+(215,),anchor='mm',stroke_width=max(4,sz//7),stroke_fill=(18,18,20,230))
+    else:
+        td.text((t.width//2,t.height//2),txt,font=f,fill=col+(200,),anchor='mm')
+        for k in range(r.randint(1,3)):   # a drip or two off the tag
+            x0=t.width//2+r.randint(-sz,sz); y0=t.height//2+sz//3; td.line([(x0,y0),(x0,y0+r.randint(sz//2,sz))],fill=col+(150,),width=3)
+    t=t.rotate(rot,expand=True,resample=Image.BICUBIC); im.paste(t,(int(cx-t.width/2),int(cy-t.height/2)),t)
+for k in range(4):
+    side=k%2; cx=r.uniform(.10,.23)*w if side==0 else r.uniform(.77,.90)*w; cy=r.uniform(.08,.92)*h
+    col=r.choice([(230,230,232),(255,70,120),(80,200,255),(255,210,40),(120,255,140)])
+    tag(r.choice(TAGS),cx,cy,r.randint(44,70),col,r.choice([90,-90])+r.uniform(-12,12),throw=(k==0))
+im=grime(im,0.35,5,96,tint=(0.56,0.56,0.58))
 save(im,'track.jpg',88)
 save(Image.new('RGB',(64,64),(0,0,0)),'track_e.jpg')   # the deck is unlit now: no glow in the paint
 

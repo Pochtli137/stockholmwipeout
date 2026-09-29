@@ -9,7 +9,7 @@
 const PW=process.env.PW||'/Users/kimdahlroth/.nvm/versions/node/v25.1.0/lib/node_modules/@playwright/cli/node_modules/playwright';
 const {chromium}=require(PW); const fs=require('fs'); const path=require('path');
 const OUT=process.argv[2]||path.join(__dirname,'check'); fs.mkdirSync(OUT,{recursive:true});
-const URL='http://localhost:8820/index.html?check&theme='+(process.env.THEME||'used');   // THEME=neon|used
+const URL='http://localhost:8820/index.html?check&theme='+(process.env.THEME||'used')+'&grepp='+(process.env.GREPP||'normal');   // THEME=neon|used, GREPP=normal|hart
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 async function open(b){ const p=await b.newPage({viewport:{width:1440,height:900}}); const errs=[];
   p.on('pageerror',e=>errs.push(e.message)); p.on('console',m=>{ if(m.type()==='error'&&!/404/.test(m.text())) errs.push(m.text()); });
@@ -58,7 +58,16 @@ async function open(b){ const p=await b.newPage({viewport:{width:1440,height:900
           const v=pl.speed+pl.boost, k=__sw.curvAhead(((pl.t%1)+1)%1,1).m; S.latg=Math.max(S.latg,v*v*k/9.81);
           if(S.frames%3===0&&__sw.segHit(pl.mesh.position,__sw.camera.position)!==null) S.occ++;
           // the bot: full throttle, hold the middle of the track
-          __sw.keys['ArrowUp']=true; __sw.keys['ArrowLeft']=pl.lat>0.8; __sw.keys['ArrowRight']=pl.lat<-0.8; }
+          __sw.keys['ArrowUp']=true;
+          if(!__sw.stats().hard){ __sw.keys['ArrowLeft']=pl.lat>0.8; __sw.keys['ArrowRight']=pl.lat<-0.8; }
+          else { // hard mode is free steering: feed-forward the bend, PD on heading and lat, airbrake when steering runs out
+            const K=__sw.keys, L=__sw.len(), t=((pl.t%1)+1)%1, v=pl.speed+pl.boost; K.ArrowLeft=K.ArrowRight=K.KeyQ=K.KeyE=false;
+            const kf=0.5*__sw.curvAhead(t,1).signed+0.5*__sw.curvAhead((t+v*0.25/L)%1,1).signed;
+            const auth=1.25/(1+v/170)*(pl.ph?pl.ph.steer:1), cap=__sw.grip()*(pl.ph?pl.ph.grip:1)/Math.max(v,12);
+            const w=-kf*v+4*(Math.max(-0.3,Math.min(0.3,-pl.lat*0.05))-(pl.psi||0))+0.25*(pl.psi||0); let sc=w/auth;
+            if(Math.abs(w)>cap*0.95||Math.abs(sc)>1){ if(w<0) K.KeyQ=true; else K.KeyE=true; sc=(w-(w<0?-0.55:0.55))/auth; }
+            if(Math.abs(kf*v)>cap*1.3) K.ArrowUp=false;
+            if(sc<-0.15) K.ArrowLeft=true; else if(sc>0.15) K.ArrowRight=true; } }
         if(__sw.state()==='done') S.done=true; requestAnimationFrame(tick); };
       requestAnimationFrame(tick); });
     const midShots=[0.30,0.52,0.74]; let ms=0, midSpeed=[];

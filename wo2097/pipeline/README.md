@@ -221,3 +221,14 @@ Render profile on phones: pixel ratio ≤ 1.5, MSAA 2, tiles errorTarget 20 and 
 `manifest.webmanifest` + apple meta: "Add to Home Screen" runs full screen in landscape.
 Checked in Playwright emulation (iPhone 15 Pro and Pixel 8, landscape): a full lap driven with the touch pad and GAS only
 (147 s, no errors), swipes, taps, pause, the portrait veil; desktop check_lap still passes in both themes.
+
+
+## Grepp hårt: fri styrning (`?grepp=hart`, G i pausen, av som standard)
+Normalläget är den gamla rälsen: skeppet följer banans riktning och styrningen flyttar det bara i sidled. På det här varvet
+(minsta radie 120 m) biter greppgränsen aldrig, så man behöver inte styra. **Grepp hårt** ger spelaren en egen kurs:
+psi är vinkeln mellan skeppet och banans tangent, `t += v·cos psi`, `lat += v·sin psi`, och banan vrider sig under skeppet
+(`psi' = omega + krökning·v − 0,25·psi`). Släpper man spaken i en kurva i full fart når man ytterväggen på 0,7–1,2 s
+(uppmätt i kurvor på 160, 200 och 300 m). Greppet begränsar hur snävt man kan svänga (`k/v` rad/s, k = 40), luftbromsarna
+ger extra gir och broms och lyfter taket 1,35 gånger. Väggen: rakt in studsar och kostar fart och sköld, snett glider längs.
+Kameran följer skeppets riktiga kurs till 70 %. AI:n går kvar på räls men bromsar för samma snävare kurvor.
+Konstanterna står i `FS` i index.html. `check_lap.cjs` tar `GREPP=hart` och kör då en styrande bot.
