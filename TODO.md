@@ -1,5 +1,10 @@
 # TODO
 
+## Läge 2026-09-29, natt
+**Tillbakarullat (Kim: "det här funkade inte"):** stadsdelsportar, ENTERING-titlar, flourishes/moves och Rez-musiken
+(revert av `ae0b0bd` och `fd889c6`, historiken kvar). Mobilfixarna (`7052cc5`, kameran i `6be353c`) är kvar. Deployat.
+**Lärdom:** Rez-idén provades rakt in i spelet utan jämförelse först; nästa gång en mock eller provsida innan bygget.
+
 ## Läge 2026-09-29, sent
 **Live (`ae0b0bd`):** stadsdelsportar (9/varv, båda teman), ENTERING-titel, ett unikt move per stadsdel på takten, Rez-musik som
 bygger ett lager per stadsdel ovanpå den deployade big beat-slingan (`SFX.rezLayers`). Ingen flourish vid upplockningar.
