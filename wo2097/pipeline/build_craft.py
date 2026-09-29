@@ -161,8 +161,9 @@ def flaps(coll,hinges,size,mA,thick=0.06):
 # ------------------------------------------------------------------ the six craft
 def materials(i):
     T=TEAMS[i]
-    return dict(A=mat(f'paintA_{i}',col=srgb(T['a']),rough=0.32,metal=0.25,coat=0.7),
-                B=mat(f'paintB_{i}',col=srgb(T['b']),rough=0.38,metal=0.35,coat=0.5),
+    # USED UNIVERSE: a season of racing on the paint: duller, the clear coat worn thin (the decals carry chips and grime)
+    return dict(A=mat(f'paintA_{i}',col=tuple(c*0.86 for c in srgb(T['a'])),rough=0.52,metal=0.2,coat=0.22),
+                B=mat(f'paintB_{i}',col=tuple(c*0.86 for c in srgb(T['b'])),rough=0.56,metal=0.3,coat=0.15),
                 K=mat('carbon',col=(0.018,0.02,0.026),rough=0.42,metal=0.55),
                 M=mat('metal',col=(0.52,0.54,0.58),rough=0.28,metal=1.0),
                 G=mat('canopy',col=(0.01,0.025,0.06),rough=0.06,metal=0.85,coat=1.0),
@@ -170,8 +171,8 @@ def materials(i):
                 N=mat(f'neon_craft_{i}',col=(0,0,0),emit_col=srgb(T['eng']),emit=3.5),
                 R=mat('neon_tail',col=(0,0,0),emit_col=srgb('#ff2030'),emit=4.0),
                 C=mat(f'accent_{i}',col=srgb(T['acc']),rough=0.35,metal=0.3,coat=0.6),
-                L=mat(f'livery_{i}',tex=f'livery_{i}.jpg',rough=0.4,metal=0.1),
-                H=mat(f'hull_{i}',tex=f'hull_{i}.jpg',rough=0.4,metal=0.1),
+                L=mat(f'livery_{i}',tex=f'livery_{i}.jpg',rough=0.58,metal=0.1),
+                H=mat(f'hull_{i}',tex=f'hull_{i}.jpg',rough=0.58,metal=0.1),
                 Z=mat('hazard',tex='hazard.jpg',rough=0.5))
 ORDER=['A','B','K','M','G','E','N','C','R']   # material slots of the body meshes
 def S(k): return ORDER.index(k)
