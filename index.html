@@ -1198,7 +1198,7 @@ const keys={};
 addEventListener('keydown',e=>{ keys[e.code]=true;
   if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code)) e.preventDefault();
   if(e.code==='KeyM') toggleAudio();
-  if(e.code==='KeyP') paused=!paused;
+  if(e.code==='KeyP'&&(state==='count'||state==='race')) paused=!paused;   // pause only means something on the grid and in the race
   if(e.code==='KeyR'&&snapDone) restart();
   if(e.code==='Space'&&state==='race'&&!paused) fireWeapon();
   ensureAudio(); });
@@ -1390,7 +1390,7 @@ window.__mus=()=>{ if(!musAnalyser) return {state:actx?actx.state:'no actx'};
 window.__setbar=(b)=>{ mstep=b*16; return {bar:b}; };
 
 /* ============================== RACE STATE ============================== */
-let state='loading', countT=3.999, raceTime=0, paused=false;
+let state='loading', countT=3.999, raceTime=0, paused=false, pauseMsg=null;
 let lapTimes=[], lapStart=0, bestLap=null;
 const msg=document.getElementById('msg'), sub=document.getElementById('sub');
 /* ============================== CRAFT SELECT ==============================
@@ -1474,7 +1474,7 @@ function startRace(){
   if(actx){ mstep=0; nextStep=actx.currentTime+0.1; } // stegringen börjar om med loppet
   spawnShips(); camSnap=true; state='count'; countT=3.999; raceTime=0; lapTimes=[]; lapStart=0; resetKit();
 }
-function restart(){ document.getElementById('results').style.display='none';
+function restart(){ document.getElementById('results').style.display='none'; paused=false; pauseMsg=null;
   if(actx){ mstep=0; nextStep=actx.currentTime+0.1; }
   spawnShips(); camSnap=true; state='count'; countT=3.999; raceTime=0; lapTimes=[]; lapStart=0; resetKit();
   msg.textContent=''; sub.innerHTML=''; }
@@ -1738,8 +1738,11 @@ function loop(now){
     tiles.setResolutionFromRenderer(camera,renderer); tiles.update(); }
   snapTick(now); updateAttrib(now);
   if(state==='select'){ updateAudio(); selectTick(dt); return; }
-  if(paused){ msg.textContent='PAUSE'; msg.style.fontSize='64px';
+  if(paused){ if(!pauseMsg) pauseMsg={t:msg.textContent,fs:msg.style.fontSize,c:msg.className};   // what the banner said before the pause
+    msg.className='hud'; msg.textContent='PAUSE'; msg.style.fontSize='64px';
     composer.render(); return; }
+  if(pauseMsg){ if(msg.textContent==='PAUSE'){ msg.textContent=pauseMsg.t==='PAUSE'?'':pauseMsg.t; msg.style.fontSize=pauseMsg.fs; msg.className=pauseMsg.c; }
+    pauseMsg=null; }   // resumed: give the banner back, never leave PAUSE on screen
   if(state==='count'){
     countT-=dt; const n=Math.ceil(countT); const band=document.getElementById('band');
     lightMats.forEach((m,i)=>{ if(!m) return; const lit=i<Math.min(5,Math.floor((4-countT)/4*5)+1); m.emissive.setRGB(lit?TH.countK:0.15,0,0); });   // used: 1.6 (under its lower bloom threshold 4 floods the frame)
