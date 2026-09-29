@@ -1,0 +1,19 @@
+# TODO
+
+## Läge 2026-09-29 (överlämning)
+**Gjort:** Blender-bygge ovanpå Googles Stockholm: bana (120 m minsta radie, lyft fri från tiles, 0 intrång), sex Blender-skepp,
+temaval NEON/USED, skeppsval, used universe med pappersaffischer, svenska varumärkes- och partiparodier, runor i stället för
+katakana, himmel. Ljud, partiklar och gnistor tillbaka till det deployade (flaggor av). Allt på grenen `crafts`, inte pushat.
+**Beslutat (Kim):** staden är Google; två teman väljs först; used = papper, ingen neon; läsbarhet som neonbanan; de åtta
+riksdagspartierna lika, utan Direktdemokraterna; ljudet som deployat; **"deploya sen allting"** när agentkön är klar.
+**Nästa steg:**
+1. Agentkön (startad 2026-09-29 i sessionen, pågår): skeppsvalskameran +25° (klar, `235803f`), avskurna annonser + parodiloggor
+   på partiannonserna (pågår, ocommittat: `faux_logos.py`, `make_textures.py`, `build.py`, `neon/build.py`, `index.html`),
+   PAUSE-texten som ligger kvar, landskapsmobil, stadsdelstitlar "ENTERING KUNGSHOLMEN" + Rez-segerpose (inget nytt ljud).
+   Om sessionen dog: läs `git log crafts` och diffen, fortsätt där det slutade.
+2. Kontrollera själv (skärmdumpar, `node wo2097/pipeline/check_lap.cjs` i båda temana), slå ihop `crafts` → `main`, pusha,
+   `vercel --prod --yes`, verifiera att livesidan är identisk och att `blender/` ger 404.
+3. Kim provar mobilen på riktig iPhone (på livesajten, HTTPS gör lutningsstyrning möjlig).
+**Overifierat:** motorljud och 3D-ljud är bara kontrollerade via parametrar, ingen har lyssnat. Tiles-minnet på riktig iPhone.
+Lutningsstyrning bara via HTTPS.
+**Kim gör:** rotera Cesium ion-tokenen i `config.js` (publikt repo sedan juni).
