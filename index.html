@@ -1453,9 +1453,10 @@ function selectTick(dt){ if(!SHIP_PROTOS) return;
   let push=0; if(selLock){ selLock+=dt; push=Math.min(1,selLock/0.9); cur.rotation.y=selSpin+push*0.8;
     if(selLock>1.0){ document.getElementById('select').classList.remove('on'); document.body.classList.remove('selecting'); selectDone=true; selLock=0; startRace(); } }
   // the craft sits right of centre, clear of the panel: the camera looks straight ahead from a point left of it
-  // seen 25° more from above than the old near-level view (Kim): same distance to the craft, only the elevation rises
-  const narrow=innerWidth/innerHeight<1.7, off=(narrow?-6.2:-4.6)*(1-push), d0=narrow?27:24;
-  const el=Math.atan2(4.0,d0)+25*Math.PI/180, R=Math.hypot(4.0,d0)*1.25-push*12;   // from above the turntable reads larger: back off to keep the old size
+  // a little from above (Kim: +25° was too much, now about +13.5° over the old near-level view), and closer: the craft
+  // fills about 18 % more of the frame than it did, still right of the stats panel
+  const narrow=innerWidth/innerHeight<1.7, off=(narrow?-5.2:-4.6)*(1-push), d0=narrow?27:24;
+  const el=Math.atan2(4.0,d0)+13.5*Math.PI/180, R=Math.hypot(4.0,d0)*(narrow?1.14:1.08)-push*9;
   hCam.position.set(off,-0.4+R*Math.sin(el),R*Math.cos(el)); hCam.lookAt(off,-0.4,0);
   renderer.setRenderTarget(null); renderer.render(hScene,hCam); }
 document.getElementById('selPrev').onclick=()=>{ ensureAudio(); selGo(-1); };
