@@ -13,6 +13,11 @@ def log(*a): print(f'[{time.time()-T0:6.1f}s]',*a,flush=True)
 bpy.ops.wm.read_factory_settings(use_empty=True); scene=bpy.context.scene
 D=json.load(open(os.path.join(OUT,'track.json')))
 FR=np.array([[np.nan if v is None else v for v in f] for f in D['frames']],np.float64); SEG=len(FR); L=D['trackLen']; HW=D['halfW']
+# the survey, per frame and relative to the track surface: the highest tile hit at the arch posts (+-11.5 m) and at the
+# billboards (+-18 m). Negative = below the deck. Set pieces only go where the tiles leave room for them.
+CLR=np.array([[np.nan if v is None else v for v in c] for c in D.get('clear',[[None]*4]*SEG)],np.float64)
+NB=len([f for f in os.listdir(TEX) if f.startswith('bill_')])
+def clear_at(t): return CLR[int(round((t%1.0)*SEG))%SEG]
 BAR_H, SLAB = 1.7, 0.9
 def G2B(v): return (v[0],-v[2],v[1])      # game frame -> Blender (glTF export maps it back)
 
@@ -95,7 +100,7 @@ for i in range(SEG):
         a0=p0+r0*sd*e0; a1=p1+r1*sd*e1
         U.quad(tuple(a0-u0*SLAB),tuple(a1-u1*SLAB),tuple(a1),tuple(a0),m_under)
         # barrier wall (text runs forward on the left wall, backwards on the right so it reads from the track)
-        w0=p0+r0*sd*(HW+0.2); w1=p1+r1*sd*(HW+0.2); ua,ub=(i*dl/26,(i+1)*dl/26) if sd<0 else (-(i*dl/26),-((i+1)*dl/26))
+        w0=p0+r0*sd*(HW+0.2); w1=p1+r1*sd*(HW+0.2); ua,ub=(i*dl/104,(i+1)*dl/104) if sd<0 else (-(i*dl/104),-((i+1)*dl/104))   # one 8192 px barrier texture per 104 m
         B.quad(tuple(w0),tuple(w1),tuple(w1+u1*BAR_H),tuple(w0+u0*BAR_H),m_barL if sd<0 else m_barR,((ua,0),(ub,0),(ub,1),(ua,1)))
         mn=m_neonL if sd<0 else m_neonR; n0=p0+r0*sd*(HW+0.15); n1=p1+r1*sd*(HW+0.15)
         for h0,h1 in ((BAR_H,BAR_H+0.22),(0.04,0.16)): N.quad(tuple(n0+u0*h0),tuple(n1+u1*h0),tuple(n1+u1*h1),tuple(n0+u0*h1),mn)
@@ -139,25 +144,47 @@ for sx in (-1,1):
 M.box(T,0,14.2,0,W2*2+2,3.4,2.2,m_metal); sign(M,T,W2*2+1.6,3.0,14.2,1.12,'gantry.jpg','gantry.jpg')
 for i in range(5): M.box(T,(i-2)*2.2,11.8,1.25,1.1,1.1,0.4,mat(f'light_{i}',col=(0.02,0,0),emit_col=(0.3,0.0,0.0),emit=1.0))
 setobs.append(M.build('gantry',SET))
-for k,A in enumerate(D['arches']):
-    if A['d']>260: log('arch skipped',A['n'],round(A['d'])); continue
-    p,r,u,fw,_=at(A['t']); T=local(p,r,u,fw); M=MB(); W2=HW+3.5; b=A['b']
+def arch_free(t):   # both posts clear: nothing from the tiles above the slab bottom where they stand
+    c=clear_at(t); return all(np.isnan(v) or v< -1.2 for v in c[:2])
+ARCHES=[dict(n=A['n'],t=A['t'],b=A['b'],d=A['d']) for A in D['arches']]
+for k in range(8):   # sponsor arches around the lap, away from the landmarks and the start
+    t=(k+0.55)/8
+    if all(min(abs(t-A['t']),1-abs(t-A['t']))*L>600 for A in ARCHES): ARCHES.append(dict(n=f'SPONSOR_{k}',t=t,b=(k*5+3)%NB,d=0))
+placed=0
+for A in ARCHES:
+    if A['d']>260: log('arch skipped (landmark too far from the lap)',A['n'],round(A['d'])); continue
+    t=None
+    for dm in range(0,160,4):
+        for sg in (1,-1):
+            tt=(A['t']+sg*dm/L)%1.0
+            if arch_free(tt): t=tt; break
+        if t is not None: break
+    if t is None: log('arch skipped (tiles at the posts)',A['n']); continue
+    p,r,u,fw,_=at(t); T=local(p,r,u,fw); M=MB(); W2=HW+3.5; b=A['b']
     for sx in (-1,1): M.box(T,sx*W2,6,0,1.3,12,1.3,m_metal); M.box(T,sx*W2,1.6,0,1.4,1.0,1.4,m_haz)
-    M.box(T,0,11.4,0,W2*2+2,3.0,1.6,m_metal); sign(M,T,W2*2+1.4,2.6,11.4,0.82,f'arch_{b}.jpg',f'arch_{(b+5)%8}.jpg')
-    M.box(T,0,9.8,0,W2*2+2,0.2,1.8,m_neonY); setobs.append(M.build('arch_'+A['n'].lower(),SET))
-nb=int(L/330); M=MB()
+    M.box(T,0,11.4,0,W2*2+2,3.0,1.6,m_metal); sign(M,T,W2*2+1.4,2.6,11.4,0.82,f'arch_{b}.jpg',f'arch_{(b+7)%NB}.jpg')
+    M.box(T,0,9.8,0,W2*2+2,0.2,1.8,m_neonY); setobs.append(M.build('arch_'+A['n'].lower(),SET)); placed+=1
+log('arches placed',placed,'of',len(ARCHES))
+nb=int(L/300); M=MB(); boards=0
 for i in range(nb):
     t=(i+0.5)/nb
     if t<0.012 or t>0.988: continue
-    sd=1 if i%2 else -1; p,r,u,fw,_=at(t); T=local(p,r,u,fw,rot=sd*0.42,lat=sd*(HW+10),lift=10)
-    M.box(T,0,-4.5,0,0.8,11,0.8,m_metal); M.box(T,0,0,0,14.4,7.4,0.5,m_metal)
-    mm=mat(f'board_{i%8}',tex=f'bill_{i%8}.jpg',emit_tex=f'bill_{i%8}.jpg',emit=0.4,rough=0.5)
-    M.quad(T((-7,-3.5,0.27)),T((7,-3.5,0.27)),T((7,3.5,0.27)),T((-7,3.5,0.27)),mm)
+    c=clear_at(t); free={-1:c[2],1:c[3]}; pref=1 if i%2 else -1; sd=None
+    for s_ in (pref,-pref):
+        v=free[s_]
+        if not np.isnan(v) and v<3.5: sd=s_; break   # the board spans +6.3..+13.7 m over the deck: the tiles must stay below
+    if sd is None: continue
+    p,r,u,fw,_=at(t); T=local(p,r,u,fw,rot=sd*0.42,lat=sd*(HW+10),lift=10)
+    leg=10-3.5-max(free[sd],-60.0)                         # mast from the board down to the roof or street under it
+    M.box(T,0,-3.5-leg/2,0,0.8,leg,0.8,m_metal); M.box(T,0,0,0,14.4,7.4,0.5,m_metal)
+    mm=mat(f'board_{i%NB}',tex=f'bill_{i%NB}.jpg',emit_tex=f'bill_{i%NB}.jpg',emit=0.4,rough=0.5)
+    M.quad(T((-7,-3.5,0.27)),T((7,-3.5,0.27)),T((7,3.5,0.27)),T((-7,3.5,0.27)),mm); boards+=1
+log('billboards',boards,'of',nb)
 setobs.append(M.build('billboards',SET)); log('set pieces',len(setobs))
 
 # ------------------------------------------------------------------ the craft (six teams, original designs)
-TEAMS=[('#f2f6ff','#0a2cff'),('#e01020','#0c0d12'),('#00c8c8','#ffe600'),('#ff6a00','#2a2e36'),('#6a2cff','#9dff3a'),('#f2f6ff','#ff2e9a')]
-ENG=['#00e1ff','#ff3b3b','#35ff8b','#ffb300','#b06bff','#ff2e9a']
+TEAMS=[('#d6deeb','#0c1830'),('#c81020','#0c0d12'),('#1ed760','#07090d'),('#ffcd00','#004aad'),('#ffb3c7','#07090d'),('#f2f6ff','#00a8e0')]   # make_textures.py TEAMS
+ENG=['#9fd8ff','#ff3b3b','#35ff8b','#ffcd00','#ff5fa2','#00e1ff']
 def prism(M,pts,y0,y1,mat_):   # pts: (x, forward) outline; forward is -z in the ship's local frame
     top=[(x,y1,-f) for x,f in pts]; bot=[(x,y0,-f) for x,f in pts]
     M.poly(top,mat_); M.poly(list(reversed(bot)),mat_)

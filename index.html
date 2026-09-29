@@ -181,16 +181,20 @@ const DEMO = location.search.includes('demo'); // kör utan tiles, platt mark
 // ?dump: walk the whole lap, snap every control point to the street and publish the calibrated track
 // (window.__dump) for the Blender pipeline. Otherwise the game plays on that same calibrated track.
 const DUMP = location.search.includes('dump');
-const TRACK_JSON = (DUMP||DEMO) ? null : await fetch('wo2097/assets/track.json').then(r=>r.ok?r.json():null).catch(()=>null);
+// ?rebuild: no tiles; recompute the height profile from the saved survey (wo2097/assets/survey.json) and publish it
+const REBUILD = location.search.includes('rebuild');
+// the racing line (wo2097/pipeline/design_track.py): the OSM route smoothed to a 120 m minimum radius
+const SMOOTH = (DUMP||REBUILD) ? await fetch('wo2097/assets/route_smooth.json').then(r=>r.ok?r.json():null).catch(()=>null) : null;
+const TRACK_JSON = (DUMP||DEMO||REBUILD) ? null : await fetch('wo2097/assets/track.json').then(r=>r.ok?r.json():null).catch(()=>null);
 // token: inbäddad via config.js (genereras från Vercel-env) → annars localStorage-prompt
-const API_KEY = DEMO ? '' : (window.ION_TOKEN || localStorage.getItem('ionKey') || '');
+const API_KEY = (DEMO||REBUILD) ? '' : (window.ION_TOKEN || localStorage.getItem('ionKey') || '');
 const keyveil=document.getElementById('keyveil'), loadveil=document.getElementById('loadveil');
 document.getElementById('keybtn').onclick=()=>{
   const v=document.getElementById('keyinput').value.trim();
   if(!v){ document.getElementById('keyerr').textContent='Klistra in en token.'; return; }
   localStorage.setItem('ionKey', v); location.reload();
 };
-if(!API_KEY&&!DEMO){ loadveil.style.display='none'; keyveil.style.display='flex'; }
+if(!API_KEY&&!DEMO&&!REBUILD){ loadveil.style.display='none'; keyveil.style.display='flex'; }
 
 /* ============================== SETUP ============================== */
 const canvas=document.getElementById('c');
@@ -410,10 +414,13 @@ for(let pass=0;pass<2;pass++) for(let i=0;i<CP.length;i++){ const N=CP.length;
   const l1=Math.hypot(d1x,d1z)||1, l2=Math.hypot(d2x,d2z)||1;
   if((d1x*d2x+d1z*d2z)/(l1*l2) < -0.3){ // bara de allra skarpaste 180°-vändningarna
     b.x=b.x*0.6+(a.x+c.x)/2*0.4; b.z=b.z*0.6+(a.z+c.z)/2*0.4; } }
+// the dump and the rebuild lay the track on the smoothed racing line, not on the raw street corners
+if(SMOOTH){ CP.length=0; for(const [x,z] of SMOOTH.xz) CP.push(new THREE.Vector3(x,12,z)); }
 // the Blender track was built on these exact, street-calibrated points: use them and skip the snapping
 if(TRACK_JSON){ CP.length=0; for(const [x,y,z] of TRACK_JSON.cp) CP.push(new THREE.Vector3(x,y,z)); }
 // centripetal Catmull-Rom: konstruerad för att INTE skapa öglor/cusps vid skarpa punkter.
 const curve=new THREE.CatmullRomCurve3(CP, true, 'centripetal');
+curve.arcLengthDivisions=Math.max(200,CP.length*6);   // dense control points need a dense arc-length table, or getPointAt drifts
 let TRACK_LEN=curve.getLength();
 const HALF_W=8, CLEARANCE=6;
 
@@ -527,7 +534,87 @@ function applyHeights(force){
 // street under every control point, then publish the calibrated track for Blender
 function tilesIdle(){ const st=tiles.stats||{}; return (st.downloading||0)===0 && (st.parsing||0)===0; }
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+// ---- SURVEY (racing line): every 4 m, rays straight down across the whole track width and at the arch posts and
+// billboards. The highest hit inside the track's own width is what the track must clear; the lowest at the centre is
+// the street. The camera parks over each 80 m window until the fine tiles are in, or the heights come from coarse LODs.
+function hitsAt(x,z){ ray.set(new THREE.Vector3(x,800,z),DOWN);
+  const ys=[]; for(const h of ray.intersectObject(tiles.group,true)){ const y=h.point.y; if(Math.abs(y)<250) ys.push(y); }
+  return ys.sort((a,b)=>b-a); }
+const SURVEY_LATS=[-9,-7,-5,-3,-1,0,1,3,5,7,9];
+async function surveyWalk(){
+  const NS=Math.round(TRACK_LEN/4), f=mkFrame(), CH=20, t0=performance.now();
+  const S={ n:NS, ds:TRACK_LEN/NS, len:TRACK_LEN, ground:[], top:[], topC:[], postL:[], postR:[], outL:[], outR:[] };
+  for(let s0=0;s0<NS;s0+=CH){
+    const mid=frameAt((s0+CH/2)/NS,f).p.clone();
+    camOverride={ p:new THREE.Vector3(mid.x,150,mid.z+50), l:new THREE.Vector3(mid.x,0,mid.z) };
+    await sleep(350); for(let w=0;w<60&&!tilesIdle();w++) await sleep(150); await sleep(150);
+    for(let i=s0;i<Math.min(NS,s0+CH);i++){
+      frameAt(i/NS,f); const r=f.right, at=lat=>hitsAt(f.p.x+r.x*lat, f.p.z+r.z*lat), hi=lat=>{ const h=at(lat); return h.length?h[0]:null; };
+      let top=null, topC=null, g=null;
+      for(const lat of SURVEY_LATS){ const h=at(lat); if(!h.length) continue;
+        if(top===null||h[0]>top) top=h[0]; if(lat===0){ topC=h[0]; g=h[h.length-1]; } }
+      S.ground[i]=g; S.top[i]=top; S.topC[i]=topC;
+      S.postL[i]=hi(-11.5); S.postR[i]=hi(11.5); S.outL[i]=hi(-18); S.outR[i]=hi(18); }
+    document.getElementById('loadfill').style.width=(s0/NS*100)+'%';
+    document.getElementById('loadtxt').textContent=`survey: ${s0}/${NS} · ${((performance.now()-t0)/1000|0)} s`; }
+  camOverride=null; return S;
+}
+// ---- THE HEIGHT PROFILE: the lowest smooth line that stays 6 m over the street and 2.6 m over anything inside the
+// track's width (trees, facades, roofs, bridge decks), with slopes of at most 6 % and no short dips.
+const PROFILE={ overStreet:6, overObstacle:2.6, slope:0.06, closeM:100, smoothM:25, buffer:2, finalSmoothM:40 };
+function closedFill(a){ const n=a.length, out=a.slice();
+  for(let i=0;i<n;i++){ if(out[i]!=null) continue; let p=i,q=i,dp=0,dq=0;
+    while(a[p]==null&&dp<n){ p=(p-1+n)%n; dp++; } while(a[q]==null&&dq<n){ q=(q+1)%n; dq++; }
+    out[i]=(a[p]!=null&&a[q]!=null)?(a[p]*dq+a[q]*dp)/(dp+dq):(a[p]??a[q]??0); }
+  return out; }
+function winMax(a,w){ const n=a.length; return a.map((_,i)=>{ let m=-1e9; for(let k=-w;k<=w;k++) m=Math.max(m,a[(i+k+n)%n]); return m; }); }
+function winMin(a,w){ const n=a.length; return a.map((_,i)=>{ let m=1e9; for(let k=-w;k<=w;k++) m=Math.min(m,a[(i+k+n)%n]); return m; }); }
+function gauss(a,sig){ const n=a.length, r=Math.ceil(sig*3), k=[]; let sum=0;
+  for(let j=-r;j<=r;j++){ const v=Math.exp(-0.5*(j/sig)**2); k.push(v); sum+=v; }
+  return a.map((_,i)=>{ let acc=0; for(let j=-r;j<=r;j++) acc+=k[j+r]*a[(i+j+n)%n]; return acc/sum; }); }
+function designProfile(S){
+  const n=S.n, ds=S.ds, P=PROFILE;
+  const ground=closedFill(S.ground), top=closedFill(S.top.map((v,i)=>v==null?null:Math.max(v,ground[i]??v)));
+  const req=ground.map((g,i)=>Math.max(g+P.overStreet, top[i]+P.overObstacle));
+  const w=Math.round(P.closeM/ds); let env=winMin(winMax(req,w),w);              // no dips shorter than ~2 x closeM
+  for(let i=0;i<n;i++) env[i]=Math.max(env[i],req[i]);
+  const SL=P.slope*0.8;   // ramps are laid at 80 % of the limit: the rounding of crests adds the rest
+  for(let pass=0;pass<3;pass++){ for(let i=0;i<n;i++) env[i]=Math.max(env[i],env[(i-1+n)%n]-SL*ds);
+    for(let i=n-1;i>=0;i--) env[i]=Math.max(env[i],env[(i+1)%n]-SL*ds); }   // ramps, never cliffs
+  // relax towards a smooth line that never dips under the envelope: smoothing rounds every crest and trough,
+  // the max() keeps it clear of whatever it crosses. Ends on the max, so no step can undercut the envelope.
+  // relax towards a smooth line held a buffer above the envelope, then one wide final smoothing: the buffer is
+  // what that last pass may eat at crests, so the line still clears everything (checked below)
+  let h=env.map(v=>v+P.buffer); const sg=P.smoothM/ds;
+  for(let it=0;it<80;it++){ h=gauss(h,sg); for(let i=0;i<n;i++) h[i]=Math.max(h[i],env[i]+P.buffer); }
+  h=gauss(h,P.finalSmoothM/ds);
+  for(let i=0;i<n;i++) if(h[i]<env[i]) console.warn('profile undercuts its envelope at',Math.round(i*ds),'m');
+  let maxSlope=0, maxVc=0, lifted=0;
+  for(let i=0;i<n;i++){ const a=h[(i-1+n)%n], b=h[i], c=h[(i+1)%n];
+    maxSlope=Math.max(maxSlope,Math.abs(c-b)/ds); const a3=h[(i-3+n)%n], c3=h[(i+3)%n]; maxVc=Math.max(maxVc,Math.abs(c3-2*b+a3)/((3*ds)**2));
+    if(b>ground[i]+P.overStreet+1.5) lifted++; }
+  return { h, ground, top, stats:{ maxSlopePct:+(maxSlope*100).toFixed(2), minVertRadius:Math.round(1/Math.max(maxVc,1e-6)), liftedPct:+(lifted/n*100).toFixed(1),
+    maxLift:Math.round(Math.max(...h.map((v,i)=>v-ground[i]))) } };
+}
+function publishTrack(S){
+  const R=designProfile(S), N=CP.length, NS=S.n, at=(arr,u)=>{ const x=((u%1)+1)%1*NS, i=Math.floor(x)%NS, j=(i+1)%NS, k=x-Math.floor(x); return arr[i]*(1-k)+arr[j]*k; };
+  for(let i=0;i<N;i++) CP[i].y=at(R.h,i/N);
+  curve.updateArcLengths(); TRACK_LEN=curve.getLength(); rebuildCurvature();
+  // pylon feet: whatever is straight under the centre (street, roof or deck), never above the slab
+  const under=closedFill(S.topC).map((v,i)=>Math.min(v,R.h[i]-1.5));
+  GROUND=[...Array(N).keys()].map(i=>at(under,i/N));
+  const SEG=2400, f=mkFrame(), frames=[], clear=[], rel=(arr,u,y)=>{ const x=((u%1)+1)%1*NS, v=arr[Math.round(x)%NS]; return v==null?null:+(v-y).toFixed(2); };
+  for(let i=0;i<SEG;i++){ const u=i/SEG; frameAt(u,f);
+    frames.push([...f.p.toArray(),...f.right.toArray(),...f.up.toArray(),...f.fwd.toArray(), groundAt(u)]);
+    clear.push([rel(S.postL,u,f.p.y),rel(S.postR,u,f.p.y),rel(S.outL,u,f.p.y),rel(S.outR,u,f.p.y)]); }
+  window.__dump={ cp:CP.map(v=>[+v.x.toFixed(3),+v.y.toFixed(3),+v.z.toFixed(3)]), frames, clear, trackLen:TRACK_LEN, halfW:HALF_W,
+    pads:PADS.map(p=>[p.t,p.lat]), wpads:WPADS.map(p=>[p.t,p.lat]),
+    arches:ARCH_AT.map(a=>({...a, ...nearestT(a.lat,a.lon)})), snapped:S.top.filter(v=>v!=null).length, n:N,
+    profile:R.stats, survey:S };
+  document.getElementById('loadtxt').textContent='dump klar · '+JSON.stringify(R.stats);
+}
 async function dumpWalk(){
+  if(SMOOTH){ const S=await surveyWalk(); publishTrack(S); return; }
   const N=CP.length, STEP=6;
   for(let s0=0;s0<N;s0+=STEP){
     const idx=[...Array(STEP).keys()].map(k=>(s0+k)%N), c=CP[idx[STEP>>1]];
@@ -545,6 +632,7 @@ async function dumpWalk(){
   document.getElementById('loadtxt').textContent='dump klar';
 }
 
+if(REBUILD){ (async()=>{ const S=await fetch('wo2097/assets/survey.json').then(r=>r.json()); publishTrack(S); })(); }
 if(DEMO){ // platt mark istället för fotogrammetri — testar bara körkänslan
   const ground=new THREE.Mesh(new THREE.PlaneGeometry(8000,8000),
     new THREE.MeshBasicMaterial({ color:0x394a5a }));
@@ -580,8 +668,9 @@ let trackGroup=null;
 const PADS=Array.from({length:135},(_,i)=>({ t:(i+0.55)/135, lat:[-3.5,0,3.5][i%3] }));
 const WPADS=Array.from({length:16},(_,i)=>({ t:(i+0.27)/16, lat:[-3.5,3.5,0][i%3] }));
 // sponsor arches over the real places: nearest point on the lap to each landmark
-const ARCH_AT=[ {n:'NORRMALMSTORG',lat:59.3337,lon:18.0733,b:2}, {n:'STADSHUSET',lat:59.3275,lon:18.0545,b:0},
-  {n:'SKEPPSBRON',lat:59.3247,lon:18.0755,b:3}, {n:'STRANDVÄGEN',lat:59.3326,lon:18.0850,b:4}, {n:'KUNGSHOLMEN',lat:59.3300,lon:18.0310,b:6} ];
+// b = brand index in make_textures.py BRANDS (6 KLARNÅ, 17 SKATTEVERK-X, 8 SJ 2097, 13 SECURITAZ, 16 FÖRSÄKRINGSKASSÅN)
+const ARCH_AT=[ {n:'NORRMALMSTORG',lat:59.3337,lon:18.0733,b:6}, {n:'STADSHUSET',lat:59.3275,lon:18.0545,b:17},
+  {n:'SKEPPSBRON',lat:59.3247,lon:18.0755,b:8}, {n:'STRANDVÄGEN',lat:59.3326,lon:18.0850,b:13}, {n:'KUNGSHOLMEN',lat:59.3300,lon:18.0310,b:16} ];
 function nearestT(lat,lon){ const x=-(lon-ORIGIN.lon)*M_LON, z=(lat-ORIGIN.lat)*M_LAT; let best=0,bd=1e18; const v=new THREE.Vector3();
   for(let i=0;i<2000;i++){ curve.getPointAt(i/2000,v); const d=(v.x-x)**2+(v.z-z)**2; if(d<bd){ bd=d; best=i/2000; } }
   return {t:best, d:Math.sqrt(bd)}; }
@@ -615,13 +704,13 @@ function glowTexture(){ const cv=document.createElement('canvas'); cv.width=cv.h
   return new THREE.CanvasTexture(cv); }
 const glowTex=glowTexture();
 // invented teams, 2097 colour blocking: primary hull, secondary pods and wing, number and glyph on the wing
-const TEAMS=[
-  {team:'KRONA AG',     pilot:'YOU',        a:0xf2f6ff, b:0x0a2cff, n:'01', glyph:'crown', eng:0x00e1ff},
-  {team:'VALKYR SYS.',  pilot:'VALKYRIA',   a:0xe01020, b:0x0c0d12, n:'07', glyph:'tri',   eng:0xff3b3b},
-  {team:'AURORA-X',     pilot:'AURORA',     a:0x00c8c8, b:0xffe600, n:'12', glyph:'wave',  eng:0x35ff8b},
-  {team:'MÄLAR FANG',   pilot:'FANG',       a:0xff6a00, b:0x2a2e36, n:'23', glyph:'bolt',  eng:0xffb300},
-  {team:'NORRSKEN DYN.',pilot:'NORRSKEN',   a:0x6a2cff, b:0x9dff3a, n:'31', glyph:'rings', eng:0xb06bff},
-  {team:'ICEBREAKER',   pilot:'ICEBREAKER', a:0xf2f6ff, b:0xff2e9a, n:'44', glyph:'grid',  eng:0xff2e9a} ];
+const TEAMS=[   // parodies of Swedish brands, 2097 (same colours as wo2097/pipeline: make_textures.py and build.py)
+  {team:'VOLVÖ SECURITY',  pilot:'YOU',        a:0xd6deeb, b:0x0c1830, n:'01', glyph:'rings', eng:0x9fd8ff},
+  {team:'SAAPH DEFENCE',   pilot:'VALKYRIA',   a:0xc81020, b:0x0c0d12, n:'07', glyph:'tri',   eng:0xff3b3b},
+  {team:'SPOTIFAI NEURAL', pilot:'AURORA',     a:0x1ed760, b:0x07090d, n:'12', glyph:'wave',  eng:0x35ff8b},
+  {team:'IKÖA FLATPACK',   pilot:'FANG',       a:0xffcd00, b:0x004aad, n:'23', glyph:'grid',  eng:0xffcd00},
+  {team:'KLARNÅ DEBT',     pilot:'NORRSKEN',   a:0xffb3c7, b:0x07090d, n:'31', glyph:'dot',   eng:0xff5fa2},
+  {team:'ERIXON SIGNAL',   pilot:'ICEBREAKER', a:0xf2f6ff, b:0x00a8e0, n:'44', glyph:'rings', eng:0x00e1ff} ];
 // the craft are Blender models (wo2097/assets/craft_<i>.glb). Named nodes: flap_L / flap_R (airbrake hinges),
 // eng_L / eng_R (nozzle centres). Glow, heat shimmer and the anti-grav field are screen FX added here.
 function buildCraft(i){
@@ -1124,6 +1213,13 @@ function loop(now){
   composer.render();
 }
 requestAnimationFrame(loop);
+// ?check: a handle for the play-through checker (wo2097/pipeline/check_lap.cjs). Never used in play.
+if(location.search.includes('check')) window.__sw={
+  frameAt, mkFrame, hitsAt:(x,z)=>tiles?hitsAt(x,z):[], tilesIdle:()=>tiles?tilesIdle():true, player, ships:()=>ships, keys,
+  state:()=>state, len:()=>TRACK_LEN, HALF_W, MAXV, curvAhead, camera, setPaused:v=>{ paused=v; },
+  placeAt(t,lat=0){ const p=player(); p.t=t; p.lat=lat; p.speed=0; p.vlat=0; advance(p,0); camSnap=true; updateCamera(1/60); camera.updateMatrixWorld(); },
+  segHit(a,b){ const d=new THREE.Vector3().subVectors(b,a), L=d.length(); d.normalize(); const rc=new THREE.Raycaster(a,d,0,L);
+    const h=rc.intersectObject(tiles.group,true); return h.length?h[0].distance:null; } };
 </script>
 </body>
 </html>
