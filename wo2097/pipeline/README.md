@@ -98,3 +98,19 @@ Every secondary label is Younger Futhark (long-branch), Swedish words spelled th
 VAPEN ᚠᛅᛒᛁᚾ, STOCKHOLMS STORA PRIS ᛋᛏᚢᚴᚼᚢᛚᛘᛋ᛫ᛋᛏᚢᚱᛅ᛫ᛒᚱᛁᛋ. The font is Noto Sans Runic (SIL OFL 1.1, `../fonts/OFL.txt`),
 embedded by the game and the showroom and used by make_textures.py, so bakes and web match. Billboards carry the
 brand name in runes as a small tag; the gantry has a rune subtitle line.
+
+## Switched off (Kim, 2026-09-29): flags in index.html, all `false` by default
+The code stays; set a flag to `true` to bring an effect back.
+
+| Flag | What it switches |
+|---|---|
+| `FX.particles` | both point clouds: exhaust, boost streams, the barrier scrape sparks, missile impacts and smoke, grit and leaves |
+| `SFX.padSound` | the sound when you ride a speed chevron pad |
+| `SFX.newPlayerEngine` | the spatial-pass player engine (boost raises pitch and level, reverb send) |
+| `SFX.spatial` | everything the spatial-audio pass added: AI engines (HRTF, Doppler), street reverb and slapbacks, positional pad/weapon/hit/scrape sounds, bus compressor |
+| `SFX.hangar` | the craft-select blips and lock-in sting |
+
+With every flag off the audio is the deployed game's (8269ea8): the player's engine (two saws detuned 7 cents,
+45 + 1.5·speed Hz, gain 0.026 + 0.0004·speed, 600 Hz lowpass straight to the output) and the big-beat music.
+Checked by function-by-function comparison against `git show 8269ea8:index.html` and by counting the nodes the page
+creates (no panner, convolver or compressor).

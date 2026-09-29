@@ -921,6 +921,16 @@ function glowTexture(){ const cv=document.createElement('canvas'); cv.width=cv.h
   return new THREE.CanvasTexture(cv); }
 const glowTex=glowTexture();
 
+// Switches for effects Kim took out (2026-09-29). The code stays; flip a flag to bring one back.
+//   FX.particles  : exhaust, boost streams, barrier sparks, missile impacts/smoke, grit and leaves (both point clouds)
+//   SFX.padSound  : the sound when you ride over a speed chevron pad
+//   SFX.newPlayerEngine : the spatial-pass player engine (boost pushes pitch and level, reverb send). Off = the engine
+//                         exactly as live on main (8269ea8): two detuned saws at 45+1.5·speed through a 600 Hz lowpass
+//   SFX.spatial   : everything the spatial-audio pass added: the AI craft engines (HRTF, Doppler), the street reverb and
+//                   facade slapbacks, the positional pad/weapon/hit/scrape sounds and their bus compressor
+//   SFX.hangar    : the craft-select blips and the lock-in sting
+// All off = the audio of the deployed game (8269ea8): the player's engine and the big-beat music, nothing else.
+const FX={ particles:false }, SFX={ padSound:false, newPlayerEngine:false, spatial:false, hangar:false };
 /* ============================== PARTICLES ==============================
    Two pooled point clouds, one draw call each: GLOW (additive, crosses the bloom: exhaust, boost, sparks, impacts)
    and DUST (normal blend: leaves and grit kicked off the street under low track, impact smoke). CPU-simulated in
@@ -939,7 +949,7 @@ function makePS(N,additive){
         gl_PointSize=aAlpha>0.0?clamp(aSize*uScale/max(-mv.z,0.5),1.0,48.0):0.0; }`,
     fragmentShader:`varying vec3 vC; varying float vA; void main(){ float d=length(gl_PointCoord-0.5)*2.0; float a=smoothstep(1.0,0.0,d);
       ${additive?'gl_FragColor=vec4(vC*a*vA,a*vA);':'gl_FragColor=vec4(vC,a*a*vA);'} }` });
-  const pts=new THREE.Points(g,m); pts.frustumCulled=false; pts.renderOrder=5; scene.add(pts);
+  const pts=new THREE.Points(g,m); pts.frustumCulled=false; pts.renderOrder=5; pts.visible=FX.particles; if(FX.particles) scene.add(pts);
   const V=new Float32Array(N*3), L=new Float32Array(N), M=new Float32Array(N), S0=new Float32Array(N), GR=new Float32Array(N), DR=new Float32Array(N), GROW=new Float32Array(N);
   let head=0, alive=0;
   return { N, pts, m,
@@ -958,11 +968,11 @@ const GLOW=makePS(8000,true), DUST=makePS(3000,false);
 const R=()=>Math.random()*2-1;
 const _pp=new THREE.Vector3(), _pc=new THREE.Color();
 // an explosion where a missile lands: a white-hot core, orange sparks, a black-grey plume
-function burstAt(pos){ for(let i=0;i<220;i++){ const sp=20+Math.random()*60; GLOW.emit(pos.x,pos.y+1,pos.z,R()*sp,Math.abs(R())*sp*0.7,R()*sp, 3.2,1.6+Math.random()*0.6,0.5, 1.0+Math.random()*1.2, 0.5+Math.random()*0.6, 26, 0.93); }
+function burstAt(pos){ if(!FX.particles) return; for(let i=0;i<220;i++){ const sp=20+Math.random()*60; GLOW.emit(pos.x,pos.y+1,pos.z,R()*sp,Math.abs(R())*sp*0.7,R()*sp, 3.2,1.6+Math.random()*0.6,0.5, 1.0+Math.random()*1.2, 0.5+Math.random()*0.6, 26, 0.93); }
   for(let i=0;i<40;i++) GLOW.emit(pos.x,pos.y+1,pos.z,R()*8,R()*8,R()*8, 4,3.4,2.6, 6.0, 0.22, 0, 0.8);
   for(let i=0;i<70;i++) DUST.emit(pos.x+R()*2,pos.y+1+R(),pos.z+R()*2,R()*7,3+Math.random()*6,R()*7, 0.16,0.15,0.17, 2.4+Math.random()*2, 1.2+Math.random()*1.2, -1.5, 0.95, 2.2); }
 // per craft, every frame: exhaust from both nozzles, a hot boost stream, sparks off the barrier, grit off the street
-function emitShip(s,dt,sf){ if(s.mesh.position.distanceToSquared(camera.position)>420*420) return;
+function emitShip(s,dt,sf){ if(!FX.particles||s.mesh.position.distanceToSquared(camera.position)>420*420) return;
   const ud=s.mesh.userData, f=s.frame, T=TEAMS[s.id!=null?s.id:0]||TEAMS[0]; _pc.set(T.eng);
   const fx=f.fwd.x, fy=f.fwd.y, fz=f.fwd.z, spd=s.speed+s.boost;
   for(const sd of ['L','R']){ _pp.copy(ud['nozzle'+sd]); s.mesh.localToWorld(_pp);
@@ -1113,7 +1123,7 @@ function ensureAudio(){
     mFilter=actx.createBiquadFilter(); mFilter.type='lowpass'; mFilter.frequency.value=520; mFilter.Q.value=0.7; mFilter.connect(musAnalyser);
     musicGain=actx.createGain(); musicGain.gain.value=0; musicGain.connect(mFilter);
     nextStep=actx.currentTime+0.2; mstep=0;
-    spatialInit(); engGain.connect(sendIn);   // the player's engine also rings in the street canyons
+    if(SFX.spatial){ spatialInit(); if(SFX.newPlayerEngine) engGain.connect(sendIn); }   // (flags) the spatial bus; the new engine rings in the street canyons
   }catch(e){ audioOn=false; } }
 function noiseSrc(){ const s=actx.createBufferSource(); s.buffer=sharedNoise; s.loop=true; return s; }
 function mKick(t){ const o=actx.createOscillator(),g=actx.createGain();
@@ -1204,7 +1214,7 @@ function spatialInit(){
   { const n=noiseSrc(), bp=actx.createBiquadFilter(), g=actx.createGain(); bp.type='bandpass'; bp.frequency.value=2600; bp.Q.value=0.9; g.gain.value=0;
     n.connect(bp); bp.connect(g); g.connect(sfxBus); g.connect(sendIn); n.start(); scrape={ g, bp }; } }
 // one-shots in the world: the sound starts where it happened and stays there as you race away from it
-function sfxAt(kind,pos){ if(!actx||!audioOn||!sfxBus||paused) return; const t=actx.currentTime, pn=panAt(pos), out=actx.createGain(); out.connect(pn); pn.connect(sfxBus); out.connect(sendIn);
+function sfxAt(kind,pos){ if(!SFX.spatial||!actx||!audioOn||!sfxBus||paused) return; const t=actx.currentTime, pn=panAt(pos), out=actx.createGain(); out.connect(pn); pn.connect(sfxBus); out.connect(sendIn);
   const tone=(type,f0,f1,dur,peak,delay=0)=>{ const o=actx.createOscillator(), g=actx.createGain(); o.type=type; o.frequency.setValueAtTime(f0,t+delay); o.frequency.exponentialRampToValueAtTime(f1,t+delay+dur);
     g.gain.setValueAtTime(0.0001,t+delay); g.gain.linearRampToValueAtTime(peak,t+delay+0.01); g.gain.exponentialRampToValueAtTime(0.0001,t+delay+dur); o.connect(g); g.connect(out); o.start(t+delay); o.stop(t+delay+dur+0.05); };
   const hiss=(type,f0,f1,dur,peak,q=1)=>{ const n=noiseSrc(), f=actx.createBiquadFilter(), g=actx.createGain(); f.type=type; f.Q.value=q; f.frequency.setValueAtTime(f0,t); f.frequency.exponentialRampToValueAtTime(f1,t+dur);
@@ -1238,7 +1248,7 @@ function spatialTick(dt){ if(!sfxBus) return; const t=actx.currentTime; if(typeo
     const dop=THREE.MathUtils.clamp(343/(343+vr),0.62,1.6), v0=v.s.speed+v.s.boost;
     const f=(52+v0*1.7)*dop; v.o1.frequency.setTargetAtTime(f,t,0.03); v.o2.frequency.setTargetAtTime(f*0.5,t,0.03);
     v.lp.frequency.setTargetAtTime(500+v0*22,t,0.05);
-    v.g.gain.setTargetAtTime(racing?0.16:0.04,t,0.2);
+    v.g.gain.setTargetAtTime(racing?0.07:0.02,t,0.2);   // under the player's engine: same register, so they sit back
     if(v.pn.positionX){ v.pn.positionX.setTargetAtTime(pos.x,t,0.02); v.pn.positionY.setTargetAtTime(pos.y,t,0.02); v.pn.positionZ.setTargetAtTime(pos.z,t,0.02); }
     else v.pn.setPosition(pos.x,pos.y,pos.z); }
   // how enclosed is the track here: facades beside and above the deck
@@ -1248,7 +1258,7 @@ function spatialTick(dt){ if(!sfxBus) return; const t=actx.currentTime; if(typeo
     revGain.gain.setTargetAtTime(0.05+encl*0.6,t,0.2); }
   if(scrape&&p){ const on=state==='race'&&Math.abs(p.lat)>=HALF_W-2.01; scrape.g.gain.setTargetAtTime(on?0.22+Math.min(0.2,p.speed*0.002):0,t,on?0.02:0.08); scrape.bp.frequency.setTargetAtTime(1800+p.speed*25,t,0.05); } }
 window.__audio=()=>{ let rms=0; if(sfxMeter){ const a=new Float32Array(sfxMeter.fftSize); sfxMeter.getFloatTimeDomainData(a); for(const x of a) rms+=x*x; rms=Math.sqrt(rms/a.length); }
-  return { ai:aiEng.length, encl:+encl.toFixed(2), rev:revGain?+revGain.gain.value.toFixed(2):null, on:audioOn, state:actx?actx.state:null, rms:+rms.toFixed(4),
+  return { player:engGain?{ f:+oscs[0].frequency.value.toFixed(1), g:+engGain.gain.value.toFixed(4), newEngine:SFX.newPlayerEngine }:null, ai:aiEng.length, encl:+encl.toFixed(2), rev:revGain?+revGain.gain.value.toFixed(2):null, on:audioOn, state:actx?actx.state:null, rms:+rms.toFixed(4),
     voices:aiEng.map(v=>({ f:+v.o1.frequency.value.toFixed(1), d:+v.s.mesh.position.distanceTo(camera.position).toFixed(0) })) }; };
 function toggleAudio(){ audioOn=!audioOn;
   if(!audioOn){ if(engGain) engGain.gain.value=0; if(musicGain) musicGain.gain.value=0; }
@@ -1256,8 +1266,9 @@ function toggleAudio(){ audioOn=!audioOn;
 function updateAudio(){ if(!actx||!audioOn||!engGain) return;
   if(actx.state==='suspended') actx.resume();
   const p=player(); if(!p){ engGain.gain.value=0; return; }
-  engGain.gain.value=paused||state!=='race'?0.012:0.026+p.speed*0.0004+p.boost*0.0006;
-  for(const o of oscs) o.frequency.setTargetAtTime(45+p.speed*1.5+p.boost*2.4,actx.currentTime,0.05);   // boost pushes the whine up
+  const nb=SFX.newPlayerEngine?p.boost:0;   // the live engine (8269ea8) ignores boost
+  engGain.gain.value=paused||state!=='race'?0.012:0.026+p.speed*0.0004+nb*0.0006;
+  for(const o of oscs) o.frequency.setTargetAtTime(45+p.speed*1.5+nb*2.4,actx.currentTime,0.05);
   if(musicGain){
     const e=musicEnergy();
     // master-filtret öppnar sig med energin (dovt → ljust), volymen växer något
@@ -1317,9 +1328,9 @@ function selConfirm(){ if(selLock||state!=='select') return; selLock=0.001; TEAM
   const fl=document.getElementById('selFlash'); fl.style.transition='none'; fl.style.opacity=0.85; requestAnimationFrame(()=>{ fl.style.transition='opacity .6s'; fl.style.opacity=0; });
   ensureAudio(); selSting(); }
 // sounds of the hangar (silent until the browser lets audio start)
-function selBlip(f){ if(!actx||!audioOn) return; const t=actx.currentTime, o=actx.createOscillator(), g=actx.createGain(); o.type='square'; o.frequency.setValueAtTime(f,t); o.frequency.exponentialRampToValueAtTime(f*1.5,t+0.06);
+function selBlip(f){ if(!SFX.hangar||!actx||!audioOn) return; const t=actx.currentTime, o=actx.createOscillator(), g=actx.createGain(); o.type='square'; o.frequency.setValueAtTime(f,t); o.frequency.exponentialRampToValueAtTime(f*1.5,t+0.06);
   g.gain.setValueAtTime(0.0001,t); g.gain.linearRampToValueAtTime(0.06,t+0.005); g.gain.exponentialRampToValueAtTime(0.0001,t+0.09); o.connect(g); g.connect(actx.destination); o.start(t); o.stop(t+0.1); }
-function selSting(){ if(!actx||!audioOn) return; const t=actx.currentTime, root=[110,98,123.5,130.8,146.8,164.8][selIdx];
+function selSting(){ if(!SFX.hangar||!actx||!audioOn) return; const t=actx.currentTime, root=[110,98,123.5,130.8,146.8,164.8][selIdx];
   [1,1.5,2,3].forEach((m,i)=>{ const o=actx.createOscillator(), g=actx.createGain(), lp=actx.createBiquadFilter(); o.type='sawtooth'; o.frequency.value=root*m;
     lp.type='lowpass'; lp.frequency.setValueAtTime(600,t+i*0.07); lp.frequency.exponentialRampToValueAtTime(6000,t+i*0.07+0.25);
     g.gain.setValueAtTime(0.0001,t+i*0.07); g.gain.linearRampToValueAtTime(0.09,t+i*0.07+0.01); g.gain.exponentialRampToValueAtTime(0.0001,t+i*0.07+0.9);
@@ -1451,7 +1462,7 @@ function stepShip(s,dt){
   if(s.hitT>0){ s.hitT-=dt; s.roll+=Math.sin(s.hitT*18)*0.4*dt*10; }
   const tn=shipT(s);
   for(const pad of PADS){ let dT=Math.abs(tn-pad.t); dT=Math.min(dT,1-dT);
-    if(dT*TRACK_LEN<6&&Math.abs(s.lat-pad.lat)<3.6){ const had=s.boost; s.boost=Math.max(s.boost,24); if(had<12) sfxAt('pad',s.mesh.position);
+    if(dT*TRACK_LEN<6&&Math.abs(s.lat-pad.lat)<3.6){ const had=s.boost; s.boost=Math.max(s.boost,24); if(had<12&&SFX.padSound) sfxAt('pad',s.mesh.position);
       if(s.isPlayer){ boostMeter=Math.min(100,boostMeter+30); if(had<12){ fovKick=1; boostFlash=Math.max(boostFlash,0.55); } } } }
   advance(s,dt);
 }
@@ -1637,7 +1648,7 @@ function loop(now){
     separate(dt); updateCamera(dt);
     for(const m of padMats) for(const k of ['map','emissiveMap']) if(m[k]) m[k].offset.y=(m[k].offset.y-dt*1.6)%1;
     for(const m of wpadMats) for(const k of ['map','emissiveMap']) if(m[k]) m[k].rotation+=dt*1.4;
-    stepMissiles(dt); GLOW.tick(dt); DUST.tick(dt); boostFlash=Math.max(0,boostFlash-dt*1.8); hitFlash=Math.max(0,hitFlash-dt*2);
+    stepMissiles(dt); if(FX.particles){ GLOW.tick(dt); DUST.tick(dt); } boostFlash=Math.max(0,boostFlash-dt*1.8); hitFlash=Math.max(0,hitFlash-dt*2);
     updateHUD(dt); drawMinimap();
     { const p=player(); const sf=(p.speed+p.boost)/MAXV;
       drawSpeedFX(state==="race"?Math.min(1,Math.max(0,(sf-0.45)/0.55)):0);
@@ -1655,7 +1666,7 @@ function loop(now){
     camera.position.set(Math.cos(a)*250,170,Math.sin(a)*250);
     camera.lookAt(0,20,0);
   }
-  updateAudio(); if(actx&&audioOn) spatialTick(dt);
+  updateAudio(); if(SFX.spatial&&actx&&audioOn) spatialTick(dt);
   composer.render();
 }
 requestAnimationFrame(loop);
