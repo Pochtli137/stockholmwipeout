@@ -83,3 +83,11 @@ Hangaren: `http://localhost:8820/wo2097/showroom.html` (← → byt skepp, dra f
   a TSL rewrite for no measurable gain.
 - Headroom is already large: uncapped median 3.6 ms, p95 5.2 ms, p99 6.2 ms on this Mac (`node perf.cjs 40`).
 `perf.cjs` measures uncapped frame time on a scripted stretch of the race (vsync off); use it before and after engine changes.
+
+## Craft select and team stats
+The hangar (state `select`) sits between loading and the countdown; `?check` skips it, `&team=N` preselects, the choice
+is remembered in `localStorage.swTeam`. `STATS` (bars 0..1) and `physOf()` in index.html drive top speed, thrust,
+steering and grip, wall drain and missile-hit loss for the player and the AI; SAAPH draws missiles 60 % of the time.
+Balance check, craft alone (`?check&solo&team=N`, bot at full throttle in the middle, 11.4 km):
+ERIXON 144.3 s · KLARNÅ 144.3 · SAAPH 144.6 · IKÖA 145.3 · SPOTIFAI 146.1 · VOLVÖ 146.5 (spread 1.5 %).
+VOLVÖ's shield and SPOTIFAI's grip only pay when you touch walls or get hit, which the bot never does.
