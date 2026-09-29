@@ -221,13 +221,3 @@ Render profile on phones: pixel ratio ≤ 1.5, MSAA 2, tiles errorTarget 20 and 
 `manifest.webmanifest` + apple meta: "Add to Home Screen" runs full screen in landscape.
 Checked in Playwright emulation (iPhone 15 Pro and Pixel 8, landscape): a full lap driven with the touch pad and GAS only
 (147 s, no errors), swipes, taps, pause, the portrait veil; desktop check_lap still passes in both themes.
-
-## District titles and the flourish (Rez, 2026-09-29)
-`python3 districts.py` fetches Stockholm's stadsdelar once (Overpass, admin_level 10, cached in `osm/districts_overpass.json`,
-© OpenStreetMap contributors, ODbL), tests the calibrated centreline against the polygons and writes `districts` into
-track.json: Södermalm, Gamla stan, Norrmalm, Östermalm, Norrmalm, Kungsholmen, Marieberg, Kungsholmen, Långholmen,
-Södermalm. In the race each entry shows a title high on screen for 1.8 s (`#district`: NEON a glitching light streak with
-scanlines, USED a municipal enamel sign slapped on) with its name in runes. Never in the first 3 s after GO; titles are at
-least 5 s apart, and one that comes too soon waits its turn instead of being dropped. Every entry and every pickup (speed
-pad, weapon pad) gives the player's craft a flourish, on the mesh only: a barrel roll, an engine pulse and a brief tint
-in team colour (~0.55 s); AI craft do a wing flick on their pads. No new sound (audio stays the deployed one).
