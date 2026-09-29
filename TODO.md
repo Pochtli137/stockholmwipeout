@@ -1,5 +1,11 @@
 # TODO
 
+## Läge 2026-09-29, kväll
+**Deployat:** `crafts` sammanslagen till `main` (`fd889c6`), pushad och live på stockholmwipeout.vercel.app. Båda temana
+verifierade i produktion utan fel; `CLAUDE.md`, `TODO.md`, `blender/` och pipelinen ger 404. Punkt 1 och 2 nedan är klara.
+**Kvar:** Kim provar mobilen på riktig iPhone via livesajten (HTTPS, så TILT går). Rotera ion-tokenen. Flourish-blixten
+kan vara för stark (skeppet blir helvitt ett ögonblick), bedöms av Kim.
+
 ## Läge 2026-09-29 (överlämning)
 **Gjort:** Blender-bygge ovanpå Googles Stockholm: bana (120 m minsta radie, lyft fri från tiles, 0 intrång), sex Blender-skepp,
 temaval NEON/USED, skeppsval, used universe med pappersaffischer, svenska varumärkes- och partiparodier, runor i stället för
