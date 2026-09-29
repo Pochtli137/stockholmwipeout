@@ -880,6 +880,63 @@ function glowTexture(){ const cv=document.createElement('canvas'); cv.width=cv.h
   gr.addColorStop(1,'rgba(0,0,0,0)'); g.fillStyle=gr; g.fillRect(0,0,64,64);
   return new THREE.CanvasTexture(cv); }
 const glowTex=glowTexture();
+
+/* ============================== PARTICLES ==============================
+   Two pooled point clouds, one draw call each: GLOW (additive, crosses the bloom: exhaust, boost, sparks, impacts)
+   and DUST (normal blend: leaves and grit kicked off the street under low track, impact smoke). CPU-simulated in
+   flat typed arrays, ring-buffered, so thousands cost well under a millisecond. */
+function makePS(N,additive){
+  const g=new THREE.BufferGeometry(), P=new Float32Array(N*3), C=new Float32Array(N*3), S=new Float32Array(N), A=new Float32Array(N);
+  g.setAttribute('position',new THREE.BufferAttribute(P,3).setUsage(THREE.DynamicDrawUsage));
+  g.setAttribute('aCol',new THREE.BufferAttribute(C,3).setUsage(THREE.DynamicDrawUsage));
+  g.setAttribute('aSize',new THREE.BufferAttribute(S,1).setUsage(THREE.DynamicDrawUsage));
+  g.setAttribute('aAlpha',new THREE.BufferAttribute(A,1).setUsage(THREE.DynamicDrawUsage));
+  const m=new THREE.ShaderMaterial({ uniforms:{ uScale:{value:500} }, transparent:true, depthWrite:false, toneMapped:false,
+    blending:additive?THREE.AdditiveBlending:THREE.NormalBlending,
+    vertexShader:`attribute vec3 aCol; attribute float aSize, aAlpha; uniform float uScale; varying vec3 vC; varying float vA;
+      void main(){ vC=aCol; vA=aAlpha; vec4 mv=modelViewMatrix*vec4(position,1.0); gl_Position=projectionMatrix*mv;
+        vA*=smoothstep(3.0,14.0,-mv.z);   // nothing blooms in the lens: particles right at the camera fade out
+        gl_PointSize=aAlpha>0.0?clamp(aSize*uScale/max(-mv.z,0.5),1.0,48.0):0.0; }`,
+    fragmentShader:`varying vec3 vC; varying float vA; void main(){ float d=length(gl_PointCoord-0.5)*2.0; float a=smoothstep(1.0,0.0,d);
+      ${additive?'gl_FragColor=vec4(vC*a*vA,a*vA);':'gl_FragColor=vec4(vC,a*a*vA);'} }` });
+  const pts=new THREE.Points(g,m); pts.frustumCulled=false; pts.renderOrder=5; scene.add(pts);
+  const V=new Float32Array(N*3), L=new Float32Array(N), M=new Float32Array(N), S0=new Float32Array(N), GR=new Float32Array(N), DR=new Float32Array(N), GROW=new Float32Array(N);
+  let head=0, alive=0;
+  return { N, pts, m,
+    emit(x,y,z,vx,vy,vz,r,gC,b,size,life,grav=0,drag=0.9,grow=0){ const i=head; head=(head+1)%N;
+      P[i*3]=x; P[i*3+1]=y; P[i*3+2]=z; V[i*3]=vx; V[i*3+1]=vy; V[i*3+2]=vz; C[i*3]=r; C[i*3+1]=gC; C[i*3+2]=b;
+      S0[i]=size; L[i]=life; M[i]=life; GR[i]=grav; DR[i]=drag; GROW[i]=grow; },
+    tick(dt){ alive=0;
+      for(let i=0;i<N;i++){ if(L[i]<=0){ if(A[i]!==0) A[i]=0; continue; }
+        L[i]-=dt; const k=Math.pow(DR[i],dt*60); V[i*3]*=k; V[i*3+1]=V[i*3+1]*k-GR[i]*dt; V[i*3+2]*=k;
+        P[i*3]+=V[i*3]*dt; P[i*3+1]+=V[i*3+1]*dt; P[i*3+2]+=V[i*3+2]*dt;
+        const u=Math.max(0,L[i]/M[i]); A[i]=u*Math.min(1,(1-u)*12); S[i]=S0[i]*(1+GROW[i]*(1-u)); alive++; }
+      g.attributes.position.needsUpdate=g.attributes.aCol.needsUpdate=g.attributes.aSize.needsUpdate=g.attributes.aAlpha.needsUpdate=true;
+      m.uniforms.uScale.value=renderer.domElement.height*0.5/Math.tan(camera.fov*Math.PI/360); },
+    get alive(){ return alive; } }; }
+const GLOW=makePS(8000,true), DUST=makePS(3000,false);
+const R=()=>Math.random()*2-1;
+const _pp=new THREE.Vector3(), _pc=new THREE.Color();
+// an explosion where a missile lands: a white-hot core, orange sparks, a black-grey plume
+function burstAt(pos){ for(let i=0;i<220;i++){ const sp=20+Math.random()*60; GLOW.emit(pos.x,pos.y+1,pos.z,R()*sp,Math.abs(R())*sp*0.7,R()*sp, 3.2,1.6+Math.random()*0.6,0.5, 1.0+Math.random()*1.2, 0.5+Math.random()*0.6, 26, 0.93); }
+  for(let i=0;i<40;i++) GLOW.emit(pos.x,pos.y+1,pos.z,R()*8,R()*8,R()*8, 4,3.4,2.6, 6.0, 0.22, 0, 0.8);
+  for(let i=0;i<70;i++) DUST.emit(pos.x+R()*2,pos.y+1+R(),pos.z+R()*2,R()*7,3+Math.random()*6,R()*7, 0.16,0.15,0.17, 2.4+Math.random()*2, 1.2+Math.random()*1.2, -1.5, 0.95, 2.2); }
+// per craft, every frame: exhaust from both nozzles, a hot boost stream, sparks off the barrier, grit off the street
+function emitShip(s,dt,sf){ if(s.mesh.position.distanceToSquared(camera.position)>420*420) return;
+  const ud=s.mesh.userData, f=s.frame, T=TEAMS[s.id!=null?s.id:0]||TEAMS[0]; _pc.set(T.eng);
+  const fx=f.fwd.x, fy=f.fwd.y, fz=f.fwd.z, spd=s.speed+s.boost;
+  for(const sd of ['L','R']){ _pp.copy(ud['nozzle'+sd]); s.mesh.localToWorld(_pp);
+    let n=Math.floor(dt*(28+sf*40)+Math.random());
+    while(n-->0) GLOW.emit(_pp.x+R()*0.2,_pp.y+R()*0.2,_pp.z+R()*0.2,-fx*6+R()*1.5,-fy*6+R()*1.5+0.4,-fz*6+R()*1.5, _pc.r*1.25,_pc.g*1.25,_pc.b*1.25, 0.14+sf*0.12, 0.16+Math.random()*0.12, 0, 0.9);
+    if(s.boost>1){ n=Math.floor(dt*90+Math.random()); while(n-->0) GLOW.emit(_pp.x+R()*0.3,_pp.y+R()*0.3,_pp.z+R()*0.3,-fx*14+R()*3,-fy*14+R()*3,-fz*14+R()*3, 1.6,2.0,2.6, 0.32, 0.3+Math.random()*0.2, 0, 0.88); } }
+  if(Math.abs(s.lat)>=HALF_W-2.01&&spd>12){ const side=Math.sign(s.lat), rx=f.right.x*side, rz=f.right.z*side;
+    _pp.copy(s.mesh.position).addScaledVector(f.right,side*1.6); let n=Math.floor(dt*(220+spd*3)+Math.random());
+    while(n-->0){ const v=spd*(0.05+Math.random()*0.25); GLOW.emit(_pp.x,_pp.y+0.3+R()*0.4,_pp.z,-fx*v-rx*(3+Math.random()*9),3+Math.random()*11,-fz*v-rz*(3+Math.random()*9), 4.2,2.1+Math.random()*0.9,0.6, 0.22+Math.random()*0.16, 0.3+Math.random()*0.35, 30, 0.95); } }
+  if(survey&&spd>28){ const i=Math.round(shipT(s)*survey.n)%survey.n, ground=survey.ground[i], h=s.mesh.position.y-ground;
+    if(h<16){ const k=1-h/16; let n=Math.floor(dt*90*k+Math.random());
+      while(n-->0){ const leaf=Math.random()<0.35; DUST.emit(s.mesh.position.x+R()*6,ground+0.3,s.mesh.position.z+R()*6,R()*5-fx*spd*0.08,4+Math.random()*9*k,R()*5-fz*spd*0.08,
+        leaf?0.32:0.46,leaf?0.4:0.4,leaf?0.14:0.33, leaf?0.35:0.9+Math.random(), 0.9+Math.random()*1.1, leaf?3:1.2, 0.965, leaf?0:1.4); } } } }
+window.__particles=()=>({ glow:GLOW.alive, dust:DUST.alive });
 // invented teams, 2097 colour blocking: primary hull, secondary pods and wing, number and glyph on the wing
 const TEAMS=[   // parodies of Swedish brands, 2097 (same colours as wo2097/pipeline: make_textures.py and build.py)
   {team:'VOLVÖ SECURITY',  pilot:'YOU',        a:0xd6deeb, b:0x0c1830, n:'01', glyph:'rings', eng:0x9fd8ff},
@@ -916,7 +973,7 @@ function makeTrail(color){ const pos=new Float32Array(TRAIL_N*2*3), col=new Floa
 const SHIP_NAMES=TEAMS.map(T=>T.pilot);
 const SHIP_COLS=TEAMS.map(T=>T.eng);
 const TOTAL_LAPS=1;
-function makeShip(i){ return {
+function makeShip(i){ return { id:i,
   name:SHIP_NAMES[i], team:TEAMS[i].team, isPlayer:i===0, color:SHIP_COLS[i], mesh:buildCraft(i), trails:[makeTrail(SHIP_COLS[i]),makeTrail(SHIP_COLS[i])], brakeFlap:0, hitT:0,
   t:1-((i+1)*9)/TRACK_LEN, lat:(i%2===0?-1:1)*(2+(i>>1)*1.8),
   speed:0, vlat:0, lap:1, crossedStart:false, done:false, finishTime:0,
@@ -1193,7 +1250,7 @@ function stepMissiles(dt){ for(let i=missiles.length-1;i>=0;i--){ const m=missil
     if(m.tgt){ m.lat+=(m.tgt.lat-m.lat)*Math.min(1,dt*4); }
     const f=mkFrame(); frameAt(m.t,f); m.spr.position.copy(f.p).addScaledVector(f.right,m.lat).addScaledVector(f.up,1.6);
     const hit=m.tgt && (m.t-m.tgt.t)*TRACK_LEN>-2;
-    if(hit){ m.tgt.speed*=0.35; m.tgt.hitT=1.2; sfxAt('hit',m.tgt.mesh.position); if(m.tgt.mesh.position.distanceTo(camera.position)<200) shake=Math.min(shake+0.5,1.4); hitFlash=0.6; }
+    if(hit){ m.tgt.speed*=0.35; m.tgt.hitT=1.2; sfxAt('hit',m.tgt.mesh.position); burstAt(m.tgt.mesh.position); if(m.tgt.mesh.position.distanceTo(camera.position)<200) shake=Math.min(shake+0.5,1.4); hitFlash=0.6; }
     if(hit||m.life<=0){ scene.remove(m.spr); m.spr.material.dispose(); missiles.splice(i,1); } } }
 function shipT(s){ return ((s.t%1)+1)%1; }
 function stepShip(s,dt){
@@ -1299,6 +1356,7 @@ function advance(s,dt){
     const pa=tr.geometry.attributes.position, wv=f.right.clone().multiplyScalar(0.12+0.14*Math.min(1,sf));
     for(let i=0;i<TRAIL_N;i++){ const q=pts[Math.min(i,pts.length-1)]; pa.setXYZ(i*2,q.x-wv.x,q.y-wv.y,q.z-wv.z); pa.setXYZ(i*2+1,q.x+wv.x,q.y+wv.y,q.z+wv.z); }
     pa.needsUpdate=true; tr.visible=sf>0.08; });
+  if(state!=='loading') emitShip(s,dt,sf);
 }
 function separate(dt){
   for(let i=0;i<ships.length;i++) for(let j=i+1;j<ships.length;j++){
@@ -1443,7 +1501,7 @@ function loop(now){
     separate(dt); updateCamera(dt);
     for(const m of padMats) for(const k of ['map','emissiveMap']) if(m[k]) m[k].offset.y=(m[k].offset.y-dt*1.6)%1;
     for(const m of wpadMats) for(const k of ['map','emissiveMap']) if(m[k]) m[k].rotation+=dt*1.4;
-    stepMissiles(dt); boostFlash=Math.max(0,boostFlash-dt*1.8); hitFlash=Math.max(0,hitFlash-dt*2);
+    stepMissiles(dt); GLOW.tick(dt); DUST.tick(dt); boostFlash=Math.max(0,boostFlash-dt*1.8); hitFlash=Math.max(0,hitFlash-dt*2);
     updateHUD(dt); drawMinimap();
     { const p=player(); const sf=(p.speed+p.boost)/MAXV;
       drawSpeedFX(state==="race"?Math.min(1,Math.max(0,(sf-0.45)/0.55)):0);
