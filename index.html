@@ -996,6 +996,7 @@ function ensureAudio(){
     mFilter=actx.createBiquadFilter(); mFilter.type='lowpass'; mFilter.frequency.value=520; mFilter.Q.value=0.7; mFilter.connect(musAnalyser);
     musicGain=actx.createGain(); musicGain.gain.value=0; musicGain.connect(mFilter);
     nextStep=actx.currentTime+0.2; mstep=0;
+    spatialInit(); engGain.connect(sendIn);   // the player's engine also rings in the street canyons
   }catch(e){ audioOn=false; } }
 function noiseSrc(){ const s=actx.createBufferSource(); s.buffer=sharedNoise; s.loop=true; return s; }
 function mKick(t){ const o=actx.createOscillator(),g=actx.createGain();
@@ -1061,14 +1062,85 @@ function scheduleStep(t,step){
   // stabbar i övre halvan, tätare nära toppen
   if(e>0.5 && (i===0||i===8 || (e>0.8&&(i===6||i===10)))) mStab(t, STEPDUR*3);
 }
+/* ============================== SPATIAL AUDIO ==============================
+   Every AI craft carries its own synthesized engine through an HRTF panner: it pans as it passes and its pitch
+   bends with the relative closing speed (Doppler). Pads, weapons and hits sound where they happen. A generated
+   reverb with facade slapbacks is dosed by how enclosed the track is, from the tile survey (the tile heights just
+   outside the barriers, wo2097/assets/survey.json): open over the roofs, ringing between tall facades. */
+let sfxBus=null, sfxMeter=null, sendIn=null, revGain=null, scrape=null, encl=0; const aiEng=[];
+const _lsPrev=new THREE.Vector3(), _lsV=new THREE.Vector3(), _ad=new THREE.Vector3(), _av=new THREE.Vector3(), _af=new THREE.Vector3();
+let survey=null; fetch('wo2097/assets/survey.json').then(r=>r.ok?r.json():null).then(d=>{ survey=d; }).catch(()=>{});
+function panAt(pos){ const pn=actx.createPanner(); pn.panningModel='HRTF'; pn.distanceModel='inverse'; pn.refDistance=18; pn.rolloffFactor=1.3; pn.maxDistance=3000;
+  if(pn.positionX){ pn.positionX.value=pos.x; pn.positionY.value=pos.y; pn.positionZ.value=pos.z; } else pn.setPosition(pos.x,pos.y,pos.z); return pn; }
+function spatialInit(){
+  const comp=actx.createDynamicsCompressor(); comp.threshold.value=-14; comp.knee.value=12; comp.ratio.value=5; comp.attack.value=0.005; comp.release.value=0.2; comp.connect(actx.destination);
+  sfxBus=actx.createGain(); sfxBus.gain.value=1; sfxBus.connect(comp);   // six engines on the grid stay loud, never clip
+  sfxMeter=actx.createAnalyser(); sfxMeter.fftSize=1024; sfxBus.connect(sfxMeter);   // level meter for the checks
+  // the street: a short dark tail plus the slapbacks off facades 12, 21 and 33 m away
+  const conv=actx.createConvolver(), R=actx.sampleRate, L=Math.floor(R*1.5), ir=actx.createBuffer(2,L,R);
+  for(let c=0;c<2;c++){ const ch=ir.getChannelData(c);
+    for(let i=0;i<L;i++) ch[i]=(Math.random()*2-1)*Math.pow(1-i/L,3.4)*0.55;
+    for(const [ms,a] of [[35,0.9],[61,0.7],[97,0.55],[140,0.35]]){ const k=Math.floor(R*(ms+(c?4:0))/1000); for(let j=0;j<60;j++) ch[k+j]+=a*(1-j/60)*(Math.random()*2-1); } }
+  conv.buffer=ir; sendIn=actx.createGain(); sendIn.gain.value=0.5; sendIn.connect(conv);
+  revGain=actx.createGain(); revGain.gain.value=0.05; conv.connect(revGain); revGain.connect(sfxBus);
+  // the barrier scrape: a hiss that opens up while you ride the wall
+  { const n=noiseSrc(), bp=actx.createBiquadFilter(), g=actx.createGain(); bp.type='bandpass'; bp.frequency.value=2600; bp.Q.value=0.9; g.gain.value=0;
+    n.connect(bp); bp.connect(g); g.connect(sfxBus); g.connect(sendIn); n.start(); scrape={ g, bp }; } }
+// one-shots in the world: the sound starts where it happened and stays there as you race away from it
+function sfxAt(kind,pos){ if(!actx||!audioOn||!sfxBus||paused) return; const t=actx.currentTime, pn=panAt(pos), out=actx.createGain(); out.connect(pn); pn.connect(sfxBus); out.connect(sendIn);
+  const tone=(type,f0,f1,dur,peak,delay=0)=>{ const o=actx.createOscillator(), g=actx.createGain(); o.type=type; o.frequency.setValueAtTime(f0,t+delay); o.frequency.exponentialRampToValueAtTime(f1,t+delay+dur);
+    g.gain.setValueAtTime(0.0001,t+delay); g.gain.linearRampToValueAtTime(peak,t+delay+0.01); g.gain.exponentialRampToValueAtTime(0.0001,t+delay+dur); o.connect(g); g.connect(out); o.start(t+delay); o.stop(t+delay+dur+0.05); };
+  const hiss=(type,f0,f1,dur,peak,q=1)=>{ const n=noiseSrc(), f=actx.createBiquadFilter(), g=actx.createGain(); f.type=type; f.Q.value=q; f.frequency.setValueAtTime(f0,t); f.frequency.exponentialRampToValueAtTime(f1,t+dur);
+    g.gain.setValueAtTime(0.0001,t); g.gain.linearRampToValueAtTime(peak,t+0.01); g.gain.exponentialRampToValueAtTime(0.0001,t+dur); n.connect(f); f.connect(g); g.connect(out); n.start(t); n.stop(t+dur+0.05); };
+  if(kind==='pad'){ tone('sine',280,1300,0.32,0.35); tone('square',560,2600,0.22,0.08); hiss('bandpass',600,5000,0.35,0.3,1.2); }
+  else if(kind==='pickup'){ [880,1175,1568].forEach((f,i)=>tone('triangle',f,f*1.01,0.16,0.22,i*0.06)); }
+  else if(kind==='turbo'){ hiss('bandpass',300,7000,0.7,0.55,0.8); tone('sawtooth',110,440,0.6,0.18); }
+  else if(kind==='shield'){ [523,784,1046,1568].forEach((f,i)=>tone('sine',f,f*1.5,0.5,0.1,i*0.04)); }
+  else if(kind==='fire'){ hiss('bandpass',5000,400,0.5,0.5,1.5); tone('sawtooth',900,120,0.45,0.2); }
+  else if(kind==='hit'){ hiss('lowpass',3000,120,0.9,0.9); tone('sine',95,35,0.7,0.8); tone('square',180,40,0.25,0.25); } }
+function ensureAiVoices(){   // the AI craft may appear after audio unlocks: voice whoever is new
+  for(let i=aiEng.length+1;i<ships.length;i++){ const o1=actx.createOscillator(), o2=actx.createOscillator(), lp=actx.createBiquadFilter(), g=actx.createGain();
+    o1.type='sawtooth'; o2.type='square'; o1.detune.value=(i*37)%23-11; lp.type='lowpass'; lp.frequency.value=900; lp.Q.value=2; g.gain.value=0;
+    const pn=panAt(ships[i].mesh.position); o1.connect(lp); o2.connect(lp); lp.connect(g); g.connect(pn); pn.connect(sfxBus); g.connect(sendIn);
+    o1.start(); o2.start(); aiEng.push({ s:ships[i], o1, o2, lp, g, pn, prev:ships[i].mesh.position.clone() }); }
+}
+function spatialTick(dt){ if(!sfxBus) return; const t=actx.currentTime; if(typeof ships!=='undefined'&&aiEng.length<ships.length-1) ensureAiVoices();
+  aiEng.forEach((v,i)=>{ if(ships[i+1]&&v.s!==ships[i+1]){ v.s=ships[i+1]; v.prev.copy(v.s.mesh.position); } });   // a restart makes new craft
+  sfxBus.gain.setTargetAtTime(audioOn&&!paused?1:0,t,0.05);
+  // the listener rides the chase camera
+  _lsV.copy(camera.position).sub(_lsPrev).divideScalar(Math.max(dt,1e-3)); _lsPrev.copy(camera.position);
+  camera.getWorldDirection(_af); const L=actx.listener, up=camera.up;
+  if(L.positionX){ L.positionX.value=camera.position.x; L.positionY.value=camera.position.y; L.positionZ.value=camera.position.z;
+    L.forwardX.value=_af.x; L.forwardY.value=_af.y; L.forwardZ.value=_af.z; L.upX.value=up.x; L.upY.value=up.y; L.upZ.value=up.z; }
+  else { L.setPosition(camera.position.x,camera.position.y,camera.position.z); L.setOrientation(_af.x,_af.y,_af.z,up.x,up.y,up.z); }
+  const racing=state==='race'||state==='count'||state==='done';
+  for(const v of aiEng){ const pos=v.s.mesh.position;
+    _av.copy(pos).sub(v.prev).divideScalar(Math.max(dt,1e-3)); v.prev.copy(pos);
+    _ad.copy(pos).sub(camera.position); const d=_ad.length(); if(d>0.01) _ad.divideScalar(d);
+    const vr=_av.clone().sub(_lsV).dot(_ad);                                   // + = opening, - = closing
+    const dop=THREE.MathUtils.clamp(343/(343+vr),0.62,1.6), v0=v.s.speed+v.s.boost;
+    const f=(52+v0*1.7)*dop; v.o1.frequency.setTargetAtTime(f,t,0.03); v.o2.frequency.setTargetAtTime(f*0.5,t,0.03);
+    v.lp.frequency.setTargetAtTime(500+v0*22,t,0.05);
+    v.g.gain.setTargetAtTime(racing?0.16:0.04,t,0.2);
+    if(v.pn.positionX){ v.pn.positionX.setTargetAtTime(pos.x,t,0.02); v.pn.positionY.setTargetAtTime(pos.y,t,0.02); v.pn.positionZ.setTargetAtTime(pos.z,t,0.02); }
+    else v.pn.setPosition(pos.x,pos.y,pos.z); }
+  // how enclosed is the track here: facades beside and above the deck
+  const p=player();
+  if(p&&survey){ const i=Math.round(shipT(p)*survey.n)%survey.n, side=Math.max(survey.outL[i],survey.outR[i]), deck=p.mesh.position.y;
+    const e=THREE.MathUtils.clamp((side-deck+14)/26,0,1); encl+=(e-encl)*Math.min(1,dt*2);
+    revGain.gain.setTargetAtTime(0.05+encl*0.6,t,0.2); }
+  if(scrape&&p){ const on=state==='race'&&Math.abs(p.lat)>=HALF_W-2.01; scrape.g.gain.setTargetAtTime(on?0.22+Math.min(0.2,p.speed*0.002):0,t,on?0.02:0.08); scrape.bp.frequency.setTargetAtTime(1800+p.speed*25,t,0.05); } }
+window.__audio=()=>{ let rms=0; if(sfxMeter){ const a=new Float32Array(sfxMeter.fftSize); sfxMeter.getFloatTimeDomainData(a); for(const x of a) rms+=x*x; rms=Math.sqrt(rms/a.length); }
+  return { ai:aiEng.length, encl:+encl.toFixed(2), rev:revGain?+revGain.gain.value.toFixed(2):null, on:audioOn, state:actx?actx.state:null, rms:+rms.toFixed(4),
+    voices:aiEng.map(v=>({ f:+v.o1.frequency.value.toFixed(1), d:+v.s.mesh.position.distanceTo(camera.position).toFixed(0) })) }; };
 function toggleAudio(){ audioOn=!audioOn;
   if(!audioOn){ if(engGain) engGain.gain.value=0; if(musicGain) musicGain.gain.value=0; }
   else ensureAudio(); }
 function updateAudio(){ if(!actx||!audioOn||!engGain) return;
   if(actx.state==='suspended') actx.resume();
   const p=player(); if(!p){ engGain.gain.value=0; return; }
-  engGain.gain.value=paused||state!=='race'?0.012:0.026+p.speed*0.0004;
-  for(const o of oscs) o.frequency.setTargetAtTime(45+p.speed*1.5,actx.currentTime,0.05);
+  engGain.gain.value=paused||state!=='race'?0.012:0.026+p.speed*0.0004+p.boost*0.0006;
+  for(const o of oscs) o.frequency.setTargetAtTime(45+p.speed*1.5+p.boost*2.4,actx.currentTime,0.05);   // boost pushes the whine up
   if(musicGain){
     const e=musicEnergy();
     // master-filtret öppnar sig med energin (dovt → ljust), volymen växer något
@@ -1107,8 +1179,9 @@ let boostMeter=50, shake=0, fovKick=0;
 // 2097 kit: shield energy (the walls eat it), one weapon slot, missiles in flight, flashes for the FX layer
 let energy=100, weapon=null, shieldT=0, boostFlash=0, hitFlash=0, critT=0; const missiles=[];
 const WEAPONS=['TURBO','SHIELD','MISSILE'];
-function pickWeapon(){ weapon=WEAPONS[Math.floor(Math.random()*WEAPONS.length)]; flash(weapon); drawWeaponIcon(); }
+function pickWeapon(){ weapon=WEAPONS[Math.floor(Math.random()*WEAPONS.length)]; flash(weapon); drawWeaponIcon(); if(player()) sfxAt('pickup',player().mesh.position); }
 function fireWeapon(){ const p=player(); if(!weapon||!p) return;
+  sfxAt(weapon==='TURBO'?'turbo':weapon==='SHIELD'?'shield':'fire',p.mesh.position);
   if(weapon==='TURBO'){ p.boost=Math.max(p.boost,42); fovKick=1; boostFlash=1; }
   else if(weapon==='SHIELD'){ shieldT=5; }
   else if(weapon==='MISSILE'){ let tgt=null, best=1e9;
@@ -1120,7 +1193,7 @@ function stepMissiles(dt){ for(let i=missiles.length-1;i>=0;i--){ const m=missil
     if(m.tgt){ m.lat+=(m.tgt.lat-m.lat)*Math.min(1,dt*4); }
     const f=mkFrame(); frameAt(m.t,f); m.spr.position.copy(f.p).addScaledVector(f.right,m.lat).addScaledVector(f.up,1.6);
     const hit=m.tgt && (m.t-m.tgt.t)*TRACK_LEN>-2;
-    if(hit){ m.tgt.speed*=0.35; m.tgt.hitT=1.2; if(m.tgt.mesh.position.distanceTo(camera.position)<200) shake=Math.min(shake+0.5,1.4); hitFlash=0.6; }
+    if(hit){ m.tgt.speed*=0.35; m.tgt.hitT=1.2; sfxAt('hit',m.tgt.mesh.position); if(m.tgt.mesh.position.distanceTo(camera.position)<200) shake=Math.min(shake+0.5,1.4); hitFlash=0.6; }
     if(hit||m.life<=0){ scene.remove(m.spr); m.spr.material.dispose(); missiles.splice(i,1); } } }
 function shipT(s){ return ((s.t%1)+1)%1; }
 function stepShip(s,dt){
@@ -1186,7 +1259,7 @@ function stepShip(s,dt){
   if(s.hitT>0){ s.hitT-=dt; s.roll+=Math.sin(s.hitT*18)*0.4*dt*10; }
   const tn=shipT(s);
   for(const pad of PADS){ let dT=Math.abs(tn-pad.t); dT=Math.min(dT,1-dT);
-    if(dT*TRACK_LEN<6&&Math.abs(s.lat-pad.lat)<3.6){ const had=s.boost; s.boost=Math.max(s.boost,24);
+    if(dT*TRACK_LEN<6&&Math.abs(s.lat-pad.lat)<3.6){ const had=s.boost; s.boost=Math.max(s.boost,24); if(had<12) sfxAt('pad',s.mesh.position);
       if(s.isPlayer){ boostMeter=Math.min(100,boostMeter+30); if(had<12){ fovKick=1; boostFlash=Math.max(boostFlash,0.55); } } } }
   advance(s,dt);
 }
@@ -1388,7 +1461,7 @@ function loop(now){
     camera.position.set(Math.cos(a)*250,170,Math.sin(a)*250);
     camera.lookAt(0,20,0);
   }
-  updateAudio();
+  updateAudio(); if(actx&&audioOn) spatialTick(dt);
   composer.render();
 }
 requestAnimationFrame(loop);
