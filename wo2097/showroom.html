@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<title>SAGL 2097 · HANGAR</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
+<style>
+  @font-face { font-family:Orbitron; src:url('pipeline/fonts/Orbitron.ttf'); }
+  @font-face { font-family:Rajdhani; src:url('pipeline/fonts/Rajdhani-Bold.ttf'); }
+  html,body { margin:0; height:100%; overflow:hidden; background:#07080c; color:#eef3ff; font-family:Rajdhani,"Arial Narrow",Arial,sans-serif; user-select:none; }
+  canvas { display:block; }
+  #panel { position:fixed; left:48px; bottom:52px; max-width:44vw; }
+  #num { font-family:Orbitron,Arial Black,sans-serif; font-size:120px; line-height:.8; font-weight:900; }
+  #team { font-family:Orbitron,Arial Black,sans-serif; font-size:40px; letter-spacing:.06em; margin-top:10px; }
+  #slogan { font-size:28px; letter-spacing:.08em; margin-top:8px; color:#ffcd00; }
+  #spec { font-size:15px; letter-spacing:.22em; margin-top:18px; color:#9aa6c0; }
+  #top { position:fixed; left:48px; top:34px; font-family:Orbitron,Arial Black,sans-serif; font-size:15px; letter-spacing:.35em; color:#9aa6c0; }
+  #top b { color:#fff; }
+  #nav { position:fixed; right:48px; bottom:52px; text-align:right; font-size:15px; letter-spacing:.22em; color:#9aa6c0; }
+  #dots span { display:inline-block; width:34px; height:6px; margin-left:6px; background:#2a3040; }
+  #dots span.on { background:#fff; }
+  #load { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; font-family:Orbitron,sans-serif; letter-spacing:.4em; color:#9aa6c0; }
+</style>
+</head>
+<body>
+<div id="top"><b>SAGL 2097</b> · STOCKHOLM ANTI-GRAVITY LEAGUE · HANGAR · ハンガー</div>
+<div id="panel"><div id="num"></div><div id="team"></div><div id="slogan"></div><div id="spec"></div></div>
+<div id="nav"><div id="dots"></div><div style="margin-top:12px">← → BYT SKEPP · DRA FÖR ATT SNURRA · SPACE PAUSA</div></div>
+<div id="load">LADDAR HANGAREN</div>
+<script type="importmap">
+{ "imports": {
+  "three": "https://unpkg.com/three@0.170.0/build/three.module.js",
+  "three/addons/": "https://unpkg.com/three@0.170.0/examples/jsm/"
+} }
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+
+// same teams, colours and order as index.html TEAMS
+const TEAMS=[
+  {team:'VOLVÖ SECURITY',  n:'01', a:0xd6deeb, eng:0x9fd8ff, slogan:'SÄKERHET. FÖR ÄGARNA.',              spec:'PANSRAD · BOXIG · KROCKZON FRAM'},
+  {team:'SAAPH DEFENCE',   n:'07', a:0xc81020, eng:0xff3b3b, slogan:'WE ARM BOTH SIDES.',                 spec:'STEALTH · CANARDER · VAPENBALKAR'},
+  {team:'SPOTIFAI NEURAL', n:'12', a:0x1ed760, eng:0x35ff8b, slogan:'VI VET VAD DU KÄNNER HÄRNÄST.',       spec:'ORGANISK · VÅGFORMSRYGG'},
+  {team:'IKÖA FLATPACK',   n:'23', a:0xffcd00, eng:0xffcd00, slogan:'MONTERA DITT MEDBORGARSKAP.',         spec:'PLATTPAKET · 48 INSEXSKRUVAR'},
+  {team:'KLARNÅ DEBT',     n:'31', a:0xffb3c7, eng:0xff5fa2, slogan:'KÖR NU. BETALA FÖR ALLTID.',          spec:'NÅLNOS · DELTAVINGE · EN DYSA'},
+  {team:'ERIXON SIGNAL',   n:'44', a:0xf2f6ff, eng:0x00e1ff, slogan:'ALLTID UPPKOPPLAD. ALLTID AVLYSSNAD.', spec:'KATAMARAN · SIGNALFENOR · PARABOL'} ];
+const Q=new URLSearchParams(location.search);
+let cur=+(Q.get('craft')||0), spin=!Q.has('still');
+
+const renderer=new THREE.WebGLRenderer({antialias:true}); renderer.setPixelRatio(Math.min(2,devicePixelRatio));
+renderer.toneMapping=THREE.ACESFilmicToneMapping; renderer.toneMappingExposure=0.85; renderer.shadowMap.enabled=true; renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+document.body.appendChild(renderer.domElement);
+const scene=new THREE.Scene(); scene.background=new THREE.Color(0x07080c); scene.fog=new THREE.Fog(0x07080c,22,60);
+{ const pm=new THREE.PMREMGenerator(renderer); scene.environment=pm.fromScene(new RoomEnvironment(),0.04).texture; scene.environmentIntensity=0.55; }
+const camera=new THREE.PerspectiveCamera(32,1,0.1,200); camera.position.set(-9.5,4.2,-10.5);
+const controls=new OrbitControls(camera,renderer.domElement); controls.target.set(0,0.6,0); controls.enableDamping=true;
+controls.minDistance=6; controls.maxDistance=24; controls.maxPolarAngle=Math.PI*0.49;
+
+// the studio: a key with soft shadows, a cold fill, a hot rim from behind, and the team colour bouncing off the floor
+const key=new THREE.DirectionalLight(0xffffff,2.4); key.position.set(-6,10,-4); key.castShadow=true;
+key.shadow.mapSize.set(2048,2048); Object.assign(key.shadow.camera,{left:-7,right:7,top:7,bottom:-7,near:1,far:30}); key.shadow.bias=-0.0004; scene.add(key);
+const fill=new THREE.DirectionalLight(0x9fb8ff,0.7); fill.position.set(8,3,-2); scene.add(fill);
+const rim=new THREE.DirectionalLight(0xffffff,2.2); rim.position.set(2,4,9); scene.add(rim);
+const bounce=new THREE.PointLight(0xffffff,1.2,9,2); bounce.position.set(0,-0.6,0); scene.add(bounce);
+// the floor: dark gloss, a turntable ring and the hangar grid
+const floor=new THREE.Mesh(new THREE.CircleGeometry(40,96),new THREE.MeshStandardMaterial({color:0x0b0d13,roughness:0.62,metalness:0.25,envMapIntensity:0.1}));
+floor.rotation.x=-Math.PI/2; floor.position.y=-0.9; floor.receiveShadow=true; scene.add(floor);
+const ring=new THREE.Mesh(new THREE.RingGeometry(5.4,5.5,128),new THREE.MeshBasicMaterial({color:0xffffff,toneMapped:false}));
+ring.rotation.x=-Math.PI/2; ring.position.y=-0.89; scene.add(ring);
+const grid=new THREE.GridHelper(80,40,0x1d2230,0x131722); grid.position.y=-0.895; scene.add(grid);
+
+const composer=new EffectComposer(renderer); composer.addPass(new RenderPass(scene,camera));
+const bloom=new UnrealBloomPass(new THREE.Vector2(1,1),0.32,0.35,0.95); composer.addPass(bloom); composer.addPass(new OutputPass());
+// the craft sits right of centre so the team panel on the left never covers it
+function resize(){ renderer.setSize(innerWidth,innerHeight); composer.setSize(innerWidth,innerHeight); camera.aspect=innerWidth/innerHeight;
+  camera.setViewOffset(innerWidth,innerHeight,-innerWidth*0.14,0,innerWidth,innerHeight); camera.updateProjectionMatrix(); }
+addEventListener('resize',resize); resize();
+
+function glowTex(){ const c=document.createElement('canvas'); c.width=c.height=64; const g=c.getContext('2d');
+  const r=g.createRadialGradient(32,32,1,32,32,31); r.addColorStop(0,'rgba(255,255,255,1)'); r.addColorStop(0.3,'rgba(255,255,255,.55)'); r.addColorStop(1,'rgba(0,0,0,0)');
+  g.fillStyle=r; g.fillRect(0,0,64,64); return new THREE.CanvasTexture(c); }
+const GLOW=glowTex();
+const loader=new GLTFLoader(); loader.setDRACOLoader(new DRACOLoader().setDecoderPath('https://unpkg.com/three@0.170.0/examples/jsm/libs/draco/gltf/'));
+const stand=new THREE.Group(); stand.position.y=0.25; scene.add(stand);
+const crafts=[]; let tris=[];
+Promise.all(TEAMS.map((T,i)=>loader.loadAsync(`assets/craft_${i}.glb`).then(g=>{
+  const root=g.scene; let n=0;
+  root.traverse(o=>{ if(o.isMesh){ o.castShadow=true; o.receiveShadow=true;
+      n+=o.geometry.index?o.geometry.index.count/3:o.geometry.attributes.position.count/3;
+      [].concat(o.material).forEach(m=>{ if(/^core|^neon/i.test(m.name)) m.toneMapped=false; }); } });
+  for(const sd of ['L','R']){ const e=root.getObjectByName('eng_'+sd); if(!e) continue;
+    const s=new THREE.Sprite(new THREE.SpriteMaterial({map:GLOW,color:new THREE.Color(T.eng).multiplyScalar(1.4),blending:THREE.AdditiveBlending,depthWrite:false,transparent:true,toneMapped:false}));
+    s.scale.set(1.3,1.3,1); s.position.copy(e.position).add(new THREE.Vector3(0,0,0.18)); root.add(s); }
+  root.visible=false; stand.add(root); crafts[i]=root; tris[i]=Math.round(n); }))).then(()=>{ document.getElementById('load').remove(); show(cur); });
+
+const dots=document.getElementById('dots'); TEAMS.forEach(()=>dots.appendChild(document.createElement('span')));
+function show(i){ cur=(i+TEAMS.length)%TEAMS.length; crafts.forEach((c,k)=>c.visible=k===cur); const T=TEAMS[cur];
+  document.getElementById('num').textContent=T.n; document.getElementById('num').style.color='#'+new THREE.Color(T.a).getHexString();
+  document.getElementById('team').textContent=T.team; document.getElementById('slogan').textContent=T.slogan;
+  document.getElementById('spec').textContent=T.spec+' · '+tris[cur].toLocaleString('sv-SE')+' TRIANGLAR';
+  bounce.color.set(T.eng); ring.material.color.set(T.eng); [...dots.children].forEach((d,k)=>d.classList.toggle('on',k===cur)); }
+addEventListener('keydown',e=>{ if(e.key==='ArrowRight') show(cur+1); if(e.key==='ArrowLeft') show(cur-1); if(e.key===' ') spin=!spin; });
+if(Q.has('view')){ const v=Q.get('view'); const P={side:[-12,1.6,0],front:[0,2.4,-12.5],top:[0,15,0.01],rear:[3.5,2.6,11],three:[-9.5,4.2,-10.5]}[v]; if(P) camera.position.set(...P); }
+let last=performance.now();
+renderer.setAnimationLoop(now=>{ const dt=Math.min(0.05,(now-last)/1000); last=now;
+  if(spin) stand.rotation.y+=dt*0.35; stand.position.y=0.25+Math.sin(now/700)*0.05;
+  controls.update(); composer.render(); });
+window.HANGAR={show,get cur(){return cur}};
+</script>
+</body>
+</html>

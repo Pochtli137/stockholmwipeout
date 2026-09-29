@@ -1,7 +1,7 @@
 """STOCKHOLM WIPEOUT 2097 · the track set and the craft, built in Blender over the calibrated centreline.
 Reads ../assets/track.json (dumped from the game over Google's tiles, see dump_track.cjs) and tex/ (make_textures.py).
 Everything is modelled in the game's own frame (+X west, +Y up, +Z north; Blender gets (x,-z,y), the glTF export
-turns it back), so the glb lands exactly on the tiles. Exports ../assets/track.glb and ../assets/craft_<i>.glb.
+turns it back), so the glb lands exactly on the tiles. Exports ../assets/track.glb (the craft: build_craft.py).
 
     blender -b --factory-startup -P build.py -- [--nobake]"""
 import bpy, bmesh, os, sys, json, math, time
@@ -182,50 +182,8 @@ for i in range(nb):
 log('billboards',boards,'of',nb)
 setobs.append(M.build('billboards',SET)); log('set pieces',len(setobs))
 
-# ------------------------------------------------------------------ the craft (six teams, original designs)
-TEAMS=[('#d6deeb','#0c1830'),('#c81020','#0c0d12'),('#1ed760','#07090d'),('#ffcd00','#004aad'),('#ffb3c7','#07090d'),('#f2f6ff','#00a8e0')]   # make_textures.py TEAMS
-ENG=['#9fd8ff','#ff3b3b','#35ff8b','#ffcd00','#ff5fa2','#00e1ff']
-def prism(M,pts,y0,y1,mat_):   # pts: (x, forward) outline; forward is -z in the ship's local frame
-    top=[(x,y1,-f) for x,f in pts]; bot=[(x,y0,-f) for x,f in pts]
-    M.poly(top,mat_); M.poly(list(reversed(bot)),mat_)
-    for k in range(len(pts)):
-        a,b=k,(k+1)%len(pts); M.quad(bot[a],bot[b],top[b],top[a],mat_)
-def ellipsoid(M,c,rx,ry,rz,m_,nu=16,nv=9):
-    for j in range(nv):
-        for i in range(nu):
-            def P(ii,jj):
-                th=ii/nu*2*math.pi; ph=jj/nv*math.pi-math.pi/2
-                return (c[0]+rx*math.cos(ph)*math.cos(th), c[1]+ry*math.sin(ph), c[2]+rz*math.cos(ph)*math.sin(th))
-            M.quad(P(i,j),P(i,j+1),P(i+1,j+1),P(i+1,j),m_) if True else None
-def cyl(M,c,r0,r1,l,m_,n=12):   # along z
-    for i in range(n):
-        a=i/n*2*math.pi; b=(i+1)/n*2*math.pi
-        p=lambda ang,r,z:(c[0]+r*math.cos(ang),c[1]+r*math.sin(ang),c[2]+z)
-        M.quad(p(a,r0,-l/2),p(b,r0,-l/2),p(b,r1,l/2),p(a,r1,l/2),m_)
+# the craft moved to build_craft.py (detailed hard-surface models); this script only builds the track set
 crafts=[]
-for i,(a,b) in enumerate(TEAMS):
-    cc=bpy.data.collections.new(f'craft_{i}'); scene.collection.children.link(cc)
-    mA=mat(f'hullA_{i}',col=srgb(a),rough=0.5,metal=0.2); mB=mat(f'hullB_{i}',col=srgb(b),rough=0.5,metal=0.25)
-    mC=mat('carbon',col=(0.02,0.022,0.03),rough=0.5,metal=0.6); mG=mat('canopy',col=(0.01,0.03,0.08),rough=0.22,metal=0.6)
-    mL=mat(f'livery_{i}',tex=f'livery_{i}.jpg',rough=0.55,metal=0.1); mE=mat(f'core_{i}',col=(0,0,0),emit_col=srgb(ENG[i]),emit=3.0)
-    I=lambda q:q; M=MB()
-    prism(M,[(0,4.4),(0.55,2.2),(1.15,0.2),(1.2,-2.6),(0.8,-3.2),(-0.8,-3.2),(-1.2,-2.6),(-1.15,0.2),(-0.55,2.2)],-0.3,0.4,mA)
-    prism(M,[(0,3.4),(0.3,1.6),(0.35,-2.4),(-0.35,-2.4),(-0.3,1.6)],0.4,0.62,mB)
-    for sx in (-1,1):
-        prism(M,[(sx*2.15+0,2.6),(sx*2.15+0.45,1.4),(sx*2.15+0.5,-3.0),(sx*2.15-0.5,-3.0),(sx*2.15-0.45,1.4)],-0.36,0.26,mB)
-        cyl(M,(sx*2.15,-0.05,3.2),0.34,0.42,0.5,mC)
-        M.poly([(sx*2.15+0.3*math.cos(k/12*2*math.pi),-0.05+0.3*math.sin(k/12*2*math.pi),3.46) for k in range(12)],mE)
-        # a raked tail fin
-        M.poly([(sx*2.05,0.26,1.2),(sx*2.05,0.26,3.0),(sx*2.2,1.55,3.2),(sx*2.2,1.45,2.1)],mA); M.poly([(sx*2.05,0.26,3.0),(sx*2.05,0.26,1.2),(sx*2.2,1.45,2.1),(sx*2.2,1.55,3.2)],mA)
-    M.box(I,0,0.2,1.3,3.6,0.14,2.6,mL,top_uv=True)
-    ellipsoid(M,(0,0.62,-0.3),0.53,0.34,1.18,mG)
-    ob=M.build(f'craft_{i}_body',cc,recalc=True); crafts.append((i,cc,[ob]))
-    for sd,sx in (('L',-1),('R',1)):
-        hinge=bpy.data.objects.new(f'flap_{sd}',None); hinge.location=G2B((sx*2.15,0.3,1.7)); cc.objects.link(hinge)
-        F=MB(); F.box(lambda q:q,0,0,0.55,0.8,0.08,1.1,mA); fo=F.build(f'flap_{sd}_plate',cc,recalc=True); fo.parent=hinge
-        eng=bpy.data.objects.new(f'eng_{sd}',None); eng.location=G2B((sx*2.15,-0.05,3.46)); cc.objects.link(eng)
-        crafts[-1][2].append(fo)
-log('craft',len(crafts))
 
 # ------------------------------------------------------------------ ambient occlusion into vertex colours (craft and set pieces)
 def bake(obs):
@@ -244,7 +202,7 @@ def bake(obs):
         n=len(me.loops); c=np.ones(n*4,np.float32); ca.data.foreach_get('color',c); c=c.reshape(-1,4); c[:,:3]=0.35+0.65*np.clip(c[:,:3],0,1)**1.1
         ca.data.foreach_set('color',c.ravel())
     log('baked',len(obs))
-if not NOBAKE: bake(setobs+[o for _,_,obs in crafts for o in obs])
+if not NOBAKE: bake(setobs)
 
 # ------------------------------------------------------------------ export
 def export(coll,path,vc):
@@ -258,5 +216,4 @@ def export(coll,path,vc):
 all_track=bpy.data.collections.new('all_track'); scene.collection.children.link(all_track)
 for o in list(trk.objects)+list(SET.objects): all_track.objects.link(o)
 export(all_track,os.path.join(OUT,'track.glb'),not NOBAKE)
-for i,cc,_ in crafts: export(cc,os.path.join(OUT,f'craft_{i}.glb'),not NOBAKE)
 log('done')

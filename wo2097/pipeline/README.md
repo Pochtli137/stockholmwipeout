@@ -14,8 +14,9 @@ Bara HUD:en, skärmeffekterna (fartstreck, blixtar, sköldkant), motorglöd, sp�
                                    #    -> assets/survey.json, sedan höjdprofilen -> assets/track.json
     node dump_track.cjs rebuild    #    (profilen om från sparad survey, utan tiles, sekunder)
     python3 make_textures.py       # 3. alla texturer med PIL -> tex/
-    blender -b --factory-startup -P build.py     # 4. banan + skeppen, AO-bakade, Draco -> ../assets/track.glb, craft_<i>.glb
-    node check_lap.cjs [utmapp]    # 5. spela igenom: svep var 8:e m + ett helt race med bot, rapport + skärmdumpar
+    blender -b --factory-startup -P build.py     # 4. banan, AO-bakad, Draco -> ../assets/track.glb
+    blender -b --factory-startup -P build_craft.py [-- --only 3] [-- --nobake]   # 5. de sex skeppen -> ../assets/craft_<i>.glb (~16 s)
+    node check_lap.cjs [utmapp]    # 6. spela igenom: svep var 8:e m + ett helt race med bot, rapport + skärmdumpar
 
 **Racinglinjen (design_track.py):** minsta svängradie 120 m. Spelets greppgräns är v = √(70·R); toppfart 66 m/s
 plus ~24 m/s boost ger R ≥ 116 m, så varje kurva kan tas i full fart med boost utan att dras in i väggen. Linjen
@@ -53,3 +54,21 @@ Skärmdumpar: `node sky_shots.cjs <utmapp>` (mot solen, bort från solen, över 
 - Skeppens noder: `flap_L`/`flap_R` (luftbromsarnas gångjärn), `eng_L`/`eng_R` (munstyckena).
 - Bloomtröskeln är 1.4: bara emission (neon 2.6, kärnor 3.0, plattor 1.6) ska över. Blanka ytor i lågt solljus blev en vit boll; banan är därför satin (roughness 0.62).
 - Typsnitt: Orbitron och Rajdhani (SIL Open Font License, `fonts/`), katakana från systemets Hiragino.
+
+## Skeppen (build_craft.py) och hangaren (wo2097/showroom.html)
+
+Sex egna konstruktioner för de påhittade lagen, modellerade som fasade hårdytor i Blender (superellipssektioner längs
+skrovet, plattor för vingar och fenor, rör för dysor och master), AO-bakade i vertexfärger, klarlack på lacken.
+Varje fil har noderna spelet styr: `flap_L`/`flap_R` (luftbromsgångjärn, plattan hänger bakom gångjärnet och
+`rotation.x < 0` lyfter bakkanten) och `eng_L`/`eng_R` (dysornas mynning, där glöd, värme och spår sätts fast).
+
+| # | Lag | Form |
+|---|---|---|
+| 0 | VOLVÖ SECURITY | brett platt skrov, pansrade sidopoddar med bultrader, stötfångare, störtbåge |
+| 1 | SAAPH DEFENCE | diamantsektion med chines, intagsbommar, canarder, snedställda fenor, vapenbalkar, noskanon |
+| 2 | SPOTIFAI NEURAL | organisk droppform, runda naceller, böjd vinge, vågformsribbor på ryggen |
+| 3 | IKÖA FLATPACK | platta skivor med fasade kanter, insexbultar, slitsad stjärt, insexnyckel som antenn |
+| 4 | KLARNÅ DEBT | nålnos, svart rygg, deltavinge med svarta spetsar, en bred dysa med två kärnor |
+| 5 | ERIXON SIGNAL | katamaran, trappstegsfenor (signalstaplar), parabol, antennmaster med fyrar |
+
+Hangaren: `http://localhost:8820/wo2097/showroom.html` (← → byt skepp, dra för att snurra, `?craft=N&still&view=side|front|top|rear|three`).
