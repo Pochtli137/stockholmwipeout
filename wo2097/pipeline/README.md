@@ -130,7 +130,7 @@ we built is a worn, lived-in 2097, and **the only saturated light in the world b
 - **Light**: a fluorescent fitting on top of both walls every 3.2 m (7 126 of them; cold white on the left, sodium on
   the right; ~8 % dead, ~3.5 % flickering: `tube_flick_*`), a top rail with posts, two conduits on the outside, and
   178 sodium lamp posts every 64 m with an additive light pool on the deck (`pool_sodium`).
-- **Signs**: every brand is lit, in three kinds (`STYLES` in make_textures.py): LIGHTBOX (backlit acrylic), NEON
+- **Signs** (superseded: the ads are printed paper now, see below): every brand is lit, in three kinds (`STYLES` in make_textures.py): LIGHTBOX (backlit acrylic), NEON
   (tube letters on a weathered panel), LED (pixel panel). Billboards emit 1.35 / 1.9 / 1.4, the arches' LED faces 1.35,
   the walls' light boxes 0.95, the tubes 0.62: the bloom threshold is 1.05, so the neon words glow and nothing else floods.
   Three boards glitch (`board_*_flk`). The arches carry a corporate neon bar in the brand's colour.
@@ -160,3 +160,34 @@ and parties outside the Riksdag are not included (Kim's call).
 | MILJÖPÅRTIET | MP | KLIMATNEUTRALT. / ENLIGT OSS. |
 
 (`PARTIES` in make_textures.py.)
+
+## Two themes in one build (Kim, 2026-09-29): TITLE → THEME → CRAFT → go
+"i början av spelet får man välja theme (neon eller used) och sen får man välja skepp och sen är det go time."
+
+- The first screen (`#themesel` in index.html) picks **NEON** or **USED**; the choice is remembered (`localStorage.swTheme`).
+  The theme is settled with a top-level `await` before anything is built, because the sky and fog colours compile into
+  every shader, and only that theme's glbs are downloaded. `?theme=neon|used` skips the screen; `?check` uses the
+  remembered one. The preview images are `wo2097/assets/theme_neon.jpg` and `theme_used.jpg` (Skeppsbron, from the game).
+- `TH` in index.html holds everything that differs: bloom, sky, cloud shade, flare tints, sun and hemisphere light,
+  grade pass (used only), engine light (used 0.5, neon 1.0), countdown light level, HUD canvas colours and the hangar.
+  The HUD CSS for neon is `body.theme-neon` and restores b08a156 exactly (the weapon slot at the top centre included).
+  The tiles, the track line (`assets/track.json`) and the physics are shared.
+- Assets: `wo2097/assets/neon/` (track 3.6 MB + craft 1.2 MB) and `wo2097/assets/used/` (track 10.8 MB + craft 1.3 MB).
+  NEON is built by the snapshot in `pipeline/neon/` (the b08a156 scripts with their paths moved; it rebuilds track.glb
+  byte for byte), USED by `pipeline/`:
+
+      cd wo2097/pipeline/neon && python3 make_textures.py && blender -b --factory-startup -P build.py && blender -b --factory-startup -P build_craft.py
+      cd wo2097/pipeline      && python3 make_textures.py && blender -b --factory-startup -P build.py && blender -b --factory-startup -P build_craft.py
+
+- The effect and audio flags above are the same in both themes (all off).
+- Checks take the theme: `THEME=neon node check_lap.cjs out/` and `THEME=neon node perf.cjs 30`.
+- The showroom follows the theme too: `wo2097/showroom.html?theme=neon`.
+
+## USED: the ads are printed paper (replaces the light boxes above)
+"jag tror vi bara kan köra pappersannonstavlor i used universe, dvs som dom i neonversionen men papper." Every ad,
+corporate and party, is a matte printed paper poster in the neon version's layout and size (billboards 1024 × 512 with
+the slogan at min 112 px, walls with the neon version's cell sizes, arches and gantry as printed banners). No neon, no
+light boxes, no LED. The print is crisp; the wear is on the paper's edges, tape at its corners, the board and the wall.
+Lighting: the tubes light the walls (`barrier_*` emission 0.5 of the whole wall), and every board has two worn
+floodlights on arms (`lamp_flood`); their warm light is the paper's emission (0.55, under the bloom threshold 1.25).
+Checked at race speed against the neon version at the same three points and on two party boards.
