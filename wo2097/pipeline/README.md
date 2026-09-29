@@ -231,3 +231,21 @@ scanlines, USED a municipal enamel sign slapped on) with its name in runes. Neve
 least 5 s apart, and one that comes too soon waits its turn instead of being dropped. Every entry and every pickup (speed
 pad, weapon pad) gives the player's craft a flourish, on the mesh only: a barrel roll, an engine pulse and a brief tint
 in team colour (~0.55 s); AI craft do a wing flick on their pads. No new sound (audio stays the deployed one).
+
+## District gates, moves and Rez layers (2026-09-29)
+Kim: "man ska inte rolla på varenda speed up. det sker bara när man kommer in i en ny stadsdel och då ska det vara en liten
+port och 'entering kungsholmen' och SEN ett UNIKT move." And: "rez hade också en grej att musiken stegrades vid en flourish."
+- **No flourish on pickups** any more (turbo and weapon pads, player and AI).
+- **Gates:** a slim portal at every stadsdel entry in `track.json` → `districts` (9 per lap; the one at the start gantry is
+  skipped). Built in both `build.py` (rusty posts, a Stockholm-blue enamel street-name sign) and `neon/build.py` (neon posts,
+  the name in a tube on black glass); textures `dist_<i>.jpg` from both `make_textures.py`. Posts at ±(halfW+3.5) like the
+  arches (same tile check `arch_free`), sign 9 × 1.8 m with its lower edge 8 m over the deck, above the chase camera.
+- **Sequence:** gate → the ENTERING title → on the next beat after it settles (≥ 0.6 s) the district's own move, and the music
+  drops on that same downbeat. `MOVES` in index.html: Södermalm double barrel roll · Gamla stan slow corkscrew with a nose dip ·
+  Norrmalm wing-flick salute left/right · Östermalm flat 360° pirouette · Kungsholmen hop with one roll · Marieberg wobble wave ·
+  Långholmen lazy half roll and back. Mesh only (physics, camera, hitbox untouched), faint team rim (0.12), AI never move.
+- **Rez layers** (`SFX.rezLayers`, on): the deployed 130 BPM loop starts unchanged. ~2 s before each gate a riser and a 16th
+  snare fill lead into the crossing; each move's downbeat carries an impact and adds one layer that stays, up to seven:
+  1 sub-bass on the offbeats · 2 16th arpeggio · 3 chord hits · 4 claps and shaker · 5 lead hook · 6 the master filter opens
+  +3.2 kHz · 7 ride and tom fills. Scheduled on the same step clock (`rezStep` after `scheduleStep`, absolute step `mAbs`);
+  reset with the race (`rezReset`). Verified: every drop on a beat, 0 ms off the grid; node creation rate plateaus (~1.5k/10 s).

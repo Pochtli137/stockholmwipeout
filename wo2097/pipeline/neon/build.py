@@ -165,6 +165,32 @@ for A in ARCHES:
     M.box(T,0,11.4,0,W2*2+2,3.0,1.6,m_metal); sign(M,T,W2*2+1.4,2.6,11.4,0.88,f'arch_{b}.jpg',f'arch_{(b+7)%NB}.jpg')
     M.box(T,0,9.8,0,W2*2+2,0.2,1.8,m_neonY); setobs.append(M.build('arch_'+A['n'].lower(),SET)); placed+=1
 log('arches placed',placed,'of',len(ARCHES))
+
+# ------------------------------------------------------------------ district gates: a slim neon portal at every stadsdel entry
+DN=[]
+for _x in D['districts']:
+    if _x['name'] not in DN: DN.append(_x['name'])
+gp=0
+for _x in D['districts']:
+    if _x['t']*L<100: continue
+    t=None
+    for dm in range(0,64,4):
+        tt=(_x['t']+dm/L)%1.0
+        if arch_free(tt): t=tt; break
+    if t is None: log('gate skipped (tiles at the posts)',_x['name']); continue
+    p,r,u,fw,_=at(t); T=local(p,r,u,fw); M=MB(); W2=HW+3.5; gi=DN.index(_x['name'])
+    for sx in (-1,1):
+        M.box(T,sx*W2,5.15,0,0.5,10.3,0.5,m_metal); M.box(T,sx*W2,5.15,0.3,0.12,9.6,0.12,m_neonL if sx<0 else m_neonR)
+    M.box(T,0,10.1,0,W2*2+0.5,0.35,0.45,m_metal); M.box(T,0,9.9,0.26,W2*2+0.3,0.08,0.08,m_neonY)
+    for sx in (-1,1): M.box(T,sx*3.4,9.6,0,0.12,0.7,0.12,m_metal)
+    M.box(T,0,8.9,0,9.1,1.9,0.46,m_metal)
+    mm=mat(f'gate_sign_{gi}',tex=f'dist_{gi}.jpg',emit_tex=f'dist_{gi}.jpg',emit=1.6,rough=0.5)   # the tube glows on its own
+    for zz,flip in ((0.26,False),(-0.26,True)):
+        x0,x1,y0,y1=-4.5,4.5,8.0,9.8
+        if not flip: M.quad(T((x0,y0,zz)),T((x1,y0,zz)),T((x1,y1,zz)),T((x0,y1,zz)),mm)
+        else: M.quad(T((x1,y0,zz)),T((x0,y0,zz)),T((x0,y1,zz)),T((x1,y1,zz)),mm)
+    setobs.append(M.build(f'gate_{gp}',SET)); gp+=1
+log('district gates',gp,'of',sum(1 for _x in D['districts'] if _x['t']*L>=100))
 nb=int(L/300); M=MB(); boards=0
 for i in range(nb):
     t=(i+0.5)/nb

@@ -196,3 +196,21 @@ for i,T in enumerate(TEAMS):
     for k in range(4): d.polygon([(w*.55+k*70,0),(w*.55+k*70+40,0),(w*.55+k*70+10,h*.62),(w*.55+k*70-30,h*.62)],fill=b)
     d.text((24,int(h*.33)),T['team']+'  '+T['n'],font=fit(d,T['team']+'  '+T['n'],FONTS[T['f']],40,w*.52,minsz=16),fill=K if T['a'] in ('#f2f6ff','#d6deeb','#ffcd00','#ffb3c7','#1ed760') else W,anchor='lm'); save(im,f'hull_{i}.jpg')
 print('textures ->',OUT, len(os.listdir(OUT)))
+
+# ---- DISTRICT GATES: a slim neon sign per stadsdel (track.json districts), the name in a tube on black glass
+import json as _json
+DIST=[]
+for _x in _json.load(open(os.path.join(H,'..','..','assets','track.json')))['districts']:
+    if _x['name'] not in DIST: DIST.append(_x['name'])
+for gi,nm in enumerate(DIST):
+    col=hx('#00e1ff') if gi%2==0 else hx('#ff2e9a'); w,h=1280,256; up=nm.upper()
+    im=Image.new('RGB',(w,h),(6,8,14)); d=ImageDraw.Draw(im)
+    for k,a in ((6,0.35),(3,0.7)): d.rectangle([k*2,k*2,w-k*2,h-k*2],outline=tuple(int(c*a) for c in col),width=3)
+    f=fit(d,up,lambda z:orb(z,900),150,w-160,minsz=70)
+    halo=Image.new('RGB',(w,h),(0,0,0)); hd=ImageDraw.Draw(halo); hd.text((w//2,int(h*.44)),up,font=f,fill=col,anchor='mm')
+    halo=halo.filter(ImageFilter.GaussianBlur(14)); im=Image.fromarray(__import__('numpy').maximum(__import__('numpy').asarray(im),__import__('numpy').asarray(halo)))
+    d=ImageDraw.Draw(im); d.text((w//2,int(h*.44)),up,font=f,fill=col,anchor='mm',stroke_width=6,stroke_fill=col)
+    d.text((w//2,int(h*.44)),up,font=f,fill=(250,252,255),anchor='mm')     # the white-hot core of the tube
+    d.text((w//2,int(h*.83)),runes(up),font=rn(34),fill=hx('#ffe600'),anchor='mm')
+    save(im,f'dist_{gi}.jpg')
+print('district signs',len(DIST))

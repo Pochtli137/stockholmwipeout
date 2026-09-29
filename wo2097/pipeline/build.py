@@ -214,6 +214,28 @@ for A in ARCHES:
     M.boxw(T,0,11.4,0,W2*2+2,3.0,1.6,m_metal,3.0); sign(M,T,W2*2+1.4,2.6,11.4,0.88,f'arch_{b}.jpg',f'arch_{(b+7)%NB}.jpg')
     M.boxw(T,0,9.8,0,W2*2+2,0.2,1.8,m_rust,3.0); setobs.append(M.build('arch_'+A['n'].lower(),SET)); placed+=1
 log('arches placed',placed,'of',len(ARCHES))
+
+# ------------------------------------------------------------------ district gates: a slim portal at every stadsdel entry
+# (track.json districts). Clearly smaller than the sponsor arches: thin posts, one beam, a 9 m street-name sign in the
+# middle. The sign's lower edge sits 8 m over the deck, well above the chase camera (about 6 m), like the arches.
+DN=[]
+for _x in D['districts']:
+    if _x['name'] not in DN: DN.append(_x['name'])
+gp=0
+for _x in D['districts']:
+    if _x['t']*L<100: continue   # the start gantry owns the first metres
+    t=None
+    for dm in range(0,64,4):
+        tt=(_x['t']+dm/L)%1.0
+        if arch_free(tt): t=tt; break
+    if t is None: log('gate skipped (tiles at the posts)',_x['name']); continue
+    p,r,u,fw,_=at(t); T=local(p,r,u,fw); M=MB(); W2=HW+3.5; gi=DN.index(_x['name'])
+    for sx in (-1,1): M.boxw(T,sx*W2,5.15,0,0.5,10.3,0.5,m_rust,3.0); M.boxw(T,sx*W2,0.5,0,0.9,1.0,0.9,m_conc,3.0)
+    M.boxw(T,0,10.1,0,W2*2+0.5,0.35,0.45,m_metal,3.0)
+    for sx in (-1,1): M.boxw(T,sx*3.4,9.6,0,0.12,0.7,0.12,m_metal,1.0)
+    M.boxw(T,0,8.9,0,9.1,1.9,0.46,m_metal,3.0); sign(M,T,9.0,1.8,8.9,0.26,f'dist_{gi}.jpg',f'dist_{gi}.jpg')
+    setobs.append(M.build(f'gate_{gp}',SET)); gp+=1
+log('district gates',gp,'of',sum(1 for _x in D['districts'] if _x['t']*L>=100))
 nb=int(L/300); M=MB(); spots=[]
 for i in range(nb):
     t=(i+0.5)/nb
