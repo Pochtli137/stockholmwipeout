@@ -1756,7 +1756,7 @@ const MOVES={
   'Kungsholmen':{ d:1.00, f:(k,e,s)=>({ lift:Math.sin(k*Math.PI)*2.4, roll:s*e*Math.PI*2 }) },             // a hop with one roll
   'Marieberg':  { d:1.00, f:(k)=>({ roll:Math.sin(k*Math.PI*6)*0.34*Math.sin(k*Math.PI), pitch:Math.sin(k*Math.PI*6+1.2)*0.07*Math.sin(k*Math.PI) }) },   // a wobble wave down the wings
   'Långholmen': { d:1.20, f:(k,e,s)=>({ roll:s*Math.PI*Math.sin(k*Math.PI) }) } };                          // a lazy half roll and back
-const _flCol=new THREE.Color();
+const _flCol=new THREE.Color(), _flUp=new THREE.Vector3(), _flTo=new THREE.Vector3(), _flRt=new THREE.Vector3();
 function flourish(s,name){ if(!s||!s.isPlayer||s.flT>0) return; s.flK=MOVES[name]?name:'Södermalm'; s.flD=MOVES[s.flK].d; s.flT=s.flD; s.flDir=Math.random()<0.5?-1:1;
   if(!s.flMats){ s.flMats=[]; s.mesh.traverse(o=>{ if(o.isMesh) [].concat(o.material).forEach(m=>{ if(m&&m.emissive&&!s.flMats.some(x=>x.m===m)) s.flMats.push({m,c:m.emissive.clone(),i:m.emissiveIntensity}); }); }); } }
 // DISTRICT TITLES: the stadsdelar the racing line enters (real OSM boundaries, wo2097/pipeline/districts.py)
@@ -1846,7 +1846,13 @@ function advance(s,dt){
     const mv=MOVES[s.flK].f(k,e,s.flDir);
     if(mv.lift) s.mesh.translateY(mv.lift); if(mv.yaw) s.mesh.rotateY(mv.yaw); if(mv.pitch) s.mesh.rotateX(mv.pitch); if(mv.roll) s.mesh.rotateZ(mv.roll);
     const a=flPulse*0.12;   // a faint team-colour rim, not a flash
-    for(const x of s.flMats){ if(s.flT>0){ x.m.emissive.copy(x.c).lerp(_flCol.setHex(s.color),a); x.m.emissiveIntensity=x.i+a*0.3; } else { x.m.emissive.copy(x.c); x.m.emissiveIntensity=x.i; } } }
+    // the anti-grav emitters glow under the hull (neon_craft_*): when a move turns the belly toward the camera (about 60 deg
+    // of roll or more) or shows the craft side-on, they would flare into the lens, so they fade out smoothly and come back
+    _flUp.set(0,1,0).applyQuaternion(s.mesh.quaternion); _flTo.copy(camera.position).sub(s.mesh.position).normalize();
+    _flRt.set(1,0,0).applyQuaternion(s.mesh.quaternion);   // and edge-on from the side (a pirouette): the rim strips read as a white bar
+    const belly=THREE.MathUtils.smoothstep(_flUp.dot(_flTo),-0.05,0.4)*(1-THREE.MathUtils.smoothstep(Math.abs(_flRt.dot(_flTo)),0.4,0.8));
+    for(const x of s.flMats){ const em=/^neon_craft/.test(x.m.name)?belly:1;
+      if(s.flT>0){ x.m.emissive.copy(x.c).lerp(_flCol.setHex(s.color),a); x.m.emissiveIntensity=(x.i+a*0.3)*em; } else { x.m.emissive.copy(x.c); x.m.emissiveIntensity=x.i; } } }
   const sf=Math.min(1.4,(s.speed+s.boost)/MAXV), glow=(0.9+Math.min(1,sf)*0.8+(s.boost>1?0.4:0))*(1+flPulse*0.45), ud=s.mesh.userData;
   ud.engL.scale.set(glow,glow,1); ud.engR.scale.set(glow,glow,1);
   // airbrakes: the player's Q/E, the AI when it scrubs speed for a corner
@@ -1904,11 +1910,15 @@ function updateCamera(dt){
   // platta ut framåtriktningen så kameran inte stirrar rakt upp i branta backar
   const backLevel=new THREE.Vector3(-f.fwd.x,-f.fwd.y*0.3,-f.fwd.z).normalize();
   const fwdLevel=new THREE.Vector3(f.fwd.x,f.fwd.y*0.3,f.fwd.z).normalize();
-  const target=p.mesh.position.clone().addScaledVector(backLevel,12).addScaledVector(UP,4.6)
+  // PHONES: a stiff chase at a fixed distance. The desktop follow lags ~2x its offset at top speed (12 m -> 25 m) and the
+  // speed FOV opens to ~105 deg; on a phone that shrank the craft to 4 % of the width. Here the lag stays under a metre,
+  // the lens is capped, and the camera sits a touch higher so the craft rides in the lower-middle third above the thumbs.
+  const MC=MOBILE?mobCam():null;
+  const target=p.mesh.position.clone().addScaledVector(backLevel,MC?MC.back:12).addScaledVector(UP,MC?MC.up:4.6)
     .addScaledVector(f.right,p.lat*0.08);
-  const lookT=p.mesh.position.clone().addScaledVector(fwdLevel,12).addScaledVector(UP,1.4);
+  const lookT=p.mesh.position.clone().addScaledVector(fwdLevel,MC?MC.look:12).addScaledVector(UP,MC?MC.lookUp:1.4);
   if(camSnap){ camPos.copy(target); camLook.copy(lookT); camSnap=false; }
-  camPos.lerp(target,1-Math.pow(0.0008,dt));
+  if(MC) camPos.copy(target); else camPos.lerp(target,1-Math.pow(0.0008,dt));   // phones: rigid, so the distance never grows with speed
   if(shake>0){ shake-=dt*2.4;
     camPos.x+=(Math.random()-0.5)*shake; camPos.y+=(Math.random()-0.5)*shake; }
   // fart-skak: en lätt darrning som växer med hastigheten
@@ -1916,15 +1926,20 @@ function updateCamera(dt){
   if(state==='race'&&sf>0.5){ const j=(sf-0.5)*0.5;
     camPos.x+=(Math.random()-0.5)*j; camPos.y+=(Math.random()-0.5)*j; }
   camera.position.copy(camPos);
-  camLook.lerp(lookT,1-Math.pow(0.0005,dt));
+  camLook.lerp(lookT,1-Math.pow(MC?MC.stiff:0.0005,dt));
   camera.lookAt(camLook);
   fovKick=Math.max(0,fovKick-dt*1.6);
-  // punchigare FOV: bredare synfält vid fart + kraftigt ryck vid boost
-  camera.fov=THREE.MathUtils.lerp(camera.fov,fovFor(67+sf*20+fovKick*12),7*dt);
+  // punchigare FOV: bredare synfält vid fart + kraftigt ryck vid boost (phones: a capped version, see mobCam)
+  camera.fov=THREE.MathUtils.lerp(camera.fov,MC?Math.min(MC.fovMax,MC.fov0+Math.min(sf,1.5)*MC.fovK+fovKick*MC.kick):fovFor(67+sf*20+fovKick*12),7*dt);
   camera.updateProjectionMatrix();
 }
 
 // a tall screen keeps roughly the landscape view across: the vertical FOV opens up (capped, or it turns into a fisheye)
+// the phone chase camera: portrait gets its own (taller lens, closer), landscape a capped one. window.__mobcam overrides for tuning.
+function mobCam(){ const por=innerHeight>innerWidth;
+  const c=por?{back:21,up:6.6,look:18,lookUp:0.0,stiff:1e-9,fov0:90,fovK:4,kick:3,fovMax:96}
+             :{back:18,up:5.8,look:16,lookUp:0.4,stiff:1e-9,fov0:62,fovK:7,kick:4,fovMax:74};
+  return window.__mobcam?Object.assign(c,window.__mobcam[por?'p':'l']||{}):c; }
 function fovFor(v){ const a=camera.aspect; if(a>=1) return v;
   return Math.min(108,2*Math.atan(Math.tan(v*Math.PI/360)*Math.min(2.2,1.1/a))*180/Math.PI); }
 
