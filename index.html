@@ -1638,10 +1638,11 @@ const MAXV=66, ACCEL=27, BRAKE=46, DRAG=0.34;
 // steer through every bend; let go and you reach the outer wall in about a second. Grip caps how tight you can turn at
 // speed (k/v rad/s, k=40), the airbrakes add yaw and drag and lift the cap x1.35. The AI stays on rails, braking for the
 // same tighter corners. Normal mode is the old rail, unchanged.
-// Default OFF: live play is unchanged unless the player asks for it. ?grepp=normal forces it off.
+// Default ON since 2026-09-29 (Kim). ?grepp=normal or G in the pause gives the old rail. The choice lives under a new key
+// (sw_grepp2): the old sw_grepp was written as 'normal' on every visit, so it cannot be read as anyone's choice.
 let HARD=(()=>{ const q=new URLSearchParams(location.search).get('grepp'); if(q==='hart'||q==='hard') return true; if(q==='normal') return false;
-  try{ return localStorage.getItem('sw_grepp')==='hart'; }catch(e){ return false; } })();
-function setHard(v){ HARD=!!v; try{ localStorage.setItem('sw_grepp',HARD?'hart':'normal'); }catch(e){} const g=document.getElementById('grepT'); if(g) g.textContent='G · GREPP: '+(HARD?'HÅRT':'NORMAL'); }
+  try{ return localStorage.getItem('sw_grepp2')!=='normal'; }catch(e){ return true; } })();
+function setHard(v){ HARD=!!v; try{ localStorage.setItem('sw_grepp2',HARD?'hart':'normal'); }catch(e){} const g=document.getElementById('grepT'); if(g) g.textContent='G · GREPP: '+(HARD?'HÅRT':'NORMAL'); }
 // HARD_EASE: en ratt för hur förlåtande hårt grepp är. 0 = som första versionen (släppt spak når väggen på ~0,9 s i en
 // 200 m-kurva), 1 = mycket förlåtande. Den styr två saker: styrhjälpen (skeppet tar själv 0,8*HARD_EASE av kurvan, du
 // styr resten) och grepptaket k (hur snävt du kan svänga i fart). Självrätningen visade sig inte bita i den här farten.
