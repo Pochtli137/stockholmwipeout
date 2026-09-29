@@ -75,7 +75,7 @@ BRANDS=[
   dict(n='PRESSBYRÅ-N',t='KORV OCH ÖVERVAKNING · DYGNET RUNT', bg=(255,205,0), fg=(200,16,32), ac=(200,16,32), icon='bolt', f='impact'),
   dict(n='FÖRSÄKRINGSKASSÅN',t='DU ÄR FRISK. VI HAR BESTÄMT DET.', bg=(0,62,106), fg=W, ac=(255,205,0), icon='crown', f='din'),
   dict(n='SKATTEVERK-X',t='VI VET VAD DU TÄNKER TJÄNA',       bg=(0,50,90), fg=W, ac=(255,205,0), icon='crown', f='din'),
-  dict(n='BANK-ID+',   t='LEGITIMERA DIG FÖR ATT ANDAS',      bg=(8,40,70),  fg=W, ac=(0,168,224), icon='grid', f='black') ]
+  dict(n='BANK-ID+',   t='UTAN OSS FINNS DU INTE.',      bg=(8,40,70),  fg=W, ac=(0,168,224), icon='grid', f='black') ]
 for B in BRANDS: B['k']=runes(B['n'])   # the brand name in runes: the small tag on its billboard
 # RACE-SPEED SLOGANS: at most two short lines (~16 characters), set big in heavy condensed type. A slogan must
 # read for about a second from the racing line at 66-90 m/s, so it is seen from 60-90 m: that asks for letters about
@@ -86,7 +86,7 @@ SLOGAN={ 'IKÖA':('MONTERA DITT','MEDBORGARSKAP'), 'VOLVÖ':('SÄKERHET.','FÖR 
   'KLARNÅ':('KÖP NU.','BETALA FÖR ALLTID.'), 'SYSTEMBÖLAGET':('DIN KVOT:','0,3 L I MÅNADEN'), 'SJ 2097':('FÖRSENAT','SEDAN 1997'),
   'S/L':('TÅGET KOMMER.','KANSKE.'), 'IKÅ':('DINA MATDATA','ÄR VÅRA'), 'OATLÖ':('NO COW.','NO COW LEFT.'), 'ABSOLUTT':('ABSOLUT','LYDNAD'),
   'SECURITAZ':('WE ARE ALWAYS','WATCHING'), 'ELECTROLUXX':('WE CLEAN UP','AFTER PROTESTS'), 'PRESSBYRÅ-N':('KORV OCH','ÖVERVAKNING'),
-  'FÖRSÄKRINGSKASSÅN':('DU ÄR FRISK.','VI BESTÄMDE DET.'), 'SKATTEVERK-X':('VI VET VAD DU','TÄNKER TJÄNA'), 'BANK-ID+':('LEGITIMERA DIG','FÖR ATT ANDAS') }
+  'FÖRSÄKRINGSKASSÅN':('DU ÄR FRISK.','VI BESTÄMDE DET.'), 'SKATTEVERK-X':('VI VET VAD DU','TÄNKER TJÄNA'), 'BANK-ID+':('UTAN OSS','FINNS DU INTE.') }
 for B in BRANDS: B['s']=SLOGAN[B['n']]
 def cond(z): return sysf('DIN Condensed Bold.ttf',z)
 def big(d,lines,maxw,start,minsz,what):
@@ -164,7 +164,7 @@ d.ellipse([w/2-34,h/2-34,w/2+34,h/2+34],fill=Y); d.text((w/2,h-62),'SAAPH · WE 
 w,h=2048,320; im=Image.new('RGB',(w,h),K); d=ImageDraw.Draw(im); hazard(d,0,h-18,w,18,s=16); hazard(d,0,0,w,14,s=14)
 d.text((w//2,int(h*.25)),'STOCKHOLM GRAND PRIX',font=orb(96),fill=W,anchor='mm')
 d.text((w//2,int(h*.455)),runes('STOCKHOLMS STORA PRIS'),font=rn(28),fill=M,anchor='mm')   # the subtitle line, in runes
-gl=['BANK-ID+ · LEGITIMERA DIG FÖR ATT TÄVLA']; d.text((w//2,int(h*.745)),gl[0],font=big(d,gl,w-360,120,96,'gantry'),fill=Y,anchor='mm')
+gl=['BANK-ID+ · IDENTIFIERAD. GODKÄND. ÄGD.']; d.text((w//2,int(h*.745)),gl[0],font=big(d,gl,w-360,120,96,'gantry'),fill=Y,anchor='mm')
 icon(d,'crown',120,int(h*.45),70,C); icon(d,'rings',w-120,int(h*.45),70,C); save(im,'gantry.jpg')
 for i,B in enumerate(BRANDS):
     # billboard: 1024 x 512 px on 14 x 7 m, seen from 60-90 m: 1.37 cm a pixel, so ~95 px caps = 1.3 m letters
