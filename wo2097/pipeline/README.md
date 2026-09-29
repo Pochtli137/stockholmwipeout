@@ -30,6 +30,17 @@ upphöjd skyway över taknocken. Pylonerna står på det som finns rakt under (g
 **Set pieces:** bågar och skyltar placeras bara där surveyn säger att tilesen lämnar plats (bågpelarna ±11,5 m, skyltarna ±18 m);
 en båge glider upp till 160 m längs varvet till närmaste fria plats, en skylt byter sida eller hoppas över.
 
+## Himlen (index.html, blocket SKY · GOLDEN HOUR OVER MÄLAREN)
+
+Sen kväll över Mälaren: solen i VNV (azimut 292°, 5,5° över horisonten, `SUN_AZ`/`SUN_EL`). En skydome-shader ritar
+2097-gradienten (indigo zenit, magenta, guld mot solen, lila bort från den), solskivan (ljus nog för bloomen) och två
+molnlager: ett solbelyst cumulusdäck på 1,8 km och cirrusstrimmor på 6 km, med en kort ljusmarsch mot solen för de varma
+kanterna. Dimman är patchad i three.js fog-chunk så att färgen följer himlen bakom fragmentet (guld mot solen, lila bort),
+och staden bleknar in i horisonten. Ett efterpass (`SkyRenderPass`) lägger god rays genom luckorna (djupmaskad radiell
+marsch mot solen) och en linsflare som skalas med hur mycket av solen staden släpper igenom. Tilesen graderas inte om,
+bara dimman rör dem. Solljuset, himmelsfyllnaden och miljökartan för blanka ytor kommer från samma sol och himmel.
+Skärmdumpar: `node sky_shots.cjs <utmapp>` (mot solen, bort från solen, över vattnet vid Skeppsbron).
+
 ## Regler
 
 - **Svenska varumärken, dystopi 2097:** parodier med ändrade namn, egen typografi och färger som bara påminner om

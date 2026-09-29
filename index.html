@@ -226,6 +226,134 @@ function resizeComposer(){ composer.setSize(innerWidth,innerHeight); bloom.resol
 addEventListener('resize',resizeComposer); resizeComposer();
 const NEON=(hex,k=2.6)=>new THREE.Color(hex).multiplyScalar(k);
 
+/* ============================== SKY · GOLDEN HOUR OVER MÄLAREN ============================== */
+// A late-evening Stockholm sun, low in the west-north-west over Mälaren (the game frame is +X west, +Z north).
+// One skydome shader draws the 2097 gradient, the sun disc and two cloud layers (a sunlit cumulus deck at 1.8 km and
+// cirrus streaks at 6 km) with a cheap light march towards the sun for their warm edges. The fog is patched to take its
+// colour from the same sky: gold towards the sun, lilac away from it, so the far city fades into the horizon behind it.
+// A post pass adds god rays through the gaps (a depth-masked radial march) and an occlusion-aware lens flare.
+// The tiles are not regraded: only the fog touches them.
+const SUN_AZ=THREE.MathUtils.degToRad(292), SUN_EL=THREE.MathUtils.degToRad(5.5);   // WNW, 5.5 deg: sunset over Mälaren
+// azimuth from north, clockwise; east is -X in this frame, so the west-north-west sun sits at +X, slightly +Z
+const SUN_DIR=new THREE.Vector3(-Math.sin(SUN_AZ)*Math.cos(SUN_EL), Math.sin(SUN_EL), Math.cos(SUN_AZ)*Math.cos(SUN_EL)).normalize();
+const SKY={ zenith:new THREE.Color(0x140f3a), upper:new THREE.Color(0x3b2466), mid:new THREE.Color(0xb24a78),
+  horizSun:new THREE.Color(0xffa24f), horizAway:new THREE.Color(0x9a86b6), sun:new THREE.Color(0xfff0d0),
+  fogSun:new THREE.Color(0xe6a472), fogAway:new THREE.Color(0x8e86ac) };
+const GLSL_SKY_CONST=`
+  const vec3 SUN_DIR=vec3(${SUN_DIR.x.toFixed(5)},${SUN_DIR.y.toFixed(5)},${SUN_DIR.z.toFixed(5)});
+  const vec3 FOG_SUN=vec3(${SKY.fogSun.r.toFixed(4)},${SKY.fogSun.g.toFixed(4)},${SKY.fogSun.b.toFixed(4)});
+  const vec3 FOG_AWAY=vec3(${SKY.fogAway.r.toFixed(4)},${SKY.fogAway.g.toFixed(4)},${SKY.fogAway.b.toFixed(4)});`;
+// directional fog for every material (tiles, track, craft): the fog colour follows the sky behind the fragment
+THREE.ShaderChunk.fog_pars_vertex+=`\n#ifdef USE_FOG\n varying vec3 vFogWorld;\n#endif\n`;
+THREE.ShaderChunk.fog_vertex+=`\n#ifdef USE_FOG\n vFogWorld=transpose(mat3(viewMatrix))*mvPosition.xyz;   // world-space ray from the camera (every fog shader has mvPosition, sprites too)\n#endif\n`;
+THREE.ShaderChunk.fog_pars_fragment+=`\n#ifdef USE_FOG\n varying vec3 vFogWorld;\n${GLSL_SKY_CONST}\n#endif\n`;
+THREE.ShaderChunk.fog_fragment=`
+#ifdef USE_FOG
+  vec3 fDir=normalize(vFogWorld);
+  float fSun=pow(max(dot(fDir,SUN_DIR),0.0),3.0);
+  vec3 fCol=mix(FOG_AWAY,FOG_SUN,fSun);
+  #ifdef FOG_EXP2
+    float fogFactor=1.0-exp(-fogDensity*fogDensity*vFogDepth*vFogDepth);
+  #else
+    float fogFactor=smoothstep(fogNear,fogFar,vFogDepth);
+  #endif
+  gl_FragColor.rgb=mix(gl_FragColor.rgb,fCol,fogFactor);
+#endif`;
+scene.fog=new THREE.Fog(SKY.fogAway.getHex(),1500,10500);
+scene.background=null;
+
+const skyMat=new THREE.ShaderMaterial({ depthWrite:false, depthTest:false, side:THREE.BackSide, toneMapped:false, fog:false,
+  uniforms:{ uTime:{value:0}, uZenith:{value:SKY.zenith}, uUpper:{value:SKY.upper}, uMid:{value:SKY.mid},
+    uHSun:{value:SKY.horizSun}, uHAway:{value:SKY.horizAway}, uSunCol:{value:SKY.sun} },
+  vertexShader:`varying vec3 vDir; void main(){ vDir=(modelMatrix*vec4(position,1.0)).xyz-cameraPosition;
+    vec4 p=projectionMatrix*viewMatrix*vec4((modelMatrix*vec4(position,1.0)).xyz,1.0); gl_Position=p.xyww; }`,
+  fragmentShader:`precision highp float; varying vec3 vDir; uniform float uTime;
+    uniform vec3 uZenith,uUpper,uMid,uHSun,uHAway,uSunCol; ${GLSL_SKY_CONST}
+    float h21(vec2 p){ p=fract(p*vec2(123.34,456.21)); p+=dot(p,p+45.32); return fract(p.x*p.y); }
+    float vn(vec2 p){ vec2 i=floor(p), f=fract(p); f=f*f*(3.0-2.0*f);
+      return mix(mix(h21(i),h21(i+vec2(1,0)),f.x),mix(h21(i+vec2(0,1)),h21(i+vec2(1,1)),f.x),f.y); }
+    float fbm(vec2 p){ float a=0.5,s=0.0; mat2 R=mat2(1.6,1.2,-1.2,1.6); for(int i=0;i<5;i++){ s+=a*vn(p); p=R*p; a*=0.5; } return s; }
+    // one cloud layer seen along d: density at the hit, and how much of the sun reaches it (a short march sunwards)
+    vec4 layer(vec3 d,float H,float scale,vec2 wind,float cover,float soft,vec2 stretch){
+      if(d.y<0.004) return vec4(0.0);
+      vec2 p=d.xz/d.y*H*scale*stretch+wind*uTime;
+      float dens=smoothstep(cover,cover+soft,fbm(p));
+      if(dens<=0.001) return vec4(0.0);
+      vec2 toSun=normalize(SUN_DIR.xz+1e-4)*0.35*stretch; float od=0.0;
+      for(int k=1;k<=3;k++) od+=smoothstep(cover,cover+soft,fbm(p+toSun*float(k)));
+      return vec4(dens,exp(-od*0.9),0.0,0.0); }
+    void main(){ vec3 d=normalize(vDir); float h=d.y, mu=dot(d,SUN_DIR);
+      float sunSide=pow(max(mu,0.0)*0.5+0.5,4.0);                          // 1 towards the sun, ~0.06 away from it
+      vec3 horiz=mix(uHAway,uHSun,sunSide);
+      float e=max(h,0.0);
+      vec3 col=mix(horiz,uMid,smoothstep(0.0,0.10,e));
+      col=mix(col,uUpper,smoothstep(0.08,0.30,e)); col=mix(col,uZenith,smoothstep(0.28,0.85,e));
+      col=mix(col,horiz*0.85,smoothstep(0.0,-0.25,h));                   // under the horizon: haze (hidden by the city)
+      col+=uHSun*(0.55*pow(max(mu,0.0),6.0)+0.35*pow(max(mu,0.0),32.0)); // the glow the sun spreads over the sky
+      // clouds: a sunlit cumulus deck and high cirrus streaks
+      vec4 c1=layer(d,1800.0,0.00055,vec2(0.012,0.004),0.52,0.22,vec2(1.0,1.0));
+      vec4 c2=layer(d,6200.0,0.00018,vec2(0.004,0.0015),0.56,0.30,vec2(0.35,1.8));
+      float horizonFade=smoothstep(0.012,0.14,h);
+      vec3 lit=mix(vec3(1.0,0.70,0.44),vec3(1.0,0.86,0.66),smoothstep(0.1,0.5,h));
+      vec3 shade=mix(vec3(0.30,0.20,0.36),vec3(0.18,0.14,0.30),smoothstep(0.0,0.6,h));
+      float silver=pow(max(mu,0.0),8.0);
+      vec3 cc2=mix(shade*1.3,lit*1.15,c2.y)+silver*vec3(1.2,0.7,0.35)*(1.0-c2.x);
+      col=mix(col,cc2,c2.x*0.55*horizonFade);
+      vec3 cc1=mix(shade,lit,c1.y)+silver*vec3(1.6,0.9,0.4)*(1.0-c1.x*0.7);
+      col=mix(col,cc1,c1.x*0.92*horizonFade);
+      // the sun disc (bright enough for the bloom), dimmed where the deck crosses it
+      float disc=smoothstep(0.99986,0.99994,mu);
+      col+=uSunCol*disc*6.0*(1.0-0.85*c1.x*horizonFade);
+      gl_FragColor=vec4(col,1.0); }` });
+const skyDome=new THREE.Mesh(new THREE.SphereGeometry(40000,48,24),skyMat); skyDome.renderOrder=-1000; skyDome.frustumCulled=false;
+scene.add(skyDome);
+// the light on everything we built comes from that sun: warm key, lilac sky fill, a sky-lit environment for the gloss
+sun.color.set(0xffc58a); sun.intensity=2.4; sun.position.copy(SUN_DIR).multiplyScalar(1000);
+scene.traverse(o=>{ if(o.isHemisphereLight){ o.color.set(0xb7a4d8); o.groundColor.set(0x3a2630); o.intensity=0.7; } });
+{ const envScene=new THREE.Scene(); const d=new THREE.Mesh(new THREE.SphereGeometry(100,32,16),skyMat); envScene.add(d);
+  const pm=new THREE.PMREMGenerator(renderer); scene.environment=pm.fromScene(envScene,0.02).texture; }
+
+/* ---- god rays and lens flare: a post pass over the rendered frame, masked by depth ---- */
+const sceneRT=new THREE.WebGLRenderTarget(1,1,{ type:THREE.HalfFloatType, samples:4 });
+sceneRT.depthTexture=new THREE.DepthTexture(1,1); sceneRT.depthTexture.type=THREE.UnsignedIntType;
+const raysMat=new THREE.ShaderMaterial({ uniforms:{ tColor:{value:null}, tDepth:{value:null}, uSun:{value:new THREE.Vector2()}, uOn:{value:0},
+    uAspect:{value:1}, uCol:{value:new THREE.Color(0xffb46a)} },
+  vertexShader:`varying vec2 vUv; void main(){ vUv=uv; gl_Position=vec4(position.xy,0.0,1.0); }`,
+  fragmentShader:`precision highp float; varying vec2 vUv; uniform sampler2D tColor,tDepth; uniform vec2 uSun; uniform float uOn,uAspect; uniform vec3 uCol;
+    float sky(vec2 uv){ return step(0.99999,texture2D(tDepth,clamp(uv,0.0,1.0)).x); }
+    void main(){ vec3 col=texture2D(tColor,vUv).rgb;
+      if(uOn>0.001){
+        // god rays: march towards the sun, only sky pixels shine, so buildings and trees cut the beams
+        vec2 dlt=(uSun-vUv)/28.0; vec2 uv=vUv; float acc=0.0, w=1.0;
+        for(int i=0;i<28;i++){ uv+=dlt; vec3 c=texture2D(tColor,clamp(uv,0.0,1.0)).rgb; acc+=sky(uv)*max(dot(c,vec3(0.33))-0.55,0.0)*w; w*=0.955; }
+        float r=length((vUv-uSun)*vec2(uAspect,1.0));
+        col+=uCol*acc*0.075*uOn*(1.0-smoothstep(0.2,1.1,r));
+        // lens flare: ghosts along the line through the centre, scaled by how much of the sun the city lets through
+        float vis=0.0; for(int x=-2;x<=2;x++) for(int y=-2;y<=2;y++) vis+=sky(uSun+vec2(float(x),float(y))*0.006);
+        vis=vis/25.0*uOn; vec2 axis=vec2(0.5)-uSun;
+        for(int g=0;g<5;g++){ float k=float(g)*0.42+0.3; vec2 gp=uSun+axis*k*2.0; float gr=0.02+0.035*float(g%3);
+          float dg=length((vUv-gp)*vec2(uAspect,1.0)); float ring=smoothstep(gr,gr*0.7,dg)*0.6+smoothstep(gr*1.1,gr,dg)*smoothstep(gr*0.9,gr,dg)*0.8;
+          vec3 tint=g==1?vec3(1.0,0.35,0.65):g==3?vec3(0.2,0.9,1.0):vec3(1.0,0.72,0.35); col+=tint*ring*0.10*vis; }
+        float streak=exp(-abs(vUv.y-uSun.y)*90.0)*exp(-abs(vUv.x-uSun.x)*3.0);   // an anamorphic streak through the sun
+        col+=vec3(1.0,0.65,0.4)*streak*0.35*vis; }
+      gl_FragColor=vec4(col,1.0); }`, depthTest:false, depthWrite:false });
+const raysQuad=new THREE.Mesh(new THREE.PlaneGeometry(2,2),raysMat); const raysScene=new THREE.Scene(); raysScene.add(raysQuad);
+const raysCam=new THREE.OrthographicCamera(-1,1,1,-1,0,1);
+class SkyRenderPass{ constructor(){ this.enabled=true; this.needsSwap=true; this.clear=true; this.renderToScreen=false; }
+  setSize(w,h){ sceneRT.setSize(w,h); }
+  render(r,writeBuffer){ r.setRenderTarget(sceneRT); r.clear(); r.render(scene,camera);
+    const sp=SUN_DIR.clone().multiplyScalar(30000).add(camera.position).project(camera);
+    const fwd=new THREE.Vector3(); camera.getWorldDirection(fwd);
+    const facing=fwd.dot(SUN_DIR), onScreen=1-THREE.MathUtils.smoothstep(Math.max(Math.abs(sp.x),Math.abs(sp.y)),1.0,1.6);
+    raysMat.uniforms.uOn.value=facing>0.05&&sp.z<1?onScreen*THREE.MathUtils.smoothstep(facing,0.05,0.5):0;
+    raysMat.uniforms.uSun.value.set(sp.x*0.5+0.5,sp.y*0.5+0.5); raysMat.uniforms.uAspect.value=camera.aspect;
+    raysMat.uniforms.tColor.value=sceneRT.texture; raysMat.uniforms.tDepth.value=sceneRT.depthTexture;
+    r.setRenderTarget(writeBuffer); r.render(raysScene,raysCam); } }
+composer.passes.splice(0,1,new SkyRenderPass());   // replaces the plain RenderPass
+resizeComposer();
+const skyTick=(dt)=>{ skyMat.uniforms.uTime.value+=dt; skyDome.position.copy(camera.position); };
+
+
 const ANISO=renderer.capabilities.getMaxAnisotropy();
 function canvasTex(w,h,draw,repeat){ const cv=document.createElement('canvas'); cv.width=w; cv.height=h;
   draw(cv.getContext('2d'),w,h); const t=new THREE.CanvasTexture(cv); t.colorSpace=THREE.SRGBColorSpace; t.anisotropy=ANISO;
@@ -1174,6 +1302,7 @@ let last=performance.now();
 function loop(now){
   requestAnimationFrame(loop);
   let dt=Math.min((now-last)/1000,0.05); last=now;
+  skyTick(dt);
   if(tiles){ camera.updateMatrixWorld();
     tiles.setResolutionFromRenderer(camera,renderer); tiles.update(); }
   snapTick(now); updateAttrib(now);
@@ -1214,6 +1343,7 @@ function loop(now){
 }
 requestAnimationFrame(loop);
 // ?check: a handle for the play-through checker (wo2097/pipeline/check_lap.cjs). Never used in play.
+if(location.search.includes('check')) window.__SUN=SUN_DIR;
 if(location.search.includes('check')) window.__sw={
   frameAt, mkFrame, hitsAt:(x,z)=>tiles?hitsAt(x,z):[], tilesIdle:()=>tiles?tilesIdle():true, player, ships:()=>ships, keys,
   state:()=>state, len:()=>TRACK_LEN, HALF_W, MAXV, curvAhead, camera, setPaused:v=>{ paused=v; },
