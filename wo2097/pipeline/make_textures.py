@@ -1,6 +1,6 @@
 """WipEout 2097 textures for the Blender track set and craft, drawn with PIL. Original designs only:
 invented league, invented brands and teams, no real logos. Fonts: Orbitron + Rajdhani (OFL, in fonts/),
-katakana from the system's Hiragino. Output: tex/*.png|jpg, read by build.py."""
+runes (Younger Futhark) in Noto Sans Runic from ../fonts. Output: tex/*.png|jpg, read by build.py."""
 import os, math, random
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
 H=os.path.dirname(os.path.abspath(__file__)); OUT=os.path.join(H,'tex'); os.makedirs(OUT,exist_ok=True)
@@ -15,8 +15,10 @@ def fit(d,s,fontf,start,maxw,minsz=24):   # the biggest size that keeps the word
     while sz>minsz and d.textlength(s,font=fontf(sz))>maxw: sz-=4
     return fontf(sz)
 def raj(sz): return ImageFont.truetype(os.path.join(FD,'Rajdhani-Bold.ttf'),sz)
-JP='/System/Library/Fonts/ヒラギノ丸ゴ ProN W4.ttc'
-def jp(sz): return ImageFont.truetype(JP,sz)
+# the secondary script is Younger Futhark (runes.py), set in the same OFL font the game embeds, so bakes match the web
+from runes import runes
+RUNE=os.path.join(os.path.dirname(os.path.abspath(__file__)),'..','fonts','NotoSansRunic-Regular.ttf')
+def rn(sz): return ImageFont.truetype(RUNE,sz)
 Y=(255,230,0); K=(7,9,13); C=(0,225,255); M=(255,46,154); W=(242,246,255); G=(53,255,139); R=(255,59,59)
 def hx(h): h=h.lstrip('#'); return tuple(int(h[i:i+2],16) for i in (0,2,4))
 def hazard(d,x,y,w,h,a=Y,b=K,s=22):   # diagonal hazard stripes, clipped to their box
@@ -55,25 +57,26 @@ FONTS={ 'futura':lambda z:sysf('Futura.ttc',z,4), 'black':lambda z:sysf('Arial B
 # SWEDEN, 2097. Parodies of well-known Swedish brands and institutions: altered names, our own typography and colours
 # that only evoke the originals, never their logos. Satire of companies and institutions only, no real people.
 BRANDS=[
-  dict(n='IKÖA',       t='MONTERA DITT EGET MEDBORGARSKAP',   k='イケア',          bg=(0,74,173),  fg=(255,205,0), ac=(255,205,0), icon='grid',  f='futura'),
-  dict(n='VOLVÖ',      t='SÄKERHET. FÖR AKTIEÄGARNA.',        k='ボルボ',          bg=(12,24,48),  fg=(214,222,235),ac=(214,222,235),icon='rings', f='serif'),
-  dict(n='SAAPH',      t='WE ARM BOTH SIDES SINCE 1937',      k='サーブ',          bg=(200,16,32), fg=W, ac=K, icon='tri',   f='black'),
-  dict(n='SPOTIFAI',   t='WE KNOW WHAT YOU WILL FEEL NEXT',   k='スポティファイ',  bg=K, fg=(30,215,96), ac=(30,215,96), icon='wave', f='black'),
-  dict(n='H&N',        t='FAST FASHION. SLOW EXTINCTION.',    k='エイチアンドエヌ',bg=(226,0,26), fg=W, ac=W, icon='dot',   f='serif'),
-  dict(n='ERIXON',     t='CONNECTING EVERY THOUGHT. RECORDING ALL OF THEM.', k='エリクソン', bg=(0,22,64), fg=W, ac=(0,168,224), icon='rings', f='gill'),
-  dict(n='KLARNÅ',     t='KÖP NU. BETALA FÖR ALLTID.',        k='クラーナ',        bg=(255,179,199),fg=K, ac=K, icon='dot',   f='black'),
-  dict(n='SYSTEMBÖLAGET',t='DIN KVOT: 0,3 L I MÅNADEN',       k='システムボラーゲット', bg=(0,92,62), fg=(255,210,0), ac=(255,210,0), icon='sun', f='din'),
-  dict(n='SJ 2097',    t='FÖRSENAT SEDAN 1997',               k='エスイェー',      bg=(24,24,24),  fg=W, ac=(0,160,220), icon='bolt',  f='din'),
-  dict(n='S/L',        t='PENDELTÅGET KOMMER. KANSKE.',       k='エスエル',        bg=(0,94,170),  fg=W, ac=(230,0,40), icon='rings', f='gill'),
-  dict(n='IKÅ',        t='DINA MATDATA ÄR VÅRA',              k='イーカ',          bg=(226,0,26),  fg=W, ac=W, icon='dot',   f='futura'),
-  dict(n='OATLÖ',      t='WOW NO COW. NO COW LEFT.',          k='オートリー',      bg=(238,236,225),fg=(0,40,110), ac=(0,40,110), icon='wave', f='black'),
-  dict(n='ABSOLUTT',   t='ABSOLUT LYDNAD',                    k='アブソルート',    bg=(170,190,210),fg=(0,40,130), ac=(0,40,130), icon='dot', f='serif'),
-  dict(n='SECURITAZ',  t='WE ARE ALWAYS WATCHING. YOU ARE WELCOME.', k='セキュリタス', bg=K, fg=W, ac=(230,0,40), icon='tri', f='black'),
-  dict(n='ELECTROLUXX',t='WE CLEAN UP AFTER THE PROTESTS',    k='エレクトロラックス', bg=(0,30,80), fg=W, ac=W, icon='sun', f='gill'),
-  dict(n='PRESSBYRÅ-N',t='KORV OCH ÖVERVAKNING · DYGNET RUNT', k='プレスビーロン', bg=(255,205,0), fg=(200,16,32), ac=(200,16,32), icon='bolt', f='impact'),
-  dict(n='FÖRSÄKRINGSKASSÅN',t='DU ÄR FRISK. VI HAR BESTÄMT DET.', k='フォシェクリングスカッサン', bg=(0,62,106), fg=W, ac=(255,205,0), icon='crown', f='din'),
-  dict(n='SKATTEVERK-X',t='VI VET VAD DU TÄNKER TJÄNA',       k='スカッテヴェルケット', bg=(0,50,90), fg=W, ac=(255,205,0), icon='crown', f='din'),
-  dict(n='BANK-ID+',   t='LEGITIMERA DIG FÖR ATT ANDAS',      k='バンクアイディー', bg=(8,40,70),  fg=W, ac=(0,168,224), icon='grid', f='black') ]
+  dict(n='IKÖA',       t='MONTERA DITT EGET MEDBORGARSKAP',   bg=(0,74,173),  fg=(255,205,0), ac=(255,205,0), icon='grid',  f='futura'),
+  dict(n='VOLVÖ',      t='SÄKERHET. FÖR AKTIEÄGARNA.',        bg=(12,24,48),  fg=(214,222,235),ac=(214,222,235),icon='rings', f='serif'),
+  dict(n='SAAPH',      t='WE ARM BOTH SIDES SINCE 1937',      bg=(200,16,32), fg=W, ac=K, icon='tri',   f='black'),
+  dict(n='SPOTIFAI',   t='WE KNOW WHAT YOU WILL FEEL NEXT',   bg=K, fg=(30,215,96), ac=(30,215,96), icon='wave', f='black'),
+  dict(n='H&N',        t='FAST FASHION. SLOW EXTINCTION.',    bg=(226,0,26), fg=W, ac=W, icon='dot',   f='serif'),
+  dict(n='ERIXON',     t='CONNECTING EVERY THOUGHT. RECORDING ALL OF THEM.', bg=(0,22,64), fg=W, ac=(0,168,224), icon='rings', f='gill'),
+  dict(n='KLARNÅ',     t='KÖP NU. BETALA FÖR ALLTID.',        bg=(255,179,199),fg=K, ac=K, icon='dot',   f='black'),
+  dict(n='SYSTEMBÖLAGET',t='DIN KVOT: 0,3 L I MÅNADEN',       bg=(0,92,62), fg=(255,210,0), ac=(255,210,0), icon='sun', f='din'),
+  dict(n='SJ 2097',    t='FÖRSENAT SEDAN 1997',               bg=(24,24,24),  fg=W, ac=(0,160,220), icon='bolt',  f='din'),
+  dict(n='S/L',        t='PENDELTÅGET KOMMER. KANSKE.',       bg=(0,94,170),  fg=W, ac=(230,0,40), icon='rings', f='gill'),
+  dict(n='IKÅ',        t='DINA MATDATA ÄR VÅRA',              bg=(226,0,26),  fg=W, ac=W, icon='dot',   f='futura'),
+  dict(n='OATLÖ',      t='WOW NO COW. NO COW LEFT.',          bg=(238,236,225),fg=(0,40,110), ac=(0,40,110), icon='wave', f='black'),
+  dict(n='ABSOLUTT',   t='ABSOLUT LYDNAD',                    bg=(170,190,210),fg=(0,40,130), ac=(0,40,130), icon='dot', f='serif'),
+  dict(n='SECURITAZ',  t='WE ARE ALWAYS WATCHING. YOU ARE WELCOME.', bg=K, fg=W, ac=(230,0,40), icon='tri', f='black'),
+  dict(n='ELECTROLUXX',t='WE CLEAN UP AFTER THE PROTESTS',    bg=(0,30,80), fg=W, ac=W, icon='sun', f='gill'),
+  dict(n='PRESSBYRÅ-N',t='KORV OCH ÖVERVAKNING · DYGNET RUNT', bg=(255,205,0), fg=(200,16,32), ac=(200,16,32), icon='bolt', f='impact'),
+  dict(n='FÖRSÄKRINGSKASSÅN',t='DU ÄR FRISK. VI HAR BESTÄMT DET.', bg=(0,62,106), fg=W, ac=(255,205,0), icon='crown', f='din'),
+  dict(n='SKATTEVERK-X',t='VI VET VAD DU TÄNKER TJÄNA',       bg=(0,50,90), fg=W, ac=(255,205,0), icon='crown', f='din'),
+  dict(n='BANK-ID+',   t='LEGITIMERA DIG FÖR ATT ANDAS',      bg=(8,40,70),  fg=W, ac=(0,168,224), icon='grid', f='black') ]
+for B in BRANDS: B['k']=runes(B['n'])   # the brand name in runes: the small tag on its billboard
 # RACE-SPEED SLOGANS: at most two short lines (~16 characters), set big in heavy condensed type. A slogan must
 # read for about a second from the racing line at 66-90 m/s, so it is seen from 60-90 m: that asks for letters about
 # 1 m tall on the billboards and arches (legibility ~1:100), and the barrier text runs a full metre high.
@@ -112,7 +115,7 @@ for _ in range(900): x,y=rnd.randrange(w),rnd.randrange(h); d.point((x,y),fill=(
 hazard(d,0,0,int(w*.055),h,s=18); hazard(d,int(w*.945),0,int(w*.055),h,s=18)
 d.rectangle([int(w*.065),0,int(w*.065)+6,h],fill=(233,238,248)); d.rectangle([int(w*.935)-6,0,int(w*.935),h],fill=(233,238,248))
 for y in range(0,h,128): d.rectangle([w//2-4,y+20,w//2+4,y+90],fill=(233,238,248))
-st=Image.new('RGBA',(700,160),(0,0,0,0)); sd=ImageDraw.Draw(st); sd.text((350,55),'SAGL · 2097',font=orb(52),fill=(255,255,255,26),anchor='mm'); sd.text((350,120),'ストックホルム',font=jp(34),fill=(255,255,255,26),anchor='mm')
+st=Image.new('RGBA',(700,160),(0,0,0,0)); sd=ImageDraw.Draw(st); sd.text((350,55),'SAGL · 2097',font=orb(52),fill=(255,255,255,26),anchor='mm'); sd.text((350,120),runes('STOCKHOLM'),font=rn(40),fill=(255,255,255,26),anchor='mm')
 st=st.rotate(90,expand=True); im.paste(st,(int(w*.28)-st.width//2,h//2-st.height//2),st)
 for k in range(3):
     y0=int(h*.18)+k*46; d.polygon([(w*.72-40,y0+30),(w*.72,y0),(w*.72+40,y0+30),(w*.72+40,y0+44),(w*.72,y0+14),(w*.72-40,y0+44)],fill=(0,70,86))
@@ -159,14 +162,16 @@ d.ellipse([w/2-34,h/2-34,w/2+34,h/2+34],fill=Y); d.text((w/2,h-62),'SAAPH · WE 
 
 # ---- gantry sign, billboards, arch faces, hazard tile
 w,h=2048,320; im=Image.new('RGB',(w,h),K); d=ImageDraw.Draw(im); hazard(d,0,h-18,w,18,s=16); hazard(d,0,0,w,14,s=14)
-d.text((w//2,int(h*.30)),'STOCKHOLM GRAND PRIX',font=orb(96),fill=W,anchor='mm')
-gl=['BANK-ID+ · LEGITIMERA DIG FÖR ATT TÄVLA']; d.text((w//2,int(h*.70)),gl[0],font=big(d,gl,w-360,120,96,'gantry'),fill=Y,anchor='mm')
+d.text((w//2,int(h*.25)),'STOCKHOLM GRAND PRIX',font=orb(96),fill=W,anchor='mm')
+d.text((w//2,int(h*.455)),runes('STOCKHOLMS STORA PRIS'),font=rn(28),fill=M,anchor='mm')   # the subtitle line, in runes
+gl=['BANK-ID+ · LEGITIMERA DIG FÖR ATT TÄVLA']; d.text((w//2,int(h*.745)),gl[0],font=big(d,gl,w-360,120,96,'gantry'),fill=Y,anchor='mm')
 icon(d,'crown',120,int(h*.45),70,C); icon(d,'rings',w-120,int(h*.45),70,C); save(im,'gantry.jpg')
 for i,B in enumerate(BRANDS):
     # billboard: 1024 x 512 px on 14 x 7 m, seen from 60-90 m: 1.37 cm a pixel, so ~95 px caps = 1.3 m letters
     w,h=1024,512; im=Image.new('RGB',(w,h),B['bg']); d=ImageDraw.Draw(im)
     d.rectangle([0,int(h*.42),w,h],fill=K if B['bg']!=K else (28,30,36)); d.rectangle([0,int(h*.42)-8,w,int(h*.42)],fill=B['ac'])
-    icon(d,B['icon'],int(w*.9),int(h*.21),int(h*.14),B['fg'])
+    icon(d,B['icon'],int(w*.9),int(h*.19),int(h*.12),B['fg'])
+    d.text((w-30,int(h*.365)),B['k'],font=rn(26),fill=B['fg'],anchor='rm')   # small rune tag
     d.text((36,int(h*.21)),B['n'],font=fit(d,B['n'],FONTS[B['f']],150,w*.78,minsz=60),fill=B['fg'],anchor='lm')
     sf=big(d,B['s'],w-72,140,112,'billboard '+B['n']); sy=[int(h*.585),int(h*.84)]
     for ln,y in zip(B['s'],sy): d.text((36,y),ln,font=sf,fill=W,anchor='lm')

@@ -31,7 +31,9 @@
     clip-path:polygon(0 0,calc(100% - 16px) 0,100% 16px,100% 100%,16px 100%,0 calc(100% - 16px));
     padding:10px 18px 12px 14px; box-shadow:0 0 0 1px rgba(255,255,255,.06) inset; }
   .lbl { font:600 11px/1 "Rajdhani",sans-serif; letter-spacing:.32em; color:#9fb3c8; }
-  .kata { font:500 10px/1 sans-serif; letter-spacing:.2em; color:var(--m); margin-left:8px; }
+  /* the secondary labels are Younger Futhark (Noto Sans Runic, OFL, wo2097/fonts): Swedish words as a carver would spell them */
+  @font-face { font-family:'Runic'; src:url('wo2097/fonts/NotoSansRunic-Regular.ttf') format('truetype'); font-display:block; }
+  .kata { font:400 12px/1 'Runic',sans-serif; letter-spacing:.14em; color:var(--m); margin-left:8px; }
   .orb { font-family:"Orbitron","Arial Black",sans-serif; font-weight:900; letter-spacing:.04em; }
   #lapbox { left:24px; top:20px; min-width:210px; }
   #lapbox .big { font-size:40px; line-height:1; color:var(--w); }
@@ -129,18 +131,18 @@
 <body>
 <canvas id="c"></canvas>
 <canvas id="fx"></canvas>
-<div class="hud plate" id="lapbox"><span class="lbl">LAP</span><span class="kata">ラップ</span><br>
+<div class="hud plate" id="lapbox"><span class="lbl">LAP</span><span class="kata">ᚠᛅᚱᚠ</span><br>
   <span class="big orb" id="lap">1</span><span class="of orb">/1</span>
   <div class="row"><span class="lbl">TIME&nbsp;</span> <span class="t" id="time">0:00.00</span></div>
   <div class="row"><span class="lbl">BEST&nbsp;</span> <span class="b" id="best">--</span></div></div>
-<div class="hud plate" id="posbox"><span class="lbl">POSITION</span><span class="kata">順位</span><br>
+<div class="hud plate" id="posbox"><span class="lbl">POSITION</span><span class="kata">ᛒᛚᛅᛏᛋ</span><br>
   <span class="big orb" id="pos">1</span><span class="ord orb" id="posOrd">st</span><span class="of orb">/6</span></div>
 <div class="hud plate" id="weapon"><div id="wslot"><canvas id="wicon" width="92" height="92"></canvas></div>
-  <div><div id="wname" class="empty">— — —</div><div id="whint">WEAPON · 武器 · <b>SPACE</b> FIRE</div></div></div>
+  <div><div id="wname" class="empty">— — —</div><div id="whint">WEAPON · <span class="kata" style="margin:0">ᚠᛅᛒᛁᚾ</span> · <b>SPACE</b> FIRE</div></div></div>
 <div class="hud plate" id="speed"><span class="num orb" id="spd">0</span> <span class="unit">KM/H</span>
   <div class="seg" id="spdseg"></div>
-  <div class="barlbl"><span class="lbl">TURBO <span class="kata">ターボ</span></span></div><div class="seg" id="boostseg"></div>
-  <div class="barlbl"><span class="lbl">SHIELD ENERGY <span class="kata">シールド</span></span></div><div class="seg" id="enseg"></div></div>
+  <div class="barlbl"><span class="lbl">TURBO <span class="kata">ᛏᚢᚱᛒᚢ</span></span></div><div class="seg" id="boostseg"></div>
+  <div class="barlbl"><span class="lbl">SHIELD ENERGY <span class="kata">ᛋᚴᚢᛚᛏ</span></span></div><div class="seg" id="enseg"></div></div>
 <div class="hud" id="band"></div>
 <div class="hud" id="msg"></div>
 <div class="hud" id="sub"></div>
@@ -152,7 +154,7 @@
 <div id="attrib"></div>
 
 <div id="keyveil"><div class="panel">
-  <h1>STOCKHOLM GRAND TOUR 2097</h1><span class="kata">ストックホルム グランプリ</span>
+  <h1>STOCKHOLM GRAND TOUR 2097</h1><span class="kata">ᛋᛏᚢᚴᚼᚢᛚᛘᛋ᛫ᛋᛏᚢᚱᛅ᛫ᛒᚱᛁᛋ</span>
   <p>Den här versionen streamar <b>Google Photorealistic 3D Tiles via Cesium ion</b> —
   riktiga Stockholm i fotogrammetri. Gratis Cesium ion-konto, inget kort:</p>
   <ol>
@@ -169,15 +171,15 @@
 </div></div>
 
 <div id="loadveil" style="display:flex"><div class="panel">
-  <h1>STREAMAR STOCKHOLM</h1><span class="kata">データ ストリーミング</span>
+  <h1>STREAMAR STOCKHOLM</h1><span class="kata">ᛚᛅᛏᛅᚱ᛫ᛋᛏᛅᛏᛁᚾ</span>
   <p>Google Photorealistic 3D Tiles · kalibrerar banhöjd mot gatunivå<br>
   GRAND TOUR · Södermalm → Gamla stan → Norrmalm → Östermalm → Kungsholmen · 16 km</p>
   <div id="loadbar"><div id="loadfill"></div></div>
   <div id="loadtxt">väntar på tiles ...</div>
 </div></div>
 
-<div id="select"><div class="top"><span><b>SAGL 2097</b> &nbsp;VÄLJ FARKOST</span><span id="selCount">1 / 6</span></div>
-  <div class="panel"><div id="selNum"></div><div id="selTeam"></div><div id="selSlogan"></div><div id="selSpec"></div>
+<div id="select"><div class="top"><span><b>SAGL 2097</b> &nbsp;VÄLJ FARKOST <span class="kata">ᚠᛅᛚᛁ᛫ᚠᛅᚱᚴᚢᛋᛏ</span></span><span id="selCount">1 / 6</span></div>
+  <div class="panel"><div id="selNum"></div><div id="selTeam"></div><div id="selRune" class="kata" style="margin:6px 0 0;font-size:15px"></div><div id="selSlogan"></div><div id="selSpec"></div>
     <div class="stat"><span>SPEED</span><div class="bar" id="stSPD"></div></div>
     <div class="stat"><span>THRUST</span><div class="bar" id="stTHR"></div></div>
     <div class="stat"><span>HANDLING</span><div class="bar" id="stHAN"></div></div>
@@ -187,7 +189,7 @@
   <div class="hint">← → / A D  BYT FARKOST · ENTER / SPACE  KÖR · DRA FÖR ATT SNURRA</div></div>
 <div id="selFlash"></div>
 <div id="results"><div class="panel">
-  <h1 id="resTitle">RACE COMPLETE</h1><span class="kata">レース 結果 · SAGL 2097</span>
+  <h1 id="resTitle">RACE COMPLETE</h1><span class="kata">ᚱᛁᛋᚢᛚᛏᛅᛏ · SAGL 2097</span>
   <table id="resTable"></table>
   <div class="again">TRYCK <b style="color:var(--y)">R</b> FÖR NYTT RACE</div>
 </div></div>
@@ -1013,6 +1015,7 @@ const SHIP_COLS=TEAMS.map(T=>T.eng);
 // what each team is: the slogan and spec from the hangar, and the stats that really change the craft.
 // Bars are 0..1; physOf() turns them into multipliers on top speed, thrust, steering and grip, wall drain and
 // how much speed a missile hit leaves you. Tuned so every craft is within a couple of percent over the lap.
+const TEAM_RUNES=['ᚠᚢᛚᚠᚢ᛫ᛋᛅᚴᛁᚱᚼᛁᛏ','ᛋᛅᚠ᛫ᚠᚢᚱᛋᚠᛅᚱ','ᛋᛒᚢᛏᛁᚠᛅᛁ᛫ᚾᛁᚢᚱᛅᛚ','ᛁᚴᚢᛅ᛫ᛒᛚᛅᛏᛒᛅᚴᛁᛏ','ᚴᛚᛅᚱᚾᚬ᛫ᛋᚴᚢᛚᛏ','ᛁᚱᛁᚴᛋᚢᚾ᛫ᛋᛁᚴᚾᛅᛚ'];   // the team names in Younger Futhark (wo2097/pipeline/runes.py)
 const TEAM_SLOGAN=['SÄKERHET. FÖR ÄGARNA.','WE ARM BOTH SIDES.','VI VET VAD DU KÄNNER HÄRNÄST.','MONTERA DITT MEDBORGARSKAP.','KÖR NU. BETALA FÖR ALLTID.','ALLTID UPPKOPPLAD. ALLTID AVLYSSNAD.'];
 const TEAM_SPEC=['PANSRAD · BOXIG · KROCKZON FRAM','STEALTH · CANARDER · VAPENBALKAR','ORGANISK · VÅGFORMSRYGG','PLATTPAKET · 48 INSEXSKRUVAR','NÅLNOS · DELTAVINGE · EN DYSA','KATAMARAN · SIGNALFENOR · PARABOL'];
 const STATS=[
@@ -1300,7 +1303,7 @@ function bars(id,v){ const el=document.getElementById(id); if(!el.children.lengt
   const n=Math.round(v*12); [...el.children].forEach((b,i)=>b.classList.toggle('on',i<n)); }
 function selInfo(){ const T=TEAMS[selIdx], st=STATS[selIdx], col='#'+new THREE.Color(T.a===0xd6deeb||T.a===0xf2f6ff?T.eng:T.a).getHexString();
   document.getElementById('selNum').textContent=T.n; document.getElementById('selNum').style.color=col;
-  document.getElementById('selTeam').textContent=T.team; document.getElementById('selSlogan').textContent=TEAM_SLOGAN[selIdx];
+  document.getElementById('selTeam').textContent=T.team; document.getElementById('selRune').textContent=TEAM_RUNES[selIdx]; document.getElementById('selSlogan').textContent=TEAM_SLOGAN[selIdx];
   document.getElementById('selSpec').textContent=TEAM_SPEC[selIdx]; document.getElementById('selCount').textContent=(selIdx+1)+' / 6';
   bars('stSPD',st.spd); bars('stTHR',st.thr); bars('stHAN',st.han); bars('stSHD',st.shd);
   [...document.getElementById('selDots').children].forEach((d,i)=>d.classList.toggle('on',i===selIdx)); }
@@ -1627,7 +1630,7 @@ function loop(now){
     if(countT<=0){ state='race'; msg.className='hud'; msg.textContent='GO'; msg.style.fontSize='120px'; flashT=0.8; boostFlash=0.7;
       sub.innerHTML=''; band.style.display='none'; lapStart=0; raceTime=0; lightMats.forEach(m=>m&&m.emissive.setRGB(0,4,0.6)); }
     else { msg.className='hud count'; msg.textContent=n; msg.style.fontSize='150px'; band.style.display='block';
-      sub.innerHTML='STOCKHOLM GRAND PRIX · SAGL 2097 · 1 LAP<span class="kata">ストックホルム グランプリ</span>'; } }
+      sub.innerHTML='STOCKHOLM GRAND PRIX · SAGL 2097 · 1 LAP<span class="kata">ᛋᛏᚢᚴᚼᚢᛚᛘᛋ᛫ᛋᛏᚢᚱᛅ᛫ᛒᚱᛁᛋ</span>'; } }
   if(state==='race') raceTime+=dt;
   if(state!=='loading'){
     for(const s of ships) stepShip(s,dt);

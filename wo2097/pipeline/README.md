@@ -91,3 +91,10 @@ steering and grip, wall drain and missile-hit loss for the player and the AI; SA
 Balance check, craft alone (`?check&solo&team=N`, bot at full throttle in the middle, 11.4 km):
 ERIXON 144.3 s · KLARNÅ 144.3 · SAAPH 144.6 · IKÖA 145.3 · SPOTIFAI 146.1 · VOLVÖ 146.5 (spread 1.5 %).
 VOLVÖ's shield and SPOTIFAI's grip only pay when you touch walls or get hit, which the bot never does.
+
+## Runes instead of katakana
+Every secondary label is Younger Futhark (long-branch), Swedish words spelled the way a Viking-age carver would
+(`runes.py`: 16 runes, no doubled consonants, ᛫ between words): VARV ᚠᛅᚱᚠ, PLATS ᛒᛚᛅᛏᛋ, TURBO ᛏᚢᚱᛒᚢ, SKÖLD ᛋᚴᚢᛚᛏ,
+VAPEN ᚠᛅᛒᛁᚾ, STOCKHOLMS STORA PRIS ᛋᛏᚢᚴᚼᚢᛚᛘᛋ᛫ᛋᛏᚢᚱᛅ᛫ᛒᚱᛁᛋ. The font is Noto Sans Runic (SIL OFL 1.1, `../fonts/OFL.txt`),
+embedded by the game and the showroom and used by make_textures.py, so bakes and web match. Billboards carry the
+brand name in runes as a small tag; the gantry has a rune subtitle line.
