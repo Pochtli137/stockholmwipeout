@@ -72,3 +72,14 @@ Varje fil har noderna spelet styr: `flap_L`/`flap_R` (luftbromsgångjärn, platt
 | 5 | ERIXON SIGNAL | katamaran, trappstegsfenor (signalstaplar), parabol, antennmaster med fyrar |
 
 Hangaren: `http://localhost:8820/wo2097/showroom.html` (← → byt skepp, dra för att snurra, `?craft=N&still&view=side|front|top|rear|three`).
+
+## Renderer: WebGL, not WebGPU (checked 2026-09-29)
+`three.WebGPURenderer` was tried against the Google tiles and rejected:
+- `3d-tiles-renderer` (0.4.28 in the game, and the latest 0.5.3) imports `WebGLRenderer` from `three`; three's WebGPU build
+  (0.170 and 0.186) does not export it, so the tiles modules fail to load and there is no city. Mapping `three` to both builds
+  would load two copies of three and break the tiles' materials.
+- `TilesFadePlugin` injects its fade with `onBeforeCompile` (8 sites); node materials ignore that.
+- The sky dome and the god rays are GLSL `ShaderMaterial`s and the post chain is `EffectComposer` + `UnrealBloomPass`: all WebGL-only,
+  a TSL rewrite for no measurable gain.
+- Headroom is already large: uncapped median 3.6 ms, p95 5.2 ms, p99 6.2 ms on this Mac (`node perf.cjs 40`).
+`perf.cjs` measures uncapped frame time on a scripted stretch of the race (vsync off); use it before and after engine changes.
