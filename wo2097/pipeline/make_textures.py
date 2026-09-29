@@ -1,8 +1,9 @@
 """USED UNIVERSE textures for the Blender track set and craft, drawn with PIL + numpy. Original designs only:
 invented league, invented brands and teams, no real logos. Fonts: Orbitron + Rajdhani (OFL, in fonts/),
 runes (Younger Futhark) in Noto Sans Runic from ../fonts. Output: tex/*.png|jpg, read by build.py.
-The world is worn Stockholm (old Slussen concrete, tunnelbana tile, rust, sodium and fluorescent light); the ONLY saturated
-light belongs to the corporations: every brand is a lit light box, a neon sign or an LED panel (an *_e emission map)."""
+The world is worn Stockholm (old Slussen concrete, tunnelbana tile, rust, sodium and fluorescent light). Every ad, corporate
+and party alike, is a matte PRINTED PAPER poster in the neon version's layout and size, lit by the world's lamps and a worn
+floodlight on each board: crisp print, the wear on the paper edges and the board, never across the letters."""
 import os, math, random
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
@@ -245,44 +246,52 @@ def tiles(w,h,seed):
     base=np.stack([186+18*ti,190+16*ti,168+14*ti],-1)*0.82          # pale green-cream SL tile, each its own
     grout=((xx%tw)<2)|((yy%th)<2); base[grout]=np.array([70,68,60])
     return to_im(base)
-def lightbox(im,em,x,y,w,h,B,slogan_font_max=100):
-    d=ImageDraw.Draw(im); e=ImageDraw.Draw(em)
+def paper(im,box,seed):
+    """printed paper on the wall: the paper yellows a touch and its edges lift and dirty; the print stays crisp"""
+    x0,y0,x1,y1=box; d=ImageDraw.Draw(im); rr=random.Random(seed)
+    for _ in range(3): tx=rr.randint(x0,x1-44); d.rectangle([tx,y0-4,tx+44,y0+4],fill=(214,206,180))     # tape on the top edge
+    d.rectangle([x0,y0,x1,y1],outline=(160,150,128),width=2)                                            # the paper's own edge
+    for _ in range(int((x1-x0)/90)):                                                                    # dirt only along the bottom edge
+        tx=rr.randint(x0,x1); d.line([(tx,y1-rr.randint(2,7)),(tx+rr.randint(10,40),y1-1)],fill=(92,84,70),width=2)
+def paper_cell(im,x,y,w,h,B,slogan_font_max=100):
+    """a brand poster on the tile: brand cell + slogan cell, exactly the neon version's barrier sizes, printed matte"""
+    d=ImageDraw.Draw(im)
     nf=fit(d,B['n'],FONTS[B['f']],84,1100,minsz=60); nw=int(d.textlength(B['n'],font=nf))+60
     line=' '.join(B['s']); sf=big(d,[line],2600,slogan_font_max,84,'barrier'); sw=int(d.textlength(line,font=sf))+70
     W_=nw+sw+30
-    for dd in (d,e):
-        dd.rectangle([x,y,x+nw,y+h],fill=B['bg']); dd.text((x+30,y+h//2+2),B['n'],font=nf,fill=B['fg'],anchor='lm')
-        dd.rectangle([x+nw+10,y,x+nw+10+sw,y+h],fill=(12,12,14)); dd.text((x+nw+45,y+h//2+6),line,font=sf,fill=(255,250,236),anchor='lm')
-    dark_edge(d,x-6,y-6,W_+12,h+12,t=8)
+    d.rectangle([x,y,x+nw,y+h],fill=B['bg']); d.text((x+30,y+h//2+2),B['n'],font=nf,fill=B['fg'],anchor='lm')
+    d.rectangle([x+nw+10,y,x+nw+10+sw,y+h],fill=(16,16,18)); d.text((x+nw+45,y+h//2+6),line,font=sf,fill=(246,242,230),anchor='lm')
+    paper(im,(x,y,x+W_-20,y+h),x)
     return W_+40
 def barrier_variant(name,order,seed):
-    w,h=8192,128; im=tiles(w,h,seed); em=Image.new('RGB',(w,h),(0,0,0)); x=40; k=0
+    w,h=8192,128; im=grime(tiles(w,h,seed),0.42,seed+3,48,rust=0.5,runs=1.2); x=40; k=0
     while True:
         B=BRANDS[order[k%len(order)]]
         tmp=ImageDraw.Draw(im); nf=fit(tmp,B['n'],FONTS[B['f']],84,1100,minsz=60)
         need=int(tmp.textlength(B['n'],font=nf))+60+int(tmp.textlength(' '.join(B['s']),font=big(tmp,[' '.join(B['s'])],2600,100,84,'barrier')))+70+120
         if x+need>w-40: break
-        x+=lightbox(im,em,x,16,0,h-32,B)+r.randint(160,420); k+=1
-    im=grime(im,0.42,seed+3,48,rust=0.5,runs=1.2)
-    em=em.filter(ImageFilter.GaussianBlur(0.6))
-    save(im,name+'.jpg'); save(em,name+'_e.jpg'); return k
+        x+=paper_cell(im,x,16,0,h-32,B)+r.randint(160,420); k+=1
+    save(im,name+'.jpg'); save(im,name+'_e.jpg'); return k      # the *_e map: the whole wall, for the tubes' light on it
 def poster_wall(name,seed):
-    """all eight parties as pasted-up election posters on the tile: paper, unlit, torn, taped, rained on"""
-    w,h=8192,128; im=tiles(w,h,seed); d=ImageDraw.Draw(im); x=60; pw=(w-120)//8
+    """all eight parties as pasted-up election posters on the tile. The PAPER is faded, rained on and torn at the
+    right-hand end; the INK is crisp: name and slogan set after the wear, big, dark-on-light or light-on-dark."""
+    w,h=8192,128; im=grime(tiles(w,h,seed),0.42,seed+3,48,rust=0.5,runs=1.2); pw=(w-120)//8; x=60; boxes=[]
     for P in PARTIES:
-        px=x+8; ww=pw-16
-        d.rectangle([px,10,px+ww,h-10],fill=P['bg'])
-        nf=fit(d,P['n'],cond,44,ww-40,minsz=26); d.text((px+20,34),P['n'],font=nf,fill=P['fg'],anchor='lm')
-        d.rectangle([px+14,54,px+ww-14,57],fill=P['ac'])
-        sf=big(d,[' '.join(P['s'])],ww-40,56,34,'poster '+P['n']); d.text((px+20,88),' '.join(P['s']),font=sf,fill=P['fg'],anchor='lm')
-        d.text((px+ww-16,112),P['k'],font=rn(16),fill=P['fg'],anchor='rm')
-        for _ in range(3):   # tape and torn strips
-            tx=px+r.randint(0,ww-60); d.rectangle([tx,8,tx+44,16],fill=(214,206,180))
-        if r.random()<0.7:
-            tx=px+r.randint(40,ww-120); d.polygon([(tx,h-10),(tx+r.randint(40,110),h-10),(tx+r.randint(20,90),r.randint(40,90))],fill=(186,176,150))
-        x+=pw
-    im=fade(im,0.3); im=grime(im,0.5,seed+5,40,rust=0.4,runs=1.5)
-    save(im,name+'.jpg'); save(Image.new('RGB',(64,8),(0,0,0)),name+'_e.jpg')
+        px=x+8; ww=pw-16; paper=Image.new('RGB',(ww,h-20),P['bg']); paper=grime(fade(paper,0.3),0.5,seed+len(boxes)*7,24,rust=0.3,runs=1.0)
+        im.paste(paper,(px,10)); boxes.append((px,ww,P)); x+=pw
+    d=ImageDraw.Draw(im)
+    for px,ww,P in boxes:
+        nf=fit(d,P['n'],cond,40,ww-40,minsz=26); tw=int(d.textlength(P['n'],font=nf))
+        d.text((px+20,28),P['n'],font=nf,fill=P['fg'],anchor='lm')
+        d.rectangle([px+14,50,px+ww-14,53],fill=P['ac'])
+        line=' '.join(P['s']); sf=big(d,[line],ww-40,74,46,'poster '+P['n']); lw=int(d.textlength(line,font=sf))
+        d.text((px+20,88),line,font=sf,fill=P['fg'],anchor='lm')
+        d.text((px+ww-16,114),P['k'],font=rn(14),fill=P['fg'],anchor='rm')
+        for tx in (px+4,px+ww-48): d.rectangle([tx,6,tx+44,14],fill=(214,206,180))          # tape at the corners, never over the ink
+        free=px+max(tw,lw)+60
+        if free<px+ww-140:                                                                  # torn only where there is no text
+            tx=r.randint(free,px+ww-130); d.polygon([(tx,h-10),(tx+r.randint(60,120),h-10),(tx+r.randint(20,90),r.randint(30,80))],fill=(186,176,150))
+    save(im,name+'.jpg'); save(im,name+'_e.jpg')      # the tubes light the poster wall like the others
 half=list(range(0,len(BRANDS),2)), list(range(1,len(BRANDS),2))
 nA=barrier_variant('barrier_A',half[0]+half[1],101); nB=barrier_variant('barrier_B',half[1]+half[0],202)
 poster_wall('barrier_P',303)
@@ -306,53 +315,38 @@ d.text((w//2,int(h*.25)),'STOCKHOLM GRAND PRIX',font=orb(96),fill=(236,232,220),
 d.text((w//2,int(h*.455)),runes('STOCKHOLMS STORA PRIS'),font=rn(34),fill=(0,168,224),anchor='mm')
 gl=['BANK-ID+ · IDENTIFIERAD. GODKÄND. ÄGD.']; d.text((w//2,int(h*.745)),gl[0],font=big(d,gl,w-360,120,96,'gantry'),fill=(80,200,255),anchor='mm')
 icon(d,'grid',120,int(h*.45),70,(0,168,224)); icon(d,'grid',w-120,int(h*.45),70,(0,168,224))
-em=lednoise(im,5); dark_edge(d,4,4,w-8,h-8,t=12); save(grime(im,0.25,71,40),'gantry.jpg'); save(em,'gantry_e.jpg')
+dark_edge(d,4,4,w-8,h-8,t=12); save(im,'gantry.jpg'); save(im,'gantry_e.jpg')   # a printed banner; *_e = the same print, for its floodlight
 
 # ============================================================ billboards and arches: every brand lit, three kinds of light
 # LIGHTBOX: the whole face backlit through dirty acrylic. NEON: a weathered dark panel with tube letters. LED: a pixel panel.
-def bill_face(B,style,runes_tag):
-    w,h=1024,512; d0=ImageDraw.Draw(Image.new('RGB',(8,8)))
-    if style=='lightbox':
-        im=Image.new('RGB',(w,h),B['bg']); d=ImageDraw.Draw(im)
-        d.rectangle([0,int(h*.42),w,h],fill=(14,14,16)); d.rectangle([0,int(h*.42)-8,w,int(h*.42)],fill=B['ac'])
-        d.text((w-30,int(h*.365)),runes_tag,font=rn(26),fill=B['fg'],anchor='rm')
-        d.text((36,int(h*.21)),B['n'],font=fit(d,B['n'],FONTS.get(B.get('f'),cond),150,w*.78,minsz=60),fill=B['fg'],anchor='lm')
-        sf=big(d,B['s'],w-72,140,100,'billboard '+B['n'])
-        for ln,y in zip(B['s'],(int(h*.585),int(h*.84))): d.text((36,y),ln,font=sf,fill=(255,250,236),anchor='lm')
-        em=im.copy(); col=grime(im,0.35,hash(B['n'])%997,40); em=Image.blend(em,col,0.35)
-        return col,em
-    if style=='neon':
-        base=Image.fromarray(np.stack([fbm(h,w,32,hash(B['n'])%991)*30+14]*3,-1).astype(np.uint8)); d=ImageDraw.Draw(base)
-        for yy in range(0,h,64): d.line([(0,yy),(w,yy)],fill=(8,8,9),width=2)
-        nf=fit(d,B['n'],FONTS.get(B.get('f'),cond),150,w*.8,minsz=60)
-        ncol=B.get('neon') or (B['ac'] if B['ac'] not in (K,W,(255,255,255)) else B['bg'])
-        e1,m1=neon_text((w,h),B['n'],nf,ncol,(40,int(h*.24)),halo=7)
-        sf=big(d,B['s'],w-80,130,96,'neon '+B['n'])
-        e2,m2=neon_text((w,h),B['s'][0],sf,(255,200,150),(40,int(h*.6)),halo=5,core=(255,236,214)); e3,m3=neon_text((w,h),B['s'][1],sf,(255,200,150),(40,int(h*.85)),halo=5,core=(255,236,214))
-        em=np.clip(e1+e2+e3,0,255); mk=np.clip(m1+m2+m3,0,1)
-        col=comp(grime(base,0.4,hash(B['n'])%977,32,rust=0.5,runs=1.0),em*0.55,mk*0.8)
-        d=ImageDraw.Draw(col); d.text((w-30,int(h*.07)),runes_tag,font=rn(24),fill=(120,116,108),anchor='rm')
-        return col,to_im(em)
-    # LED
-    im=Image.new('RGB',(w,h),(8,9,11)); d=ImageDraw.Draw(im)
-    d.rectangle([0,0,int(w*.18),h],fill=B['bg']); icon(d,B.get('icon','dot'),int(w*.09),int(h*.5),int(h*.16),B['fg'])
-    d.text((int(w*.22),int(h*.2)),B['n'],font=fit(d,B['n'],FONTS.get(B.get('f'),cond),130,w*.72,minsz=56),fill=B['ac'] if B['ac']!=K else B['bg'],anchor='lm')
-    sf=big(d,B['s'],int(w*.74),130,96,'led '+B['n'])
-    for ln,y in zip(B['s'],(int(h*.56),int(h*.83))): d.text((int(w*.22),y),ln,font=sf,fill=(255,244,222),anchor='lm')
-    em=lednoise(im,5); col=grime(im,0.2,hash(B['n'])%983,40)
-    return col,em
-STYLES=['lightbox','neon','led']
+def edge_wear(im,seed,m=14):
+    """dirt and rust on the outer rim only: the frame's business, never the face's"""
+    w,h=im.size; worn=grime(im,0.7,seed,24,rust=0.8,runs=2.0); mask=Image.new('L',(w,h),255); ImageDraw.Draw(mask).rectangle([m,m,w-m,h-m],fill=0)
+    return Image.composite(worn,im,mask)
+def bill_face(B,runes_tag):
+    """the neon version's billboard, 1024 x 512 on 14 x 7 m: brand band on top, the slogan big in white on black
+    (min 112 px = ~1.5 m letters). Returns (dim base, clean emission)."""
+    w,h=1024,512; im=Image.new('RGB',(w,h),B['bg']); d=ImageDraw.Draw(im)
+    d.rectangle([0,int(h*.42),w,h],fill=K if B['bg']!=K else (28,30,36)); d.rectangle([0,int(h*.42)-8,w,int(h*.42)],fill=B['ac'] if B['ac']!=K else B['fg'])
+    if B.get('icon'): icon(d,B['icon'],int(w*.9),int(h*.19),int(h*.12),B['fg'])
+    d.text((w-30,int(h*.365)),runes_tag,font=rn(26),fill=B['fg'],anchor='rm')
+    d.text((36,int(h*.21)),B['n'],font=fit(d,B['n'],FONTS.get(B.get('f'),cond),150,w*.78,minsz=60),fill=B['fg'],anchor='lm')
+    sf=big(d,B['s'],w-72,140,112,'billboard '+B['n'])
+    for ln,y in zip(B['s'],(int(h*.585),int(h*.84))): d.text((36,y),ln,font=sf,fill=(255,250,236),anchor='lm')
+    im=edge_wear(im,hash(B['n'])%997,12); d=ImageDraw.Draw(im)                    # paper pasted on the board: dirty rim, lifted corner
+    d.polygon([(w-1,0),(w-70,0),(w-1,56)],fill=(196,188,166)); d.line([(w-70,0),(w-1,56)],fill=(120,110,92),width=2)
+    return im,im
 for i,B in enumerate(BRANDS):
-    col,em=bill_face(B,STYLES[i%3],B['k']); save(col,f'bill_{i}.jpg'); save(em,f'bill_{i}_e.jpg')
-    # arch face 2048 x 256 on 24 x 2.6 m: an LED strip over the track, brand left, slogan right
-    w,h=2048,256; im=Image.new('RGB',(w,h),(8,9,11)); d=ImageDraw.Draw(im)
-    d.rectangle([0,0,940,h],fill=B['bg']); d.text((60,h//2+4),B['n'],font=fit(d,B['n'],FONTS[B['f']],190,820,minsz=80),fill=B['fg'],anchor='lm')
-    d.rectangle([940,0,952,h],fill=B['ac'] if B['ac']!=K else (255,255,255))
-    af=big(d,B['s'],w-1010-40,124,104,'arch '+B['n'])
-    for ln,y in zip(B['s'],(int(h*.30),int(h*.76))): d.text((1000,y),ln,font=af,fill=(255,244,222),anchor='lm')
-    save(grime(im,0.2,i+300,40),f'arch_{i}.jpg'); save(lednoise(im,4),f'arch_{i}_e.jpg')
-for i,P in enumerate(PARTIES):   # the parties' neon billboards: every party the same style and size
-    B=dict(P,f=None,icon='dot'); col,em=bill_face(B,'neon',P['k']); save(col,f'pbill_{i}.jpg'); save(em,f'pbill_{i}_e.jpg')
+    col,em=bill_face(B,B['k']); save(col,f'bill_{i}.jpg'); save(em,f'bill_{i}_e.jpg')
+    # arch face 2048 x 256 on 24 x 2.6 m, overhead: brand left, slogan right in two ~1 m lines (the neon version's sizes)
+    w,h=2048,256; im=Image.new('RGB',(w,h),B['bg']); d=ImageDraw.Draw(im)
+    d.text((120,h//2+4),B['n'],font=fit(d,B['n'],FONTS[B['f']],190,800,minsz=80),fill=B['fg'],anchor='lm')
+    d.rectangle([960,0,w-90,h],fill=K); d.rectangle([960,0,972,h],fill=B['ac'] if B['ac']!=K else (255,255,255))
+    af=big(d,B['s'],w-90-1010,124,104,'arch '+B['n'])
+    for ln,y in zip(B['s'],(int(h*.30),int(h*.76))): d.text((1000,y),ln,font=af,fill=(255,250,236),anchor='lm')
+    im=edge_wear(im,i+300,10); save(im,f'arch_{i}.jpg'); save(im,f'arch_{i}_e.jpg')   # a printed vinyl banner
+for i,P in enumerate(PARTIES):   # the parties' boards: the same layout and size as every brand, party colours
+    col,em=bill_face(dict(P,f=None,icon=None),P['k']); save(col,f'pbill_{i}.jpg'); save(em,f'pbill_{i}_e.jpg')
 # a sodium light pool (additive decal under the lamp posts) and the tube sprite
 w=h=256; yy,xx=np.mgrid[0:h,0:w]; rr=np.sqrt((xx-w/2)**2+(yy-h/2)**2)/(w/2); a=np.clip(1-rr,0,1)**2.2
 save(to_im(np.stack([a*255,a*150,a*40],-1)),'pool.png')

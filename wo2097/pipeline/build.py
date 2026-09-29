@@ -92,7 +92,7 @@ trk=bpy.data.collections.new('track'); scene.collection.children.link(trk)
 # sodium lamps light the road in white and orange, a few tubes dead or failing.
 m_surf=mat('track_surface',tex='track.jpg',rough=0.86,metal=0.0)
 m_under=mat('track_under',tex='concrete.jpg',rough=0.95,metal=0.0,double=True)
-WALLS={v:mat(f'barrier_{v}',tex=f'barrier_{v}.jpg',emit_tex=f'barrier_{v}_e.jpg',emit=0.95,rough=0.55,metal=0.05,double=True) for v in 'ABP'}
+WALLS={v:mat(f'barrier_{v}',tex=f'barrier_{v}.jpg',emit_tex=f'barrier_{v}_e.jpg',emit=0.5,rough=0.55,metal=0.05,double=True) for v in 'ABP'}
 m_housing=mat('steel_fitting',tex='steel.jpg',rough=0.7,metal=0.5)
 m_tubeC=mat('tube_cold',col=(0,0,0),emit_col=(0.86,0.95,0.92),emit=0.62); m_tubeS=mat('tube_sodium',col=(0,0,0),emit_col=(1.0,0.62,0.26),emit=0.62)
 m_tubeD=mat('tube_dead',col=(0.16,0.16,0.15),rough=0.5)
@@ -102,7 +102,7 @@ m_pole=mat('lamp_pole',tex='pylon.jpg',rough=0.8,metal=0.4); m_lamp=mat('lamp_so
 m_pool=mat('pool_sodium',col=(0,0,0),emit_tex='pool.png',emit=0.55,double=True)
 m_pad=mat('pad_speed',col=(0,0,0),emit_tex='pad_speed.png',emit=1.6,double=True); m_wpad=mat('pad_weapon',col=(0,0,0),emit_tex='pad_weapon.png',emit=1.6,double=True)
 m_metal=mat('frame_metal',tex='steel.jpg',rough=0.75,metal=0.5); m_haz=mat('hazard',tex='hazard.jpg',rough=0.7,metal=0.2)
-m_rust=mat('pylon_rust',tex='pylon.jpg',rough=0.85,metal=0.35); m_conc=mat('footing',tex='concrete.jpg',rough=0.95)
+m_rust=mat('pylon_rust',tex='pylon.jpg',rough=0.85,metal=0.35); m_flood=mat('lamp_flood',col=(0,0,0),emit_col=(1.0,0.78,0.5),emit=1.1); m_conc=mat('footing',tex='concrete.jpg',rough=0.95)
 H_=np.array([0,1,0.0])
 
 S=MB(); U=MB(); B=MB(); N=MB(); X=MB()   # deck, slab, walls, tubes, fittings/rails/conduits
@@ -181,7 +181,7 @@ Y_.build('pylons',trk); log('pylons')
 SET=bpy.data.collections.new('setpieces'); scene.collection.children.link(SET); setobs=[]
 def sign(M,T,w,h,y,z,front,back):
     for tex,zz,flip in ((front,z,False),(back,-z,True)):
-        base=tex.split('.')[0]; mm=mat('sign_'+base,tex=tex,emit_tex=base+'_e.jpg',emit=1.35,rough=0.6)
+        base=tex.split('.')[0]; mm=mat('sign_'+base,tex=tex,emit_tex=base+'_e.jpg',emit=0.55,rough=0.92)   # printed, matte: its floodlight, no glow
         x0,x1=-w/2,w/2
         if not flip: M.quad(T((x0,y-h/2,zz)),T((x1,y-h/2,zz)),T((x1,y+h/2,zz)),T((x0,y+h/2,zz)),mm)
         else: M.quad(T((x1,y-h/2,zz)),T((x0,y-h/2,zz)),T((x0,y+h/2,zz)),T((x1,y+h/2,zz)),mm)
@@ -193,6 +193,7 @@ for i in range(5): M.box(T,(i-2)*2.2,11.8,1.25,1.1,1.1,0.4,mat(f'light_{i}',col=
 setobs.append(M.build('gantry',SET))
 def arch_free(t):   # both posts clear: nothing from the tiles above the slab bottom where they stand
     c=clear_at(t); return all(np.isnan(v) or v< -1.2 for v in c[:2])
+PCOL=[srgb(h) for h in ['#e8112d','#3c8cff','#ffd200','#22c05a','#e0303a','#4a78ff','#1f9bff','#8fd83a']]   # the parties' colours, bright enough to glow
 ACC=[srgb(h) for h in ['#ffcd00','#d6deeb','#ff2030','#1ed760','#ffffff','#00a8e0','#ffb3c7','#ffd200','#00a0dc','#e60028','#ffffff','#1f5fd0','#2050c8','#e60028','#ffffff','#ffcd00','#ffcd00','#ffcd00','#00a8e0']]
 ARCHES=[dict(n=A['n'],t=A['t'],b=A['b'],d=A['d']) for A in D['arches']]
 for k in range(8):   # sponsor arches around the lap, away from the landmarks and the start
@@ -211,7 +212,7 @@ for A in ARCHES:
     p,r,u,fw,_=at(t); T=local(p,r,u,fw); M=MB(); W2=HW+3.5; b=A['b']
     for sx in (-1,1): M.boxw(T,sx*W2,6,0,1.3,12,1.3,m_rust,3.0); M.boxw(T,sx*W2,1.6,0,1.4,1.0,1.4,m_haz,1.5)
     M.boxw(T,0,11.4,0,W2*2+2,3.0,1.6,m_metal,3.0); sign(M,T,W2*2+1.4,2.6,11.4,0.82,f'arch_{b}.jpg',f'arch_{(b+7)%NB}.jpg')
-    M.box(T,0,9.8,0,W2*2+2,0.2,1.8,mat(f'neon_arch_{b}',col=(0,0,0),emit_col=ACC[b],emit=2.6)); setobs.append(M.build('arch_'+A['n'].lower(),SET)); placed+=1
+    M.boxw(T,0,9.8,0,W2*2+2,0.2,1.8,m_rust,3.0); setobs.append(M.build('arch_'+A['n'].lower(),SET)); placed+=1
 log('arches placed',placed,'of',len(ARCHES))
 nb=int(L/300); M=MB(); spots=[]
 for i in range(nb):
@@ -228,13 +229,15 @@ for j,(i,t,sd,fv) in enumerate(spots):
     p,r,u,fw,_=at(t); T=local(p,r,u,fw,rot=sd*0.42,lat=sd*(HW+10),lift=10)
     leg=10-3.5-max(fv,-60.0)                         # mast from the board down to the roof or street under it
     M.boxw(T,0,-3.5-leg/2,0,0.8,leg,0.8,m_rust,3.0); M.boxw(T,0,0,0,14.8,7.8,0.6,m_metal,3.0)
-    for lx in (-5,0,5): M.boxw(T,lx,4.2,0.7,0.3,0.12,1.2,m_housing,1.0)      # the lamp brackets over the face
     if j in PARTY_SLOTS and pk<2*NP:
-        q=pk%NP; pk+=1; party_count[q]+=1; mm=mat(f'pboard_{q}',tex=f'pbill_{q}.jpg',emit_tex=f'pbill_{q}_e.jpg',emit=1.9,rough=0.6)
+        q=pk%NP; pk+=1; party_count[q]+=1; mm=mat(f'pboard_{q}',tex=f'pbill_{q}.jpg',emit_tex=f'pbill_{q}_e.jpg',emit=0.55,rough=0.92)
     else:
-        q=bk%NB; bk+=1; nm=f'board_{q}'+('_flk' if bk in FLK else '')
-        mm=mat(nm,tex=f'bill_{q}.jpg',emit_tex=f'bill_{q}_e.jpg',emit=(1.35,1.9,1.4)[q%3],rough=0.6)   # light box, neon tubes, LED (make_textures STYLES)
+        q=bk%NB; bk+=1; mm=mat(f'board_{q}',tex=f'bill_{q}.jpg',emit_tex=f'bill_{q}_e.jpg',emit=0.55,rough=0.92)   # printed paper, lit by its floodlights
     M.quad(T((-7,-3.5,0.31)),T((7,-3.5,0.31)),T((7,3.5,0.31)),T((-7,3.5,0.31)),mm)
+    # two worn floodlights on arms over the top edge, pointing at the paper (their warm light is the face's emission above)
+    for lx in (-4.2,4.2):
+        M.boxw(T,lx,4.05,0.9,0.14,0.5,0.14,m_rust,1.0); M.boxw(T,lx,4.3,1.55,0.14,0.14,1.3,m_rust,1.0); M.boxw(T,lx,4.12,2.2,0.7,0.34,0.5,m_housing,1.0)
+        M.quad(T((lx-0.3,3.94,2.0)),T((lx+0.3,3.94,2.0)),T((lx+0.3,3.94,2.4)),T((lx-0.3,3.94,2.4)),m_flood)
 log('billboards',len(spots),'of',nb,'· parties',party_count,'· brands',bk)
 setobs.append(M.build('billboards',SET)); log('set pieces',len(setobs))
 
