@@ -1,4 +1,4 @@
-"""STOCKHOLM WIPEOUT 2097 · the track set and the craft, built in Blender over the calibrated centreline.
+"""STOCKHOLM WIPEOUT 2097 · USED UNIVERSE · the track set, built in Blender over the calibrated centreline.
 Reads ../assets/track.json (dumped from the game over Google's tiles, see dump_track.cjs) and tex/ (make_textures.py).
 Everything is modelled in the game's own frame (+X west, +Y up, +Z north; Blender gets (x,-z,y), the glTF export
 turns it back), so the glb lands exactly on the tiles. Exports ../assets/track.glb (the craft: build_craft.py).
@@ -16,7 +16,7 @@ FR=np.array([[np.nan if v is None else v for v in f] for f in D['frames']],np.fl
 # the survey, per frame and relative to the track surface: the highest tile hit at the arch posts (+-11.5 m) and at the
 # billboards (+-18 m). Negative = below the deck. Set pieces only go where the tiles leave room for them.
 CLR=np.array([[np.nan if v is None else v for v in c] for c in D.get('clear',[[None]*4]*SEG)],np.float64)
-NB=len([f for f in os.listdir(TEX) if f.startswith('bill_')])
+NB=len([f for f in os.listdir(TEX) if f.startswith('bill_') and not f.endswith('_e.jpg')]); NP=len([f for f in os.listdir(TEX) if f.startswith('pbill_') and not f.endswith('_e.jpg')])
 def clear_at(t): return CLR[int(round((t%1.0)*SEG))%SEG]
 BAR_H, SLAB = 1.7, 0.9
 def G2B(v): return (v[0],-v[2],v[1])      # game frame -> Blender (glTF export maps it back)
@@ -54,6 +54,15 @@ class MB:
         for q in ((P(x0,y0,z0),P(x1,y0,z0),P(x1,y0,z1),P(x0,y0,z1)),(P(x0,y0,z1),P(x1,y0,z1),P(x1,y1,z1),P(x0,y1,z1)),
                   (P(x1,y0,z0),P(x0,y0,z0),P(x0,y1,z0),P(x1,y1,z0)),(P(x1,y0,z1),P(x1,y0,z0),P(x1,y1,z0),P(x1,y1,z1)),
                   (P(x0,y0,z0),P(x0,y0,z1),P(x0,y1,z1),P(x0,y1,z0))): s.quad(*q,mat,((0,0),)*4)
+    def boxw(s,T,cx,cy,cz,w,h,d,mat,sc=2.0):   # a box with world-scaled UVs on every face (sc metres a texture tile)
+        x0,x1,y0,y1,z0,z1=cx-w/2,cx+w/2,cy-h/2,cy+h/2,cz-d/2,cz+d/2; P=lambda x,y,z:T((x,y,z))
+        uw,uh,ud=w/sc,h/sc,d/sc; oy=cy/sc
+        s.quad(P(x0,y1,z1),P(x1,y1,z1),P(x1,y1,z0),P(x0,y1,z0),mat,((0,0),(uw,0),(uw,ud),(0,ud)))
+        s.quad(P(x0,y0,z0),P(x1,y0,z0),P(x1,y0,z1),P(x0,y0,z1),mat,((0,0),(uw,0),(uw,ud),(0,ud)))
+        s.quad(P(x0,y0,z1),P(x1,y0,z1),P(x1,y1,z1),P(x0,y1,z1),mat,((0,oy),(uw,oy),(uw,oy+uh),(0,oy+uh)))
+        s.quad(P(x1,y0,z0),P(x0,y0,z0),P(x0,y1,z0),P(x1,y1,z0),mat,((0,oy),(uw,oy),(uw,oy+uh),(0,oy+uh)))
+        s.quad(P(x1,y0,z1),P(x1,y0,z0),P(x1,y1,z0),P(x1,y1,z1),mat,((0,oy),(ud,oy),(ud,oy+uh),(0,oy+uh)))
+        s.quad(P(x0,y0,z0),P(x0,y0,z1),P(x0,y1,z1),P(x0,y1,z0),mat,((0,oy),(ud,oy),(ud,oy+uh),(0,oy+uh)))
     def build(s,name,coll=None,recalc=False):
         me=bpy.data.meshes.new(name); me.from_pydata([G2B(v) for v in s.v],[],s.f); me.update()
         if recalc:   # closed solids: point every face outwards so backface culling never eats one
@@ -78,35 +87,73 @@ def local(p,r,u,fw,rot=0.0,lat=0.0,lift=0.0):   # local frame: x right, y up, z 
 
 # ------------------------------------------------------------------ the track
 trk=bpy.data.collections.new('track'); scene.collection.children.link(trk)
-m_surf=mat('track_surface',tex='track.jpg',emit_tex='track_e.jpg',emit=0.7,rough=0.62,metal=0.12)   # satin, or the low sun turns it into a mirror
-m_under=mat('track_under',col=(0.05,0.06,0.08),rough=0.55,metal=0.7,double=True)
-m_barL=mat('barrier_L',tex='barrier_L.jpg',emit_tex='barrier_L.jpg',emit=0.35,rough=0.4,metal=0.3,double=True)
-m_barR=mat('barrier_R',tex='barrier_R.jpg',emit_tex='barrier_R.jpg',emit=0.35,rough=0.4,metal=0.3,double=True)
-m_neonL=mat('neon_L',col=(0,0,0),emit_col=srgb('#ff2e9a'),emit=2.6,double=True); m_neonR=mat('neon_R',col=(0,0,0),emit_col=srgb('#00e1ff'),emit=2.6,double=True)
-m_neonY=mat('neon_Y',col=(0,0,0),emit_col=srgb('#ffe600'),emit=1.8)
+# USED UNIVERSE: the deck is old Slussen concrete and asphalt (unlit), the slab is formwork concrete, the barriers are
+# tunnelbana tile carrying LIT light boxes (the only saturated light is the corporations'), fluorescent tube fittings and
+# sodium lamps light the road in white and orange, a few tubes dead or failing.
+m_surf=mat('track_surface',tex='track.jpg',rough=0.86,metal=0.0)
+m_under=mat('track_under',tex='concrete.jpg',rough=0.95,metal=0.0,double=True)
+WALLS={v:mat(f'barrier_{v}',tex=f'barrier_{v}.jpg',emit_tex=f'barrier_{v}_e.jpg',emit=0.95,rough=0.55,metal=0.05,double=True) for v in 'ABP'}
+m_housing=mat('steel_fitting',tex='steel.jpg',rough=0.7,metal=0.5)
+m_tubeC=mat('tube_cold',col=(0,0,0),emit_col=(0.86,0.95,0.92),emit=0.62); m_tubeS=mat('tube_sodium',col=(0,0,0),emit_col=(1.0,0.62,0.26),emit=0.62)
+m_tubeD=mat('tube_dead',col=(0.16,0.16,0.15),rough=0.5)
+m_flkC=mat('tube_flick_cold',col=(0,0,0),emit_col=(0.86,0.95,0.92),emit=0.62); m_flkS=mat('tube_flick_sodium',col=(0,0,0),emit_col=(1.0,0.62,0.26),emit=0.62)
+m_rail=mat('rail_steel',tex='steel.jpg',rough=0.55,metal=0.8); m_cond=mat('conduit',col=(0.09,0.09,0.09),rough=0.6,metal=0.3)
+m_pole=mat('lamp_pole',tex='pylon.jpg',rough=0.8,metal=0.4); m_lamp=mat('lamp_sodium',col=(0,0,0),emit_col=(1.0,0.66,0.3),emit=1.15)
+m_pool=mat('pool_sodium',col=(0,0,0),emit_tex='pool.png',emit=0.55,double=True)
 m_pad=mat('pad_speed',col=(0,0,0),emit_tex='pad_speed.png',emit=1.6,double=True); m_wpad=mat('pad_weapon',col=(0,0,0),emit_tex='pad_weapon.png',emit=1.6,double=True)
-m_metal=mat('frame_metal',col=(0.06,0.07,0.1),rough=0.35,metal=0.85); m_haz=mat('hazard',tex='hazard.jpg',rough=0.5,metal=0.2)
+m_metal=mat('frame_metal',tex='steel.jpg',rough=0.75,metal=0.5); m_haz=mat('hazard',tex='hazard.jpg',rough=0.7,metal=0.2)
+m_rust=mat('pylon_rust',tex='pylon.jpg',rough=0.85,metal=0.35); m_conc=mat('footing',tex='concrete.jpg',rough=0.95)
+H_=np.array([0,1,0.0])
 
-S=MB(); U=MB(); B=MB(); N=MB()
+S=MB(); U=MB(); B=MB(); N=MB(); X=MB()   # deck, slab, walls, tubes, fittings/rails/conduits
 dist=0.0; dl=L/SEG
+VAR={-1:'ABP',1:'BAP'}                    # the three walls alternate every 104 m; the sides are out of step
 for i in range(SEG):
     p0,r0,u0,f0,g0=frame(i); p1,r1,u1,f1,g1=frame(i+1); v0=i*dl/32; v1=(i+1)*dl/32
     Lp0,Rp0,Lp1,Rp1=p0-r0*HW,p0+r0*HW,p1-r1*HW,p1+r1*HW
     S.quad(tuple(Lp0),tuple(Rp0),tuple(Rp1),tuple(Lp1),m_surf,((0,v0),(1,v0),(1,v1),(0,v1)))
-    # slab: bottom and both skirts
-    e0,e1=HW+0.4,HW+0.4
-    U.quad(tuple(p0+r0*e0-u0*SLAB),tuple(p0-r0*e0-u0*SLAB),tuple(p1-r1*e1-u1*SLAB),tuple(p1+r1*e1-u1*SLAB),m_under)
+    e0,e1=HW+0.4,HW+0.4; a8,b8=i*dl/8,(i+1)*dl/8
+    U.quad(tuple(p0+r0*e0-u0*SLAB),tuple(p0-r0*e0-u0*SLAB),tuple(p1-r1*e1-u1*SLAB),tuple(p1+r1*e1-u1*SLAB),m_under,((0,a8),(e0*2/8,a8),(e0*2/8,b8),(0,b8)))
+    chunk=int((i*dl)//104)
     for sd in (-1,1):
         a0=p0+r0*sd*e0; a1=p1+r1*sd*e1
-        U.quad(tuple(a0-u0*SLAB),tuple(a1-u1*SLAB),tuple(a1),tuple(a0),m_under)
-        # barrier wall (text runs forward on the left wall, backwards on the right so it reads from the track)
-        w0=p0+r0*sd*(HW+0.2); w1=p1+r1*sd*(HW+0.2); ua,ub=(i*dl/104,(i+1)*dl/104) if sd<0 else (-(i*dl/104),-((i+1)*dl/104))   # one 8192 px barrier texture per 104 m
-        B.quad(tuple(w0),tuple(w1),tuple(w1+u1*BAR_H),tuple(w0+u0*BAR_H),m_barL if sd<0 else m_barR,((ua,0),(ub,0),(ub,1),(ua,1)))
-        mn=m_neonL if sd<0 else m_neonR; n0=p0+r0*sd*(HW+0.15); n1=p1+r1*sd*(HW+0.15)
-        for h0,h1 in ((BAR_H,BAR_H+0.22),(0.04,0.16)): N.quad(tuple(n0+u0*h0),tuple(n1+u1*h0),tuple(n1+u1*h1),tuple(n0+u0*h1),mn)
-S.build('track_surface',trk); U.build('track_under',trk); B.build('track_barriers',trk); N.build('track_neon',trk)
+        U.quad(tuple(a0-u0*SLAB),tuple(a1-u1*SLAB),tuple(a1),tuple(a0),m_under,((a8,0),(b8,0),(b8,SLAB/8),(a8,SLAB/8)))
+        w0=p0+r0*sd*(HW+0.2); w1=p1+r1*sd*(HW+0.2); ua,ub=(i*dl/104,(i+1)*dl/104) if sd<0 else (-(i*dl/104),-((i+1)*dl/104))
+        wall=WALLS[VAR[sd][(chunk+(0 if sd<0 else 1))%3]]
+        B.quad(tuple(w0),tuple(w1),tuple(w1+u1*BAR_H),tuple(w0+u0*BAR_H),wall,((ua,0),(ub,0),(ub,1),(ua,1)))
+        # the top rail and two conduits on the outside of the wall
+        for hh,ww_,mm in ((BAR_H+0.95,0.07,m_rail),(0.55,0.09,m_cond),(0.78,0.06,m_cond)):
+            o0=p0+r0*sd*(HW+(0.24 if mm is m_rail else 0.34))+u0*hh; o1=p1+r1*sd*(HW+(0.24 if mm is m_rail else 0.34))+u1*hh
+            X.quad(tuple(o0-u0*ww_),tuple(o1-u1*ww_),tuple(o1+u1*ww_),tuple(o0+u0*ww_),mm)
+            X.quad(tuple(o0+u0*ww_),tuple(o1+u1*ww_),tuple(o1+u1*ww_+r1*sd*ww_*2),tuple(o0+u0*ww_+r0*sd*ww_*2),mm)
+S.build('track_surface',trk); U.build('track_under',trk); B.build('track_barriers',trk)
 log('track ribbons',SEG,'segments')
-
+# fluorescent fittings along the top of both walls (a 2.7 m tube in a 2.9 m housing every 3.2 m) and the rail posts
+rng=np.random.default_rng(7); nfit=int(L/3.2); counts={'on':0,'dead':0,'flick':0}
+for k in range(nfit):
+    t=(k+0.5)/nfit; p,r,u,fw,_=at(t)
+    for sd in (-1,1):
+        T=local(p,r,u,fw,lat=sd*(HW+0.12),lift=BAR_H)
+        roll=rng.random(); m=(m_tubeC if sd<0 else m_tubeS); st='on'
+        if roll<0.08: m=m_tubeD; st='dead'
+        elif roll<0.115: m=(m_flkC if sd<0 else m_flkS); st='flick'
+        counts[st]+=1
+        X.boxw(T,0,0.07,0,0.16,0.12,2.9,m_housing,1.0)
+        c0=T((-sd*0.09,0.03,-1.35)); c1=T((-sd*0.09,0.03,1.35)); c2=T((-sd*0.09,0.1,1.35)); c3=T((-sd*0.09,0.1,-1.35))
+        N.quad(c0,c1,c2,c3,m) if sd>0 else N.quad(c3,c2,c1,c0,m)
+        X.boxw(local(p,r,u,fw,lat=sd*(HW+0.24),lift=BAR_H),0,0.48,0,0.06,0.95,0.06,m_rail,1.0)   # a rail post
+log('tube fittings',nfit*2,counts)
+# sodium lamp posts every 64 m, alternating sides: a mast from the wall top, an arm over the road, a lamp and its pool
+nl=int(L/64)
+for k in range(nl):
+    t=(k+0.3)/nl; p,r,u,fw,_=at(t); sd=-1 if k%2 else 1
+    T=local(p,r,u,fw,lat=sd*(HW+0.45),lift=BAR_H)
+    X.boxw(T,0,3.2,0,0.22,6.4,0.22,m_pole,1.5); X.boxw(T,-sd*1.6,6.35,0,3.4,0.16,0.16,m_pole,1.5)
+    X.boxw(T,-sd*3.2,6.2,0,0.9,0.22,0.42,m_housing,1.0)
+    lc=T((-sd*3.2,6.08,0)); N.quad(T((-sd*3.2-0.4,6.08,-0.18)),T((-sd*3.2+0.4,6.08,-0.18)),T((-sd*3.2+0.4,6.08,0.18)),T((-sd*3.2-0.4,6.08,0.18)),m_lamp)
+    c=p+r*(sd*(HW-3.0))+u*0.05; R_=6.0
+    P4=[c-r*R_-fw*R_,c+r*R_-fw*R_,c+r*R_+fw*R_,c-r*R_+fw*R_]; N.quad(*[tuple(q) for q in P4],m_pool)
+N.build('tubes_lamps',trk); X.build('fittings',trk); log('lamp posts',nl)
 P_=MB()
 def flat_pad(t,lat,w,l,m):
     p,r,u,fw,_=at(t); c=p+r*lat+u*0.06
@@ -125,27 +172,28 @@ for i in range(n):
     # a vertical leg (world up, not track up) and a yoke under the slab, hazard band at the top of the leg
     fl=np.array([fw[0],0,fw[2]]); fl/=np.linalg.norm(fl); rl=np.array([-fl[2],0,fl[0]]) if False else np.cross(fl,[0,1,0]); rl/=np.linalg.norm(rl)
     def T(q,base=np.array([p[0],g,p[2]])): x,y,z=q; return tuple(base+rl*x+np.array([0,1,0])*y-fl*z)
-    Y_.box(T,0,hgt/2,0,1.4,hgt,1.4,m_metal)
-    if hgt>3: Y_.box(T,0,hgt-1.2,0,1.46,1.0,1.46,m_haz)
-    Y_.box(T,0,hgt-0.35,0,HW*1.5,0.7,1.2,m_metal)
+    Y_.boxw(T,0,hgt/2,0,1.4,hgt,1.4,m_rust,3.0); Y_.boxw(T,0,0.6,0,2.4,1.2,2.4,m_conc,3.0)
+    if hgt>3: Y_.boxw(T,0,hgt-1.2,0,1.46,1.0,1.46,m_haz,1.5)
+    Y_.boxw(T,0,hgt-0.35,0,HW*1.5,0.7,1.2,m_rust,3.0)
 Y_.build('pylons',trk); log('pylons')
 
 # ------------------------------------------------------------------ set pieces: gantry, sponsor arches, billboards
 SET=bpy.data.collections.new('setpieces'); scene.collection.children.link(SET); setobs=[]
 def sign(M,T,w,h,y,z,front,back):
     for tex,zz,flip in ((front,z,False),(back,-z,True)):
-        mm=mat('sign_'+tex.split('.')[0],tex=tex,emit_tex=tex,emit=0.4,rough=0.5)
+        base=tex.split('.')[0]; mm=mat('sign_'+base,tex=tex,emit_tex=base+'_e.jpg',emit=1.35,rough=0.6)
         x0,x1=-w/2,w/2
         if not flip: M.quad(T((x0,y-h/2,zz)),T((x1,y-h/2,zz)),T((x1,y+h/2,zz)),T((x0,y+h/2,zz)),mm)
         else: M.quad(T((x1,y-h/2,zz)),T((x0,y-h/2,zz)),T((x0,y+h/2,zz)),T((x1,y+h/2,zz)),mm)
 p,r,u,fw,_=at(0.0); T=local(p,r,u,fw); M=MB(); W2=HW+3.2
 for sx in (-1,1):
-    M.box(T,sx*W2,8,0,1.6,16,1.6,m_metal); M.box(T,sx*W2,8,0.85,0.5,14,0.5,m_neonY); M.box(T,sx*W2,2.2,0,1.7,1.4,1.7,m_haz)
-M.box(T,0,14.2,0,W2*2+2,3.4,2.2,m_metal); sign(M,T,W2*2+1.6,3.0,14.2,1.12,'gantry.jpg','gantry.jpg')
+    M.boxw(T,sx*W2,8,0,1.6,16,1.6,m_rust,3.0); M.boxw(T,sx*W2,2.2,0,1.7,1.4,1.7,m_haz,1.5)
+M.boxw(T,0,14.2,0,W2*2+2,3.4,2.2,m_metal,3.0); sign(M,T,W2*2+1.6,3.0,14.2,1.12,'gantry.jpg','gantry.jpg')
 for i in range(5): M.box(T,(i-2)*2.2,11.8,1.25,1.1,1.1,0.4,mat(f'light_{i}',col=(0.02,0,0),emit_col=(0.3,0.0,0.0),emit=1.0))
 setobs.append(M.build('gantry',SET))
 def arch_free(t):   # both posts clear: nothing from the tiles above the slab bottom where they stand
     c=clear_at(t); return all(np.isnan(v) or v< -1.2 for v in c[:2])
+ACC=[srgb(h) for h in ['#ffcd00','#d6deeb','#ff2030','#1ed760','#ffffff','#00a8e0','#ffb3c7','#ffd200','#00a0dc','#e60028','#ffffff','#1f5fd0','#2050c8','#e60028','#ffffff','#ffcd00','#ffcd00','#ffcd00','#00a8e0']]
 ARCHES=[dict(n=A['n'],t=A['t'],b=A['b'],d=A['d']) for A in D['arches']]
 for k in range(8):   # sponsor arches around the lap, away from the landmarks and the start
     t=(k+0.55)/8
@@ -161,11 +209,11 @@ for A in ARCHES:
         if t is not None: break
     if t is None: log('arch skipped (tiles at the posts)',A['n']); continue
     p,r,u,fw,_=at(t); T=local(p,r,u,fw); M=MB(); W2=HW+3.5; b=A['b']
-    for sx in (-1,1): M.box(T,sx*W2,6,0,1.3,12,1.3,m_metal); M.box(T,sx*W2,1.6,0,1.4,1.0,1.4,m_haz)
-    M.box(T,0,11.4,0,W2*2+2,3.0,1.6,m_metal); sign(M,T,W2*2+1.4,2.6,11.4,0.82,f'arch_{b}.jpg',f'arch_{(b+7)%NB}.jpg')
-    M.box(T,0,9.8,0,W2*2+2,0.2,1.8,m_neonY); setobs.append(M.build('arch_'+A['n'].lower(),SET)); placed+=1
+    for sx in (-1,1): M.boxw(T,sx*W2,6,0,1.3,12,1.3,m_rust,3.0); M.boxw(T,sx*W2,1.6,0,1.4,1.0,1.4,m_haz,1.5)
+    M.boxw(T,0,11.4,0,W2*2+2,3.0,1.6,m_metal,3.0); sign(M,T,W2*2+1.4,2.6,11.4,0.82,f'arch_{b}.jpg',f'arch_{(b+7)%NB}.jpg')
+    M.box(T,0,9.8,0,W2*2+2,0.2,1.8,mat(f'neon_arch_{b}',col=(0,0,0),emit_col=ACC[b],emit=2.6)); setobs.append(M.build('arch_'+A['n'].lower(),SET)); placed+=1
 log('arches placed',placed,'of',len(ARCHES))
-nb=int(L/300); M=MB(); boards=0
+nb=int(L/300); M=MB(); spots=[]
 for i in range(nb):
     t=(i+0.5)/nb
     if t<0.012 or t>0.988: continue
@@ -173,13 +221,21 @@ for i in range(nb):
     for s_ in (pref,-pref):
         v=free[s_]
         if not np.isnan(v) and v<3.5: sd=s_; break   # the board spans +6.3..+13.7 m over the deck: the tiles must stay below
-    if sd is None: continue
+    if sd is not None: spots.append((i,t,sd,free[sd]))
+# the eight parties: exactly two neon boards each, spread evenly among the spots; every other spot is a brand
+PARTY_SLOTS=set(int(round((k+0.5)*len(spots)/(2*NP))) for k in range(2*NP)); pk=0; bk=0; party_count=[0]*NP; FLK={3,11,19}
+for j,(i,t,sd,fv) in enumerate(spots):
     p,r,u,fw,_=at(t); T=local(p,r,u,fw,rot=sd*0.42,lat=sd*(HW+10),lift=10)
-    leg=10-3.5-max(free[sd],-60.0)                         # mast from the board down to the roof or street under it
-    M.box(T,0,-3.5-leg/2,0,0.8,leg,0.8,m_metal); M.box(T,0,0,0,14.4,7.4,0.5,m_metal)
-    mm=mat(f'board_{i%NB}',tex=f'bill_{i%NB}.jpg',emit_tex=f'bill_{i%NB}.jpg',emit=0.4,rough=0.5)
-    M.quad(T((-7,-3.5,0.27)),T((7,-3.5,0.27)),T((7,3.5,0.27)),T((-7,3.5,0.27)),mm); boards+=1
-log('billboards',boards,'of',nb)
+    leg=10-3.5-max(fv,-60.0)                         # mast from the board down to the roof or street under it
+    M.boxw(T,0,-3.5-leg/2,0,0.8,leg,0.8,m_rust,3.0); M.boxw(T,0,0,0,14.8,7.8,0.6,m_metal,3.0)
+    for lx in (-5,0,5): M.boxw(T,lx,4.2,0.7,0.3,0.12,1.2,m_housing,1.0)      # the lamp brackets over the face
+    if j in PARTY_SLOTS and pk<2*NP:
+        q=pk%NP; pk+=1; party_count[q]+=1; mm=mat(f'pboard_{q}',tex=f'pbill_{q}.jpg',emit_tex=f'pbill_{q}_e.jpg',emit=1.9,rough=0.6)
+    else:
+        q=bk%NB; bk+=1; nm=f'board_{q}'+('_flk' if bk in FLK else '')
+        mm=mat(nm,tex=f'bill_{q}.jpg',emit_tex=f'bill_{q}_e.jpg',emit=(1.35,1.9,1.4)[q%3],rough=0.6)   # light box, neon tubes, LED (make_textures STYLES)
+    M.quad(T((-7,-3.5,0.31)),T((7,-3.5,0.31)),T((7,3.5,0.31)),T((-7,3.5,0.31)),mm)
+log('billboards',len(spots),'of',nb,'· parties',party_count,'· brands',bk)
 setobs.append(M.build('billboards',SET)); log('set pieces',len(setobs))
 
 # the craft moved to build_craft.py (detailed hard-surface models); this script only builds the track set
