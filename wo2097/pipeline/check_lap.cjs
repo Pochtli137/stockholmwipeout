@@ -9,7 +9,7 @@
 const PW=process.env.PW||'/Users/kimdahlroth/.nvm/versions/node/v25.1.0/lib/node_modules/@playwright/cli/node_modules/playwright';
 const {chromium}=require(PW); const fs=require('fs'); const path=require('path');
 const OUT=process.argv[2]||path.join(__dirname,'check'); fs.mkdirSync(OUT,{recursive:true});
-const URL='http://localhost:8820/index.html?check';
+const URL='http://localhost:8820/index.html?check&theme='+(process.env.THEME||'used');   // THEME=neon|used
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 async function open(b){ const p=await b.newPage({viewport:{width:1440,height:900}}); const errs=[];
   p.on('pageerror',e=>errs.push(e.message)); p.on('console',m=>{ if(m.type()==='error'&&!/404/.test(m.text())) errs.push(m.text()); });
