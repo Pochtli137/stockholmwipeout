@@ -191,3 +191,20 @@ light boxes, no LED. The print is crisp; the wear is on the paper's edges, tape 
 Lighting: the tubes light the walls (`barrier_*` emission 0.5 of the whole wall), and every board has two worn
 floodlights on arms (`lamp_flood`); their warm light is the paper's emission (0.55, under the bloom threshold 1.25).
 Checked at race speed against the neon version at the same three points and on two party boards.
+
+## Ads never break (2026-09-29)
+Kim saw boards with the left half of the slogan missing ("…RSENAT / …N 1997"). Root cause: the ad faces sat 1–2 cm in
+front of their frames, but the set-piece meshes span the whole ~4 km lap and Draco quantised positions to 16 bits of
+that extent (about 6 cm a step). Corners snapped behind the frame and one triangle of the quad vanished. Measured in
+Blender on the decoded glbs: 51 of 114 ad quads (used) and 46 of 116 (neon) had a corner in or behind the frame, as far
+as 5.8 / 8.8 cm. Fix: positions at 20 bits (~4 mm), faces 8 cm proud of their frames (boards, arches, gantry, both
+themes), and in the game every ad material gets polygonOffset. After: 0 of 116, the smallest gap 7.6 cm.
+Ads also mark themselves in the scene target's alpha (0.25, `markAd` in index.html) so the speed blur and the boost
+colour split skip the letters (`MotionPass` reads `tMark`).
+
+## Faux party logos (faux_logos.py)
+Every party board and poster (USED; the NEON theme is the b08a156 snapshot and carries no party ads) has a new mark
+that evokes the party with a 2097 twist, never the real logo, no text, no real people, the same size for all eight:
+S a rose in a camera iris with a barbed-wire stem · M a padlock whose shackle is an M · SD a flower sealed in a snow
+globe · C a four-leaf clover with a barcode and a smokestack stem · V a fist gripping a remote control ·
+KD a faceless family inside a CCTV housing · L a torch with a price tag (¤) · MP a dandelion whose seeds are drones.

@@ -477,9 +477,9 @@ composer.passes.splice(0,1,new SkyRenderPass());   // replaces the plain RenderP
 const POSTFX={ sf:0, boost:0, ship:new THREE.Vector3(), on:false };
 const NOMB=location.search.includes('nomb');   // ?nomb: the old look, for comparisons
 const mbMat=new THREE.ShaderMaterial({ uniforms:{ tColor:{value:null}, tDepth:{value:null}, uFoe:{value:new THREE.Vector2(0.5,0.5)},
-    uShip:{value:new THREE.Vector2(0.5,0.3)}, uAmt:{value:0}, uBoost:{value:0}, uAspect:{value:1}, uNear:{value:0.3}, uFar:{value:200000}, uPulse:{value:0} },
+    uShip:{value:new THREE.Vector2(0.5,0.3)}, tMark:{value:null}, uAmt:{value:0}, uBoost:{value:0}, uAspect:{value:1}, uNear:{value:0.3}, uFar:{value:200000}, uPulse:{value:0} },
   vertexShader:`varying vec2 vUv; void main(){ vUv=uv; gl_Position=vec4(position.xy,0.0,1.0); }`,
-  fragmentShader:`precision highp float; varying vec2 vUv; uniform sampler2D tColor,tDepth; uniform vec2 uFoe,uShip;
+  fragmentShader:`precision highp float; varying vec2 vUv; uniform sampler2D tColor,tDepth,tMark; uniform vec2 uFoe,uShip;
     uniform float uAmt,uBoost,uAspect,uNear,uFar,uPulse;
     float dist(vec2 uv){ float d=texture2D(tDepth,uv).x; float z=d*2.0-1.0; return (2.0*uNear*uFar)/(uFar+uNear-z*(uFar-uNear)); }
     void main(){ vec3 base=texture2D(tColor,vUv).rgb;
@@ -487,13 +487,14 @@ const mbMat=new THREE.ShaderMaterial({ uniforms:{ tColor:{value:null}, tDepth:{v
       // sharp window: an ellipse around the heading, and a disc around the player's craft
       float win=smoothstep(0.16,0.42,length(dir*vec2(uAspect*0.85,1.25)));
       float ship=smoothstep(0.10,0.20,length((vUv-uShip)*vec2(uAspect,1.0)));
-      float k=uAmt*win*ship;
+      float ad=1.0-smoothstep(0.35,0.6,texture2D(tMark,vUv).a);   // an ad face: no streak, no colour split
+      float k=uAmt*win*ship*(1.0-ad);
       if(k>0.002) k*=1.0-smoothstep(25.0,420.0,dist(vUv));        // close surfaces streak, the far city and the sky hold
       vec3 col=base;
       if(k>0.002){ vec2 step=dir*k*0.044/8.0; vec3 acc=base; float w=1.0;
         for(int i=1;i<=8;i++){ float wi=1.0-float(i)/9.0; acc+=texture2D(tColor,clamp(vUv-step*float(i),0.0,1.0)).rgb*wi; w+=wi; }
         col=acc/w; }
-      if(uBoost>0.01){ vec2 off=dir*0.006*uBoost*(0.3+r);            // boost: the lens splits the colours at the edges
+      if(uBoost>0.01&&ad<0.5){ vec2 off=dir*0.006*uBoost*(0.3+r);            // boost: the lens splits the colours at the edges
         col.r=mix(col.r,texture2D(tColor,clamp(vUv+off,0.0,1.0)).r,0.8*uBoost);
         col.b=mix(col.b,texture2D(tColor,clamp(vUv-off,0.0,1.0)).b,0.8*uBoost); }
       float vig=smoothstep(0.55,1.15,length((vUv-0.5)*vec2(uAspect,1.0)));   // a vignette that tightens with speed and pulses on boost
@@ -514,7 +515,7 @@ class MotionPass{ constructor(){ this.enabled=true; this.needsSwap=true; this.cl
     U.uBoost.value+=((POSTFX.on&&!NOMB?POSTFX.boost:0)-U.uBoost.value)*Math.min(1,dt*8);
     U.uPulse.value=U.uBoost.value*(0.5+0.5*Math.sin(now*0.012));
     U.uAspect.value=camera.aspect; U.uNear.value=camera.near; U.uFar.value=camera.far;
-    U.tColor.value=readBuffer.texture; U.tDepth.value=sceneRT.depthTexture;
+    U.tColor.value=readBuffer.texture; U.tDepth.value=sceneRT.depthTexture; U.tMark.value=sceneRT.texture;
     r.setRenderTarget(this.renderToScreen?null:writeBuffer); r.render(mbScene,raysCam); } }
 composer.insertPass(new MotionPass(),1);   // after the sky and rays, before the bloom
 const gradeMat=new THREE.ShaderMaterial({ uniforms:{ tDiffuse:{value:null}, uT:{value:0} }, depthTest:false, depthWrite:false,
@@ -991,7 +992,15 @@ function nearestT(lat,lon){ const x=-(lon-ORIGIN.lon)*M_LON, z=(lat-ORIGIN.lat)*
 const gltf=new GLTFLoader(); { const dl=new DRACOLoader().setDecoderPath('https://unpkg.com/three@0.170.0/examples/jsm/libs/draco/gltf/'); gltf.setDRACOLoader(dl); }
 const lightMats=[], padMats=[], wpadMats=[]; let SHIP_PROTOS=null;
 // materials as Blender named them; the only runtime tweaks are blending for the pads and letting neon exceed 1 for the bloom
+// ADS: every printed or lit ad face (boards, party boards, arches, gantry, the barrier walls that carry the posters).
+// polygonOffset keeps the face in front of its frame at any distance, and the face marks itself in the scene target's
+// alpha (0.25) so the speed blur and the boost aberration leave the letters alone (MotionPass reads it).
+const AD_RE=/^(sign_|board_|pboard_|barrier_[ABP]$)/i;
+function markAd(m){ m.polygonOffset=true; m.polygonOffsetFactor=-1; m.polygonOffsetUnits=-4;
+  m.onBeforeCompile=sh=>{ sh.fragmentShader=sh.fragmentShader.replace('#include <opaque_fragment>','#include <opaque_fragment>\n\tgl_FragColor.a=0.25;'); };
+  m.customProgramCacheKey=()=>'ad-mark'; m.needsUpdate=true; }
 function tuneMaterial(m){
+  if(AD_RE.test(m.name)&&!m.transparent) markAd(m);
   if(/^neon|^light|^core/i.test(m.name)) m.toneMapped=false;
   if(/^pad_speed/i.test(m.name)){ m.transparent=true; m.blending=THREE.AdditiveBlending; m.depthWrite=false; m.toneMapped=false; padMats.push(m);
     for(const k of ['map','emissiveMap']) if(m[k]){ m[k].wrapS=m[k].wrapT=THREE.RepeatWrapping; } }

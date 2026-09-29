@@ -141,7 +141,7 @@ def sign(M,T,w,h,y,z,front,back):
 p,r,u,fw,_=at(0.0); T=local(p,r,u,fw); M=MB(); W2=HW+3.2
 for sx in (-1,1):
     M.box(T,sx*W2,8,0,1.6,16,1.6,m_metal); M.box(T,sx*W2,8,0.85,0.5,14,0.5,m_neonY); M.box(T,sx*W2,2.2,0,1.7,1.4,1.7,m_haz)
-M.box(T,0,14.2,0,W2*2+2,3.4,2.2,m_metal); sign(M,T,W2*2+1.6,3.0,14.2,1.12,'gantry.jpg','gantry.jpg')
+M.box(T,0,14.2,0,W2*2+2,3.4,2.2,m_metal); sign(M,T,W2*2+1.6,3.0,14.2,1.18,'gantry.jpg','gantry.jpg')
 for i in range(5): M.box(T,(i-2)*2.2,11.8,1.25,1.1,1.1,0.4,mat(f'light_{i}',col=(0.02,0,0),emit_col=(0.3,0.0,0.0),emit=1.0))
 setobs.append(M.build('gantry',SET))
 def arch_free(t):   # both posts clear: nothing from the tiles above the slab bottom where they stand
@@ -162,7 +162,7 @@ for A in ARCHES:
     if t is None: log('arch skipped (tiles at the posts)',A['n']); continue
     p,r,u,fw,_=at(t); T=local(p,r,u,fw); M=MB(); W2=HW+3.5; b=A['b']
     for sx in (-1,1): M.box(T,sx*W2,6,0,1.3,12,1.3,m_metal); M.box(T,sx*W2,1.6,0,1.4,1.0,1.4,m_haz)
-    M.box(T,0,11.4,0,W2*2+2,3.0,1.6,m_metal); sign(M,T,W2*2+1.4,2.6,11.4,0.82,f'arch_{b}.jpg',f'arch_{(b+7)%NB}.jpg')
+    M.box(T,0,11.4,0,W2*2+2,3.0,1.6,m_metal); sign(M,T,W2*2+1.4,2.6,11.4,0.88,f'arch_{b}.jpg',f'arch_{(b+7)%NB}.jpg')
     M.box(T,0,9.8,0,W2*2+2,0.2,1.8,m_neonY); setobs.append(M.build('arch_'+A['n'].lower(),SET)); placed+=1
 log('arches placed',placed,'of',len(ARCHES))
 nb=int(L/300); M=MB(); boards=0
@@ -178,7 +178,7 @@ for i in range(nb):
     leg=10-3.5-max(free[sd],-60.0)                         # mast from the board down to the roof or street under it
     M.box(T,0,-3.5-leg/2,0,0.8,leg,0.8,m_metal); M.box(T,0,0,0,14.4,7.4,0.5,m_metal)
     mm=mat(f'board_{i%NB}',tex=f'bill_{i%NB}.jpg',emit_tex=f'bill_{i%NB}.jpg',emit=0.4,rough=0.5)
-    M.quad(T((-7,-3.5,0.27)),T((7,-3.5,0.27)),T((7,3.5,0.27)),T((-7,3.5,0.27)),mm); boards+=1
+    M.quad(T((-7,-3.5,0.33)),T((7,-3.5,0.33)),T((7,3.5,0.33)),T((-7,3.5,0.33)),mm); boards+=1   # 8 cm proud of the frame
 log('billboards',boards,'of',nb)
 setobs.append(M.build('billboards',SET)); log('set pieces',len(setobs))
 
@@ -211,7 +211,7 @@ def export(coll,path,vc):
     bpy.ops.export_scene.gltf(filepath=path,export_format='GLB',use_selection=True,export_yup=True,export_apply=False,
         export_vertex_color='NAME' if vc else 'NONE',export_vertex_color_name='Col',export_all_vertex_colors=False,
         export_image_format='AUTO',export_materials='EXPORT',export_draco_mesh_compression_enable=True,export_draco_mesh_compression_level=7,
-        export_draco_position_quantization=16,export_draco_texcoord_quantization=12,export_draco_color_quantization=8,export_draco_normal_quantization=8)
+        export_draco_position_quantization=20,export_draco_texcoord_quantization=12,export_draco_color_quantization=8,export_draco_normal_quantization=8)
     log('exported',os.path.basename(path),round(os.path.getsize(path)/1e6,2),'MB')
 all_track=bpy.data.collections.new('all_track'); scene.collection.children.link(all_track)
 for o in list(trk.objects)+list(SET.objects): all_track.objects.link(o)

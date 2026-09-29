@@ -5,6 +5,8 @@ The world is worn Stockholm (old Slussen concrete, tunnelbana tile, rust, sodium
 and party alike, is a matte PRINTED PAPER poster in the neon version's layout and size, lit by the world's lamps and a worn
 floodlight on each board: crisp print, the wear on the paper edges and the board, never across the letters."""
 import os, math, random
+sys_path_fix=__import__('sys').path.insert(0,os.path.dirname(os.path.abspath(__file__)))
+from faux_logos import logo as faux_logo   # the eight parties' faux logos (faux_logos.py)
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
 H=os.path.dirname(os.path.abspath(__file__)); OUT=os.path.join(H,'tex'); os.makedirs(OUT,exist_ok=True)
@@ -281,16 +283,17 @@ def poster_wall(name,seed):
         im.paste(paper,(px,10)); boxes.append((px,ww,P)); x+=pw
     d=ImageDraw.Draw(im)
     for px,ww,P in boxes:
-        nf=fit(d,P['n'],cond,40,ww-40,minsz=26); tw=int(d.textlength(P['n'],font=nf))
+        nf=fit(d,P['n'],cond,40,ww-150,minsz=26); tw=int(d.textlength(P['n'],font=nf))
         d.text((px+20,28),P['n'],font=nf,fill=P['fg'],anchor='lm')
         d.rectangle([px+14,50,px+ww-14,53],fill=P['ac'])
-        line=' '.join(P['s']); sf=big(d,[line],ww-40,74,46,'poster '+P['n']); lw=int(d.textlength(line,font=sf))
+        line=' '.join(P['s']); sf=big(d,[line],ww-150,74,46,'poster '+P['n']); lw=int(d.textlength(line,font=sf))
+        lg=faux_logo(PARTIES.index(P),92,P['fg'],P['ac']); im.paste(lg,(px+ww-112,8),lg)   # the faux logo, right, never over the ink
         d.text((px+20,88),line,font=sf,fill=P['fg'],anchor='lm')
         d.text((px+ww-16,114),P['k'],font=rn(14),fill=P['fg'],anchor='rm')
         for tx in (px+4,px+ww-48): d.rectangle([tx,6,tx+44,14],fill=(214,206,180))          # tape at the corners, never over the ink
         free=px+max(tw,lw)+60
-        if free<px+ww-140:                                                                  # torn only where there is no text
-            tx=r.randint(free,px+ww-130); d.polygon([(tx,h-10),(tx+r.randint(60,120),h-10),(tx+r.randint(20,90),r.randint(30,80))],fill=(186,176,150))
+        if free<px+ww-270:                                                                  # torn only where there is no text or logo
+            tx=r.randint(free,px+ww-260); d.polygon([(tx,h-10),(tx+r.randint(60,120),h-10),(tx+r.randint(20,90),r.randint(30,80))],fill=(186,176,150))
     save(im,name+'.jpg'); save(im,name+'_e.jpg')      # the tubes light the poster wall like the others
 half=list(range(0,len(BRANDS),2)), list(range(1,len(BRANDS),2))
 nA=barrier_variant('barrier_A',half[0]+half[1],101); nB=barrier_variant('barrier_B',half[1]+half[0],202)
@@ -323,14 +326,16 @@ def edge_wear(im,seed,m=14):
     """dirt and rust on the outer rim only: the frame's business, never the face's"""
     w,h=im.size; worn=grime(im,0.7,seed,24,rust=0.8,runs=2.0); mask=Image.new('L',(w,h),255); ImageDraw.Draw(mask).rectangle([m,m,w-m,h-m],fill=0)
     return Image.composite(worn,im,mask)
-def bill_face(B,runes_tag):
+def bill_face(B,runes_tag,mark=None):
     """the neon version's billboard, 1024 x 512 on 14 x 7 m: brand band on top, the slogan big in white on black
     (min 112 px = ~1.5 m letters). Returns (dim base, clean emission)."""
     w,h=1024,512; im=Image.new('RGB',(w,h),B['bg']); d=ImageDraw.Draw(im)
     d.rectangle([0,int(h*.42),w,h],fill=K if B['bg']!=K else (28,30,36)); d.rectangle([0,int(h*.42)-8,w,int(h*.42)],fill=B['ac'] if B['ac']!=K else B['fg'])
     if B.get('icon'): icon(d,B['icon'],int(w*.9),int(h*.19),int(h*.12),B['fg'])
     d.text((w-30,int(h*.365)),runes_tag,font=rn(26),fill=B['fg'],anchor='rm')
-    d.text((36,int(h*.21)),B['n'],font=fit(d,B['n'],FONTS.get(B.get('f'),cond),150,w*.78,minsz=60),fill=B['fg'],anchor='lm')
+    d.text((36,int(h*.21)),B['n'],font=fit(d,B['n'],FONTS.get(B.get('f'),cond),150,w*(.7 if mark is not None else .78),minsz=60),fill=B['fg'],anchor='lm')
+    if mark is not None:   # the party's faux logo in the band, right, the same size for all eight
+        lg=faux_logo(mark,158,B['fg'],B['ac']); im.paste(lg,(w-214,12),lg)   # clear of the rune tag under it
     sf=big(d,B['s'],w-72,140,112,'billboard '+B['n'])
     for ln,y in zip(B['s'],(int(h*.585),int(h*.84))): d.text((36,y),ln,font=sf,fill=(255,250,236),anchor='lm')
     im=edge_wear(im,hash(B['n'])%997,12); d=ImageDraw.Draw(im)                    # paper pasted on the board: dirty rim, lifted corner
@@ -346,7 +351,7 @@ for i,B in enumerate(BRANDS):
     for ln,y in zip(B['s'],(int(h*.30),int(h*.76))): d.text((1000,y),ln,font=af,fill=(255,250,236),anchor='lm')
     im=edge_wear(im,i+300,10); save(im,f'arch_{i}.jpg'); save(im,f'arch_{i}_e.jpg')   # a printed vinyl banner
 for i,P in enumerate(PARTIES):   # the parties' boards: the same layout and size as every brand, party colours
-    col,em=bill_face(dict(P,f=None,icon=None),P['k']); save(col,f'pbill_{i}.jpg'); save(em,f'pbill_{i}_e.jpg')
+    col,em=bill_face(dict(P,f=None,icon=None),P['k'],mark=i); save(col,f'pbill_{i}.jpg'); save(em,f'pbill_{i}_e.jpg')
 # a sodium light pool (additive decal under the lamp posts) and the tube sprite
 w=h=256; yy,xx=np.mgrid[0:h,0:w]; rr=np.sqrt((xx-w/2)**2+(yy-h/2)**2)/(w/2); a=np.clip(1-rr,0,1)**2.2
 save(to_im(np.stack([a*255,a*150,a*40],-1)),'pool.png')

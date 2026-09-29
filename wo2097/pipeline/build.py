@@ -188,7 +188,7 @@ def sign(M,T,w,h,y,z,front,back):
 p,r,u,fw,_=at(0.0); T=local(p,r,u,fw); M=MB(); W2=HW+3.2
 for sx in (-1,1):
     M.boxw(T,sx*W2,8,0,1.6,16,1.6,m_rust,3.0); M.boxw(T,sx*W2,2.2,0,1.7,1.4,1.7,m_haz,1.5)
-M.boxw(T,0,14.2,0,W2*2+2,3.4,2.2,m_metal,3.0); sign(M,T,W2*2+1.6,3.0,14.2,1.12,'gantry.jpg','gantry.jpg')
+M.boxw(T,0,14.2,0,W2*2+2,3.4,2.2,m_metal,3.0); sign(M,T,W2*2+1.6,3.0,14.2,1.18,'gantry.jpg','gantry.jpg')
 for i in range(5): M.box(T,(i-2)*2.2,11.8,1.25,1.1,1.1,0.4,mat(f'light_{i}',col=(0.02,0,0),emit_col=(0.3,0.0,0.0),emit=1.0))
 setobs.append(M.build('gantry',SET))
 def arch_free(t):   # both posts clear: nothing from the tiles above the slab bottom where they stand
@@ -211,7 +211,7 @@ for A in ARCHES:
     if t is None: log('arch skipped (tiles at the posts)',A['n']); continue
     p,r,u,fw,_=at(t); T=local(p,r,u,fw); M=MB(); W2=HW+3.5; b=A['b']
     for sx in (-1,1): M.boxw(T,sx*W2,6,0,1.3,12,1.3,m_rust,3.0); M.boxw(T,sx*W2,1.6,0,1.4,1.0,1.4,m_haz,1.5)
-    M.boxw(T,0,11.4,0,W2*2+2,3.0,1.6,m_metal,3.0); sign(M,T,W2*2+1.4,2.6,11.4,0.82,f'arch_{b}.jpg',f'arch_{(b+7)%NB}.jpg')
+    M.boxw(T,0,11.4,0,W2*2+2,3.0,1.6,m_metal,3.0); sign(M,T,W2*2+1.4,2.6,11.4,0.88,f'arch_{b}.jpg',f'arch_{(b+7)%NB}.jpg')
     M.boxw(T,0,9.8,0,W2*2+2,0.2,1.8,m_rust,3.0); setobs.append(M.build('arch_'+A['n'].lower(),SET)); placed+=1
 log('arches placed',placed,'of',len(ARCHES))
 nb=int(L/300); M=MB(); spots=[]
@@ -233,7 +233,7 @@ for j,(i,t,sd,fv) in enumerate(spots):
         q=pk%NP; pk+=1; party_count[q]+=1; mm=mat(f'pboard_{q}',tex=f'pbill_{q}.jpg',emit_tex=f'pbill_{q}_e.jpg',emit=0.55,rough=0.92)
     else:
         q=bk%NB; bk+=1; mm=mat(f'board_{q}',tex=f'bill_{q}.jpg',emit_tex=f'bill_{q}_e.jpg',emit=0.55,rough=0.92)   # printed paper, lit by its floodlights
-    M.quad(T((-7,-3.5,0.31)),T((7,-3.5,0.31)),T((7,3.5,0.31)),T((-7,3.5,0.31)),mm)
+    M.quad(T((-7,-3.5,0.38)),T((7,-3.5,0.38)),T((7,3.5,0.38)),T((-7,3.5,0.38)),mm)   # 8 cm proud of the frame: Draco's grid must never push it behind
     # two worn floodlights on arms over the top edge, pointing at the paper (their warm light is the face's emission above)
     for lx in (-4.2,4.2):
         M.boxw(T,lx,4.05,0.9,0.14,0.5,0.14,m_rust,1.0); M.boxw(T,lx,4.3,1.55,0.14,0.14,1.3,m_rust,1.0); M.boxw(T,lx,4.12,2.2,0.7,0.34,0.5,m_housing,1.0)
@@ -270,7 +270,7 @@ def export(coll,path,vc):
     bpy.ops.export_scene.gltf(filepath=path,export_format='GLB',use_selection=True,export_yup=True,export_apply=False,
         export_vertex_color='NAME' if vc else 'NONE',export_vertex_color_name='Col',export_all_vertex_colors=False,
         export_image_format='AUTO',export_materials='EXPORT',export_draco_mesh_compression_enable=True,export_draco_mesh_compression_level=7,
-        export_draco_position_quantization=16,export_draco_texcoord_quantization=12,export_draco_color_quantization=8,export_draco_normal_quantization=8)
+        export_draco_position_quantization=20,export_draco_texcoord_quantization=12,export_draco_color_quantization=8,export_draco_normal_quantization=8)
     log('exported',os.path.basename(path),round(os.path.getsize(path)/1e6,2),'MB')
 all_track=bpy.data.collections.new('all_track'); scene.collection.children.link(all_track)
 for o in list(trk.objects)+list(SET.objects): all_track.objects.link(o)
