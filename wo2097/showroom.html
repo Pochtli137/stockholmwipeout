@@ -47,9 +47,8 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
-// the game's theme: ?theme=neon|used, else the one chosen in the game (default used)
-const THEME=(()=>{ const q=new URLSearchParams(location.search).get('theme'); if(q==='neon'||q==='used') return q; try{ return localStorage.getItem('swTheme')||'used'; }catch(e){ return 'used'; } })();
-const NEON_T=THEME==='neon'; document.body.classList.add('theme-'+THEME);
+// one look since 2026-09-29: NEON (the USED theme was retired)
+const THEME='neon', NEON_T=true; document.body.classList.add('theme-neon');
 
 // same teams, colours and order as index.html TEAMS
 const TEAMS=[

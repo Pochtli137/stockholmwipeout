@@ -1,5 +1,12 @@
 # STOCKHOLM WIPEOUT 2097 · Blender-byggda banan och skeppen
 
+> **2026-09-29: en look, NEON.** USED-temat (sliten Stockholm, pappersaffischer, partiannonser med parodiloggor, grå asfalt)
+> är pensionerat på Kims beslut. Neon-pipelinen ligger i `neon/` och `build.sh` bygger den. De gamla skripten på toppnivå
+> (`make_textures.py`, `build.py`, `build_craft.py`, `faux_logos.py`) byggde USED och ligger kvar som referens; deras utdata
+> (`assets/used/`) är borttagen. Sista commit med USED: `730a8f7`. Spelet börjar nu med en titelskärm som glider in i
+> CHOOSE VEHICLE (inget temaval).
+
+
 Staden är Googles Photorealistic 3D Tiles (via Cesium ion, som förut). Allt nytt ovanpå den är byggt i Blender
 och laddas som glb i spelets egen koordinatram: banan, barriärerna, neonkanterna, fart- och vapenplattorna,
 pylonerna ner till gatan, startportalen vid Slussen, sponsorbågarna, skyltarna och de sex skeppen.

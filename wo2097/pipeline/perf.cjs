@@ -6,7 +6,7 @@ const SECS=+(process.argv[2]||45), LABEL=process.argv[3]||'run', PORT=process.en
 (async()=>{ const b=await chromium.launch({channel:'chrome',args:['--use-angle=metal','--enable-gpu','--disable-gpu-vsync','--disable-frame-rate-limit']});
   const p=await b.newPage({viewport:{width:1440,height:900}}); const errs=[];
   p.on('pageerror',e=>errs.push(e.message)); p.on('console',m=>{ if(m.type()==='error'&&!/404/.test(m.text())) errs.push(m.text()); });
-  await p.goto(`http://localhost:${PORT}/index.html?check&theme=${process.env.THEME||'used'}`);   // THEME=neon|used
+  await p.goto(`http://localhost:${PORT}/index.html?check&theme=${process.env.THEME||'neon'}`);   // THEME=neon|used
   for(let i=0;i<120;i++){ if(await p.evaluate(()=>!!window.__sw&&window.__sw.state()!=='loading')) break; await sleep(500); }
   await p.evaluate(()=>{ const S=window.__pf={ ft:[], last:performance.now(), on:false };
     const tick=()=>{ const now=performance.now(); if(S.on) S.ft.push(now-S.last); S.last=now;

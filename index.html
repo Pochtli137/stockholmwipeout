@@ -39,27 +39,6 @@
   body.theme-neon .bar i.on { background:var(--c); box-shadow:0 0 8px var(--c); }
   body.theme-neon #results, body.theme-neon #keyveil, body.theme-neon #loadveil { background:repeating-linear-gradient(-55deg,rgba(255,230,0,.05) 0 40px,transparent 40px 80px),rgba(3,5,9,.9); }
   body.theme-neon .panel { background:rgba(8,11,18,.97); }
-  /* ===== THEME SELECT: the first screen. Neutral chrome that leans towards whichever look is highlighted ===== */
-  #themesel { position:fixed; inset:0; z-index:40; display:none; flex-direction:column; align-items:center; justify-content:center; gap:3vh;
-    background:#0b0b0d; transition:background .5s; font-family:"Rajdhani",sans-serif; color:#eee; }
-  #themesel.hi-neon { background:radial-gradient(ellipse at 30% 40%,rgba(255,46,154,.22),transparent 60%),radial-gradient(ellipse at 70% 60%,rgba(0,225,255,.18),transparent 60%),#07070c; }
-  #themesel.hi-used { background:radial-gradient(ellipse at 70% 45%,rgba(231,160,80,.2),transparent 60%),#0d0c0b; }
-  #themesel .ttl { font:900 clamp(22px,3vw,40px) "Orbitron",sans-serif; letter-spacing:.14em; }
-  #themesel .sub { font:700 clamp(11px,1.1vw,14px) "Rajdhani",sans-serif; letter-spacing:.4em; color:#9a9aa0; }
-  #themesel .row { display:flex; gap:3vw; }
-  #themesel .tp { width:min(40vw,620px); cursor:pointer; opacity:.55; transform:scale(.96); transition:all .35s; }
-  #themesel .tp.on { opacity:1; transform:scale(1); }
-  #themesel .tp img { width:100%; aspect-ratio:16/10; object-fit:cover; display:block; border:3px solid transparent;
-    clip-path:polygon(0 0,calc(100% - 22px) 0,100% 22px,100% 100%,22px 100%,0 calc(100% - 22px)); }
-  #themesel .tp[data-t=neon].on img { border-color:#ff2e9a; box-shadow:0 0 30px rgba(0,225,255,.5); }
-  #themesel .tp[data-t=used].on img { border-color:#e7b457; }
-  #themesel .tp h2 { margin:14px 0 4px; font:900 clamp(20px,2.4vw,34px) "Orbitron",sans-serif; letter-spacing:.1em; }
-  #themesel .tp[data-t=neon] h2 { color:#ff2e9a; text-shadow:0 0 16px rgba(255,46,154,.6); }
-  #themesel .tp[data-t=used] h2 { color:#e7b457; }
-  #themesel .tp p { margin:0; font:600 clamp(12px,1.1vw,15px)/1.45 "Rajdhani",sans-serif; letter-spacing:.08em; color:#b8b8be; }
-  #themesel .hint { font:700 clamp(10px,.95vw,12px) "Rajdhani",sans-serif; letter-spacing:.34em; color:#8a8a90; }
-  @font-face { font-family:'RunicT'; src:url('wo2097/fonts/NotoSansRunic-Regular.ttf') format('truetype'); }
-  #themesel .run { font-family:'RunicT',sans-serif; letter-spacing:.14em; color:#8a8a90; margin-left:10px; }
   html, body { margin:0; padding:0; height:100%; overflow:hidden; background:#05070b;
     font-family:"Rajdhani","Arial Narrow",Arial,sans-serif; color:var(--w); user-select:none; }
   #c { display:block; width:100%; height:100%; touch-action:none; }
@@ -105,8 +84,7 @@
   body.mobile #select .panel { transform:scale(.62); transform-origin:left bottom; left:calc(env(safe-area-inset-left) + 12px); bottom:calc(env(safe-area-inset-bottom) + 12px); width:460px; }
   body.mobile #select .nav { right:calc(env(safe-area-inset-right) + 12px); bottom:calc(env(safe-area-inset-bottom) + 12px); transform:scale(.85); transform-origin:right bottom; }
   body.mobile #select .hint, body.mobile #selDots { display:none; }
-  #themesel, #select { touch-action:none; }   /* swipes are ours, never a page scroll (a scroll cancels the pointer) */
-  body.mobile #themesel .tp { width:40vw; } body.mobile #themesel { gap:2vh; } body.mobile #themesel .tp p { display:none; }
+  #select { touch-action:none; }   /* swipes are ours, never a page scroll (a scroll cancels the pointer) */
   body.mobile:not(.racing) #touch { display:none; }
   #fx { position:fixed; inset:0; z-index:6; pointer-events:none; }
   /* RESPONSIVE HUD: --hs is set from the window size (hudLayout), so the HUD never covers the race on a small screen */
@@ -130,10 +108,7 @@
   body.mobile.portrait #band { height:70px; top:calc(38% + 8px); }
   body.mobile.portrait #district { top:22vh; } body.mobile.portrait #district .nm { font-size:24px; }
   body.mobile.portrait #touch { zoom:calc(var(--hs,1) * .9); }
-  /* portrait menus: the two themes stacked, the craft on top with its panel under it */
-  body.mobile.portrait #themesel .row { flex-direction:column; gap:2.4vh; }
-  body.mobile.portrait #themesel .tp { width:82vw; } body.mobile.portrait #themesel .tp img { aspect-ratio:16/9; }
-  body.mobile.portrait #themesel .tp h2 { margin:8px 0 0; font-size:22px; }
+  /* portrait menus: the craft on top with its panel under it */
   body.mobile.portrait #select .panel { left:calc(env(safe-area-inset-left) + 12px); right:calc(env(safe-area-inset-right) + 12px); width:auto;
     bottom:calc(env(safe-area-inset-bottom) + 76px); transform:scale(.78); transform-origin:left bottom; }
   body.mobile.portrait #select .nav { right:50%; transform:translateX(50%); bottom:calc(env(safe-area-inset-bottom) + 14px); }
@@ -217,6 +192,39 @@
   #selDots i { width:34px; height:5px; background:rgba(255,255,255,.18); cursor:pointer; transform:skewX(-20deg); }
   #selDots i.on { background:var(--y); }
   #select .hint { position:absolute; left:0; right:0; bottom:clamp(20px,3vh,34px); text-align:center; font:700 clamp(10px,.95vw,12px) "Rajdhani",sans-serif; letter-spacing:.34em; color:#8aa0b8; }
+  /* ===== TITLE: the loading veil is the title screen now; the city streams in behind the logo ===== */
+  body.titling .hud, body.titling #minimap { display:none !important; }
+  #loadveil.title { background:radial-gradient(ellipse at 50% 42%,rgba(5,7,11,.15),rgba(5,7,11,.72) 70%),linear-gradient(180deg,rgba(5,7,11,.55),transparent 30%,transparent 70%,rgba(5,7,11,.8)) !important;
+    flex-direction:column; gap:4vh; touch-action:none; cursor:pointer; }
+  .tlogo { text-align:center; transform:skewX(-8deg); transition:transform .8s cubic-bezier(.6,0,.2,1), opacity .8s, filter .8s; }
+  .tlogo .t1 { font:900 clamp(22px,3.4vw,52px) "Orbitron",sans-serif; letter-spacing:.42em; color:var(--w); text-shadow:0 0 18px rgba(0,225,255,.55); padding-left:.42em; }
+  .tlogo .t2 { font:900 clamp(56px,11vw,176px)/.92 "Orbitron",sans-serif; letter-spacing:.04em; color:#fff;
+    text-shadow:0 0 24px rgba(0,225,255,.9),0 0 60px rgba(0,225,255,.45),6px 6px 0 rgba(255,46,154,.85); }
+  .tlogo .t3 { font:900 clamp(28px,4.6vw,72px) "Orbitron",sans-serif; letter-spacing:.3em; color:var(--y); text-shadow:0 0 22px rgba(255,230,0,.6); padding-left:.3em; }
+  .tlogo .trune { margin-top:1.2vh; font:400 clamp(14px,1.5vw,22px) 'Runic',sans-serif; letter-spacing:.3em; color:var(--m); text-shadow:0 0 10px rgba(255,46,154,.6); }
+  .tlogo .tsub { margin-top:.8vh; font:700 clamp(10px,1vw,13px) "Rajdhani",sans-serif; letter-spacing:.5em; color:#9fb4cc; }
+  #tpress { font:900 clamp(13px,1.3vw,18px) "Orbitron",sans-serif; letter-spacing:.34em; color:var(--w); opacity:.5; }
+  #tpress.ready { color:var(--y); opacity:1; animation:tpulse 1.2s ease-in-out infinite; }
+  @keyframes tpulse { 0%,100%{ opacity:1; text-shadow:0 0 16px rgba(255,230,0,.7); } 50%{ opacity:.35; text-shadow:none; } }
+  .tload { position:absolute; left:50%; bottom:clamp(18px,4vh,40px); transform:translateX(-50%); width:min(360px,60vw); text-align:center; opacity:.7; }
+  #loadveil.title #loadbar { height:3px; margin:0 0 8px; }
+  #loadveil.title #loadtxt { font-size:10px; letter-spacing:.25em; }
+  /* the hand-over: the logo rushes at the camera and a neon wipe crosses into the hangar */
+  #loadveil.title.go .tlogo { transform:skewX(-8deg) scale(2.4); opacity:0; filter:blur(8px); }
+  #loadveil.title.go #tpress, #loadveil.title.go .tload { opacity:0; animation:none; transition:opacity .2s; }
+  #sweep { position:fixed; inset:0; z-index:30; pointer-events:none; transform:translateX(-110%) skewX(-18deg);
+    background:linear-gradient(90deg,transparent,rgba(0,225,255,.9) 18%,#05070b 34%,#05070b 66%,rgba(255,46,154,.9) 82%,transparent); }
+  #sweep.run { transition:transform .9s cubic-bezier(.7,0,.3,1); transform:translateX(110%) skewX(-18deg); }
+  body.mobile .tlogo .t2 { font-size:clamp(44px,13vw,120px); }
+  body.mobile.portrait .tlogo .t2 { font-size:clamp(40px,15vw,90px); } body.mobile.portrait .tlogo .t1 { letter-spacing:.3em; }
+  /* the neighbours in the hangar: prev at the left edge, next at the right, dimmed by the edges */
+  #select::before { content:''; position:absolute; inset:0; pointer-events:none;
+    background:linear-gradient(90deg,rgba(5,7,11,.5),transparent 11%,transparent 89%,rgba(5,7,11,.5)); }
+  .selNb { position:absolute; top:34%; transform:translateY(-50%); pointer-events:auto; cursor:pointer; display:flex; align-items:center; gap:10px;
+    font:700 clamp(10px,.9vw,12px) "Rajdhani",sans-serif; letter-spacing:.28em; color:rgba(242,246,255,.7); padding:18px 10px; }
+  .selNb b { font:900 clamp(26px,2.6vw,40px) "Orbitron",sans-serif; color:var(--y); text-shadow:0 0 14px rgba(255,230,0,.6); }
+  .selNb:hover { color:#fff; } #selNbL { left:clamp(6px,1vw,16px); } #selNbR { right:clamp(6px,1vw,16px); flex-direction:row-reverse; }
+  body.mobile.portrait .selNb { top:30%; } body.mobile .selNb span { display:none; }
   #selFlash { position:fixed; inset:0; z-index:19; background:#fff; opacity:0; pointer-events:none; }
   @media (max-width:1100px){ #select .panel { width:min(400px,40vw); } }
   #results, #keyveil, #loadveil { position:fixed; inset:0; z-index:20; display:none;
@@ -293,20 +301,13 @@
   <button id="keybtn">STARTA STREAMING</button>
 </div></div>
 
-<div id="themesel"><div class="ttl">STOCKHOLM WIPEOUT 2097</div>
-  <div class="sub">VÄLJ STAD<span class="run">ᚠᛅᛚᛁ᛫ᛋᛏᛅᛏ</span></div>
-  <div class="row">
-    <div class="tp" data-t="neon"><img src="wo2097/assets/theme_neon.jpg" alt=""><h2>NEON</h2><p>2097 som reklamfilmen lovade: neonbana, magentahimmel, upplysta skyltar.</p></div>
-    <div class="tp" data-t="used"><img src="wo2097/assets/theme_used.jpg" alt=""><h2>USED</h2><p>Samma Stockholm, begagnat: gamla Slussen, lysrör, natriumljus, affischer på kaklet.</p></div>
-  </div>
-  <div class="hint">← → VÄLJ · ENTER / KLICK KÖR</div></div>
-<div id="loadveil" style="display:flex"><div class="panel">
-  <h1>STREAMAR STOCKHOLM</h1><span class="kata">ᛚᛅᛏᛅᚱ᛫ᛋᛏᛅᛏᛁᚾ</span>
-  <p>Google Photorealistic 3D Tiles · kalibrerar banhöjd mot gatunivå<br>
-  GRAND TOUR · Södermalm → Gamla stan → Norrmalm → Östermalm → Kungsholmen · 16 km</p>
-  <div id="loadbar"><div id="loadfill"></div></div>
-  <div id="loadtxt">väntar på tiles ...</div>
-</div></div>
+<div id="loadveil" class="title" style="display:flex">
+  <div class="tlogo"><div class="t1">STOCKHOLM</div><div class="t2">WIPEOUT</div><div class="t3">2097</div>
+    <div class="trune">ᛋᛏᚢᚴᚼᚢᛚᛘ᛫ᚢᛁᛒᛁᚢᛏ</div><div class="tsub">SAGL · STOCKHOLM ANTI-GRAVITY LEAGUE</div></div>
+  <div id="tpress">LADDAR STOCKHOLM</div>
+  <div class="tload"><div id="loadbar"><div id="loadfill"></div></div><div id="loadtxt">väntar på tiles ...</div></div>
+</div>
+<div id="sweep"></div>
 
 <div id="select"><div class="top"><span><b>SAGL 2097</b> &nbsp;VÄLJ FARKOST <span class="kata">ᚠᛅᛚᛁ᛫ᚠᛅᚱᚴᚢᛋᛏ</span></span><span id="selCount">1 / 6</span></div>
   <div class="panel"><div id="selNum"></div><div id="selTeam"></div><div id="selRune" class="kata" style="margin:6px 0 0;font-size:15px"></div><div id="selSlogan"></div><div id="selSpec"></div>
@@ -315,6 +316,7 @@
     <div class="stat"><span>HANDLING</span><div class="bar" id="stHAN"></div></div>
     <div class="stat"><span>SHIELD</span><div class="bar" id="stSHD"></div></div></div>
   <div class="nav"><button class="arrow" id="selPrev">◀</button><button class="arrow" id="selNext">▶</button><button id="selGo">KÖR ▸</button></div>
+  <div class="selNb" id="selNbL"><b>‹</b><span id="selNbLn"></span></div><div class="selNb" id="selNbR"><b>›</b><span id="selNbRn"></span></div>
   <div id="selDots"></div>
   <div class="hint">← → / A D  BYT FARKOST · ENTER / SPACE  KÖR · DRA FÖR ATT SNURRA</div></div>
 <div id="selFlash"></div>
@@ -345,10 +347,9 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-/* ============================== THEME ==============================
-   NEON (the 2097 look of b08a156) or USED (the worn Stockholm). Picked on the first screen, before anything is built,
-   because the sky and fog colours compile into every shader and only the chosen theme's assets are downloaded.
-   ?theme=neon|used skips the screen (and remembers it); ?check uses the remembered theme (default used). */
+/* ============================== LOOK ==============================
+   One look: NEON, the 2097 of b08a156. The USED theme (worn Stockholm) was retired 2026-09-29 (Kim); it lives in git history
+   (last in 730a8f7). THEME stays as a constant so the asset paths read wo2097/assets/neon/. ?theme is ignored. */
 // MOBILE: a touch-first phone (or ?mobile for testing). Only then do the touch controls, the compact HUD and the lighter
 // render profile switch on; desktop is untouched.
 // Detection uses what real phones report (touch points, coarse pointer, no hover, a small screen), never the user agent.
@@ -367,31 +368,9 @@ function hudLayout(){ const W=innerWidth, H=innerHeight, por=H>W; document.body.
   document.documentElement.style.setProperty('--hs',hs.toFixed(3));
   document.body.classList.toggle('shorthelp',MOBILE||W<1150||H<720); }
 addEventListener('resize',hudLayout); addEventListener('orientationchange',()=>setTimeout(hudLayout,200)); hudLayout();
-const THEME=await (async()=>{ const q=new URLSearchParams(location.search).get('theme');
-  let saved='used'; try{ saved=localStorage.getItem('swTheme')||'used'; }catch(e){}
-  if(q==='neon'||q==='used'){ try{ localStorage.setItem('swTheme',q); }catch(e){} return q; }
-  if(location.search.includes('check')) return saved;
-  const el=document.getElementById('themesel'), P=[...el.querySelectorAll('.tp')]; let cur=saved==='neon'?0:1;
-  const show=()=>{ P.forEach((x,i)=>x.classList.toggle('on',i===cur)); el.className='hi-'+P[cur].dataset.t; };
-  el.style.display='flex'; show();
-  return new Promise(res=>{ const done=()=>{ const t=P[cur].dataset.t; try{ localStorage.setItem('swTheme',t); }catch(e){}
-      removeEventListener('keydown',kd,true); el.style.display='none'; res(t); };
-    const kd=e=>{ if(['ArrowLeft','KeyA'].includes(e.code)){ cur=0; show(); } else if(['ArrowRight','KeyD'].includes(e.code)){ cur=1; show(); }
-      else if(e.code==='Enter'||e.code==='Space'){ e.preventDefault(); done(); } e.stopImmediatePropagation(); };
-    addEventListener('keydown',kd,true);
-    let sw=null, swiped=false;   // phones: a swipe moves between the two, a tap on a panel confirms it
-    el.addEventListener('pointerdown',e=>{ sw={x:e.clientX,t:e.timeStamp}; swiped=false; });
-    el.addEventListener('pointerup',e=>{ if(sw&&Math.abs(e.clientX-sw.x)>60&&e.timeStamp-sw.t<700){ cur=e.clientX<sw.x?1:0; show(); swiped=true; } sw=null; });
-    P.forEach((x,i)=>{ x.onmouseenter=()=>{ cur=i; show(); }; x.onclick=()=>{ if(swiped){ swiped=false; return; } cur=i; show(); done(); }; }); }); })();
-const USED=THEME==='used'; document.body.classList.add('theme-'+THEME);
+const THEME='neon', USED=false; document.body.classList.add('theme-neon');
 // everything that differs between the two looks; the tiles, the track line and the physics are shared
-const TH=USED?{
-  bloom:[0.7,0.4,1.25], sunCol:0xffd2a0, sunI:1.9, hemi:[0xa19c92,0x2e2a26,0.62], engineLight:0.5, countK:1.6, grade:true,
-  sky:{ zenith:0x1c2331, upper:0x3b4250, mid:0x86705f, horizSun:0xe39a5a, horizAway:0x8d8883, sun:0xfff0d8, fogSun:0xc59c78, fogAway:0x8b8783 },
-  shade:'mix(vec3(0.33,0.30,0.29),vec3(0.22,0.22,0.25),smoothstep(0.0,0.6,h))', flare:'g==1?vec3(0.9,0.55,0.4):g==3?vec3(0.55,0.75,0.8):vec3(1.0,0.72,0.35)', flareK:'0.08',
-  fx:['216,96,76',0.2,'231,180,87',0.2], shield:'169,211,214', mmStart:'#e7b457', spd:['#a9d3d6','#e7b457','#d8604c'], boostCol:'#e7b457', en:['#e79a3a','#9dcf7c'],
-  hangar:{ bg:0x0d0c0b, fog:[36,86], key:[0xffc98f,2.4], rimM:[0xff9a4a,1.6], rimC:[0xcfe8e6,1.5], hemi:[0x8f8a80,0x14110e,0.55], grid:[40,0x3a352e,0x1c1916], floor:[0x2b2824,0.05,0.95], disc:[0x3a3530,0.6,0.7] }
-}:{
+const TH={
   bloom:[0.6,0.3,1.4], sunCol:0xffc58a, sunI:2.4, hemi:[0xb7a4d8,0x3a2630,0.7], engineLight:1.0, countK:4, grade:false,
   sky:{ zenith:0x140f3a, upper:0x3b2466, mid:0xb24a78, horizSun:0xffa24f, horizAway:0x9a86b6, sun:0xfff0d0, fogSun:0xe6a472, fogAway:0x8e86ac },
   shade:'mix(vec3(0.30,0.20,0.36),vec3(0.18,0.14,0.30),smoothstep(0.0,0.6,h))', flare:'g==1?vec3(1.0,0.35,0.65):g==3?vec3(0.2,0.9,1.0):vec3(1.0,0.72,0.35)', flareK:'0.10',
@@ -1568,10 +1547,11 @@ function selInfo(){ const T=TEAMS[selIdx], st=STATS[selIdx], col='#'+new THREE.C
   document.getElementById('selTeam').textContent=T.team; document.getElementById('selRune').textContent=TEAM_RUNES[selIdx]; document.getElementById('selSlogan').textContent=TEAM_SLOGAN[selIdx];
   document.getElementById('selSpec').textContent=TEAM_SPEC[selIdx]; document.getElementById('selCount').textContent=(selIdx+1)+' / 6';
   bars('stSPD',st.spd); bars('stTHR',st.thr); bars('stHAN',st.han); bars('stSHD',st.shd);
-  [...document.getElementById('selDots').children].forEach((d,i)=>d.classList.toggle('on',i===selIdx)); }
+  [...document.getElementById('selDots').children].forEach((d,i)=>d.classList.toggle('on',i===selIdx));
+  document.getElementById('selNbLn').textContent=TEAMS[(selIdx+5)%6].team; document.getElementById('selNbRn').textContent=TEAMS[(selIdx+1)%6].team; }
 function selGo(dir){ if(selLock) return; selFrom=selIdx; selIdx=(selIdx+dir+6)%6; selDir=dir; selT=0; selSpin=0; selInfo(); selBlip(420+selIdx*60); }
 function selPick(k){ if(k===selIdx||selLock) return; selFrom=selIdx; selDir=k>selIdx?1:-1; selIdx=k; selT=0; selSpin=0; selInfo(); selBlip(420+k*60); }
-function enterSelect(){ state='select'; loadveil.style.display='none'; document.getElementById('select').classList.add('on'); document.body.classList.add('selecting');
+function enterSelect(){ state='select'; selIntro=0; document.getElementById('select').classList.add('on'); document.body.classList.add('selecting');
   const dots=document.getElementById('selDots'); if(!dots.children.length) for(let i=0;i<6;i++){ const d=document.createElement('i'); d.onclick=()=>selPick(i); dots.appendChild(d); }
   selT=1; selFrom=-1; selInfo(); }
 function selConfirm(){ if(selLock||state!=='select') return; selLock=0.001; TEAM_CHOICE=selIdx;
@@ -1589,26 +1569,47 @@ function selSting(){ if(!SFX.hangar||!actx||!audioOn) return; const t=actx.curre
   const n=actx.createBufferSource(); n.buffer=sharedNoise; const bp=actx.createBiquadFilter(), g=actx.createGain(); bp.type='bandpass'; bp.Q.value=1.2;
   bp.frequency.setValueAtTime(400,t); bp.frequency.exponentialRampToValueAtTime(8000,t+0.6); g.gain.setValueAtTime(0.0001,t); g.gain.linearRampToValueAtTime(0.25,t+0.5); g.gain.exponentialRampToValueAtTime(0.0001,t+0.75);
   n.connect(bp); bp.connect(g); g.connect(actx.destination); n.start(t); n.stop(t+0.8); }
+// CAROUSEL: the chosen craft on its turntable in the middle, the previous one peeking in at the left edge and the next at
+// the right (further back, cropped by the screen edge, dimmed by the edge vignette). A switch slides every pod one slot.
+// rel(k,i): where craft k sits when craft i is chosen (-1 left, 0 centre, +1 right, +-2 just off screen, 3 hidden).
+let selIntro=1; const _nb=new THREE.Vector3(), _v=new THREE.Vector3(), selNbL=document.getElementById('selNbL'), selNbR=document.getElementById('selNbR');
+const selRel=(k,i)=>{ let d=(k-i+6)%6; if(d>3) d-=6; return d; };
 function selectTick(dt){ if(!SHIP_PROTOS) return;
   hCam.aspect=innerWidth/innerHeight; hCam.updateProjectionMatrix();
   selT=Math.min(1,selT+dt/0.45); const e=1-Math.pow(1-selT,3); selSpin+=dt*(selDrag?0:0.45);
-  for(let k=0;k<6;k++){ const pod=hangarPod(k); if(!pod) continue; pod.visible=false; }
-  const cur=hangarPod(selIdx); cur.visible=true; cur.position.set((1-e)*selDir*16,0,0); cur.rotation.y=selSpin+(1-e)*selDir*1.2;
-  if(selFrom>=0&&selT<1){ const old=hangarPod(selFrom); old.visible=true; old.position.set(-e*selDir*16,0,0); old.rotation.y=selSpin-e*selDir*1.2; }
+  selIntro=Math.min(1,selIntro+dt/1.2); const ie=1-Math.pow(1-selIntro,3);
   // the lock-in: the camera pushes in and the rig brightens, then the grid
-  let push=0; if(selLock){ selLock+=dt; push=Math.min(1,selLock/0.9); cur.rotation.y=selSpin+push*0.8;
+  let push=0; if(selLock){ selLock+=dt; push=Math.min(1,selLock/0.9);
     if(selLock>1.0){ document.getElementById('select').classList.remove('on'); document.body.classList.remove('selecting'); selectDone=true; selLock=0; startRace(); } }
-  // the craft sits right of centre, clear of the panel: the camera looks straight ahead from a point left of it
-  // a little from above (Kim: +25° was too much, now about +13.5° over the old near-level view), and closer: the craft
-  // fills about 18 % more of the frame than it did, still right of the stats panel
+  // the craft sits right of centre, clear of the panel: the camera looks straight ahead from a point left of it,
+  // about +13.5 deg over the old level view. Coming from the title it starts high and far and sweeps down into this.
   const por=innerHeight>innerWidth, narrow=innerWidth/innerHeight<1.7, off=por?0:(narrow?-5.2:-4.6)*(1-push), d0=por?30:(narrow?27:24);
   if(hCam.fov!==(por?58:34)){ hCam.fov=por?58:34; hCam.updateProjectionMatrix(); }   // portrait: a wider lens, the craft centred above the panel
-  const el=Math.atan2(4.0,d0)+13.5*Math.PI/180, R=Math.hypot(4.0,d0)*(por?1.0:(narrow?1.14:1.08))-push*9, ly=por?-4.2:-0.4;
-  hCam.position.set(off,-0.4+R*Math.sin(el),R*Math.cos(el)); hCam.lookAt(off,ly,0);
+  const el=Math.atan2(4.0,d0)+13.5*Math.PI/180+(1-ie)*0.5, R=Math.hypot(4.0,d0)*(por?1.0:(narrow?1.14:1.08))-push*9+(1-ie)*34, ly=por?-4.2:-0.4;
+  hCam.position.set(off,-0.4+R*Math.sin(el),R*Math.cos(el)); hCam.lookAt(off,ly,0); hCam.updateMatrixWorld();
+  // neighbour slots: on the ray through the screen edge at the craft's own height (a little higher in landscape, over the panel)
+  // the neighbours stand on the hangar floor (y 0) further back than the chosen craft: find the screen height where the
+  // ray through the edge reaches y 0 at that depth (a floating pod under the floor was invisible in portrait)
+  const depth=hCam.position.length()*1.3, rayAt=(sx,sy)=>_nb.set(sx,sy,0.5).unproject(hCam).sub(hCam.position).normalize().multiplyScalar(depth).add(hCam.position);
+  let lo=-1, hi=1; for(let it=0;it<14;it++){ const m=(lo+hi)/2; if(rayAt(0.86,m).y<0) lo=m; else hi=m; }
+  const ny=por?(lo+hi)/2:Math.max((lo+hi)/2,0.42);   // landscape: over the stats panel
+  const nbTop=((1-ny)/2*100+(por?8:10)).toFixed(1)+'%'; if(selNbL.style.top!==nbTop){ selNbL.style.top=nbTop; selNbR.style.top=nbTop; }   // the names ride with the neighbours
+  const slot=r=>{ if(r===0) return _nb.set(0,0,0); return rayAt(Math.sign(r)*(Math.abs(r)>=2?1.9:0.86),ny); };
+  for(let k=0;k<6;k++){ const pod=hangarPod(k); if(!pod) continue;
+    let rN=selRel(k,selIdx), rO=(selFrom>=0&&selT<1)?selRel(k,selFrom):rN;
+    const out=Math.max(push,1-ie);   // the lock-in and the intro push the neighbours off the edges
+    const far=r=>r===0?0:(Math.abs(r)>=2?Math.sign(r)*2:r)*(1+out*(Math.abs(r)===1?1:0));
+    if(Math.abs(rN)>=3&&Math.abs(rO)>=3){ pod.visible=false; continue; }
+    const a=far(Math.max(-2,Math.min(2,rO))), b=far(Math.max(-2,Math.min(2,rN)));
+    const pa=slot(a).clone(), pb=slot(b).clone(); pod.visible=true; pod.position.lerpVectors(pa,pb,e);
+    const sa=a===0?1:0.86, sb=b===0?1:0.86; pod.scale.setScalar(sa+(sb-sa)*e);
+    const ra=a===0?selSpin:Math.sign(a)*-0.7, rb=b===0?selSpin+(selLock?push*0.8:0):Math.sign(b)*-0.7; pod.rotation.y=ra+(rb-ra)*e; }
   renderer.setRenderTarget(null); renderer.render(hScene,hCam); }
 document.getElementById('selPrev').onclick=()=>{ ensureAudio(); selGo(-1); };
 document.getElementById('selNext').onclick=()=>{ ensureAudio(); selGo(1); };
 document.getElementById('selGo').onclick=()=>selConfirm();
+document.getElementById('selNbL').onclick=()=>{ ensureAudio(); selGo(-1); };
+document.getElementById('selNbR').onclick=()=>{ ensureAudio(); selGo(1); };
 addEventListener('keydown',e=>{ if(state!=='select') return;
   if(e.code==='ArrowLeft'||e.code==='KeyA'){ selGo(-1); e.preventDefault(); e.stopImmediatePropagation(); }
   else if(e.code==='ArrowRight'||e.code==='KeyD'){ selGo(1); e.preventDefault(); e.stopImmediatePropagation(); }
@@ -1616,10 +1617,25 @@ addEventListener('keydown',e=>{ if(state!=='select') return;
 canvas.addEventListener('pointerdown',e=>{ if(state==='select') selDrag={x:e.clientX,s:selSpin}; });
 addEventListener('pointermove',e=>{ if(selDrag) selSpin=selDrag.s+(e.clientX-selDrag.x)*0.01; });
 addEventListener('pointerup',()=>{ selDrag=null; });
-window.__select=()=>({ state, sel:selIdx, done:selectDone, choice:TEAM_CHOICE });
+window.__select=()=>({ state, sel:selIdx, done:selectDone, choice:TEAM_CHOICE,
+  pods:hPods.map((g,k)=>g?{k,vis:g.visible,sc:+g.scale.x.toFixed(2),ndc:g.position.clone().project(hCam).toArray().map(v=>+v.toFixed(2)),pos:g.position.toArray().map(v=>+v.toFixed(1))}:null) });
 
+/* TITLE: the loading veil is the title screen. When the start area is in (startRace is called), the prompt lights up; ENTER,
+   SPACE or a tap hands over: the logo rushes at the camera, a neon wipe crosses, and the hangar sweeps in underneath. */
+let titleReady=false, titleGo=false, titleDone=false;
+const tpress=document.getElementById('tpress'), sweepEl=document.getElementById('sweep');
+if(!selectDone) document.body.classList.add('titling');   // no race HUD behind the title and the hangar
+function titlePrompt(){ tpress.textContent=MOBILE?'TAP':'PRESS ENTER'; tpress.classList.add('ready'); }
+function titleToSelect(){ if(titleDone) return; titleDone=true; ensureAudio();
+  loadveil.classList.add('go'); sweepEl.classList.remove('run'); void sweepEl.offsetWidth; sweepEl.classList.add('run');
+  setTimeout(()=>enterSelect(),430);
+  setTimeout(()=>{ loadveil.style.display='none'; loadveil.classList.remove('go'); sweepEl.classList.remove('run'); document.body.classList.remove('titling'); },1000); }
+function titleWant(){ if(state!=='loading'||titleDone||keyveil.style.display==='flex') return; titleGo=true;
+  if(titleReady) titleToSelect(); else tpress.textContent='LADDAR STOCKHOLM · STRAX'; }
+addEventListener('keydown',e=>{ if(state==='loading'&&(e.code==='Enter'||e.code==='Space')){ e.preventDefault(); titleWant(); } },true);
+loadveil.addEventListener('pointerdown',e=>{ e.preventDefault(); titleWant(); });
 function startRace(){
-  if(!selectDone){ enterSelect(); return; }
+  if(!selectDone){ titleReady=true; titlePrompt(); if(titleGo) titleToSelect(); return; }
   loadveil.style.display='none';
   if(actx){ mstep=0; nextStep=actx.currentTime+0.1; } // stegringen börjar om med loppet
   spawnShips(); camSnap=true; state='count'; countT=3.999; raceTime=0; lapTimes=[]; lapStart=0; resetKit();
@@ -1977,10 +1993,11 @@ function loop(now){
   } else if(camOverride){ POSTFX.on=false; camera.position.copy(camOverride.p); camera.lookAt(camOverride.l);
   } else if(rootLoaded){
     // loading: sväva över startområdet så tiles där streamas in snabbt
-    const a=loadStartTime?(now-loadStartTime)*0.0004:0;
+    // the title: a slow drift over Slussen and the water (it also keeps the start area streaming in)
+    const a=loadStartTime?(now-loadStartTime)*0.0002:0;
     frameAt(0,loadFrame); frameAt(0.015,lookFrame);
-    camera.position.copy(loadFrame.p).addScaledVector(loadFrame.up,110)
-      .addScaledVector(loadFrame.fwd,-60).addScaledVector(loadFrame.right,Math.sin(a)*28);
+    camera.position.copy(loadFrame.p).addScaledVector(loadFrame.up,100+18*Math.sin(a*1.3))
+      .addScaledVector(loadFrame.fwd,-70-30*Math.cos(a*0.8)).addScaledVector(loadFrame.right,Math.sin(a)*60);
     camera.lookAt(lookFrame.p);
   } else {
     const a=now*0.0001;
