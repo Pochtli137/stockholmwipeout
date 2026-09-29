@@ -8,12 +8,12 @@
 <style>
   @font-face { font-family:Orbitron; src:url('pipeline/fonts/Orbitron.ttf'); }
   @font-face { font-family:Rajdhani; src:url('pipeline/fonts/Rajdhani-Bold.ttf'); }
-  html,body { margin:0; height:100%; overflow:hidden; background:#07080c; color:#eef3ff; font-family:Rajdhani,"Arial Narrow",Arial,sans-serif; user-select:none; }
+  html,body { margin:0; height:100%; overflow:hidden; background:#0d0c0b; color:#ece6da; font-family:Rajdhani,"Arial Narrow",Arial,sans-serif; user-select:none; }
   canvas { display:block; }
   #panel { position:fixed; left:48px; bottom:52px; max-width:44vw; }
   #num { font-family:Orbitron,Arial Black,sans-serif; font-size:120px; line-height:.8; font-weight:900; }
   #team { font-family:Orbitron,Arial Black,sans-serif; font-size:40px; letter-spacing:.06em; margin-top:10px; }
-  #slogan { font-size:28px; letter-spacing:.08em; margin-top:8px; color:#ffcd00; }
+  #slogan { font-size:28px; letter-spacing:.08em; margin-top:8px; color:#e7b457; }
   #spec { font-size:15px; letter-spacing:.22em; margin-top:18px; color:#9aa6c0; }
   #top { position:fixed; left:48px; top:34px; font-family:Orbitron,Arial Black,sans-serif; font-size:15px; letter-spacing:.35em; color:#9aa6c0; }
   #top b { color:#fff; }
@@ -25,7 +25,7 @@
 </style>
 </head>
 <body>
-<div id="top"><b>SAGL 2097</b> · STOCKHOLM ANTI-GRAVITY LEAGUE · HANGAR · <span style="font-family:Runic;letter-spacing:.14em;color:#ff2e9a">ᚼᛅᚾᚴᛅᚱ</span></div>
+<div id="top"><b>SAGL 2097</b> · STOCKHOLM ANTI-GRAVITY LEAGUE · HANGAR · <span style="font-family:Runic;letter-spacing:.14em;color:#d8604c">ᚼᛅᚾᚴᛅᚱ</span></div>
 <div id="panel"><div id="num"></div><div id="team"></div><div id="slogan"></div><div id="spec"></div></div>
 <div id="nav"><div id="dots"></div><div style="margin-top:12px">← → BYT SKEPP · DRA FÖR ATT SNURRA · SPACE PAUSA</div></div>
 <div id="load">LADDAR HANGAREN</div>
@@ -60,24 +60,24 @@ let cur=+(Q.get('craft')||0), spin=!Q.has('still');
 const renderer=new THREE.WebGLRenderer({antialias:true}); renderer.setPixelRatio(Math.min(2,devicePixelRatio));
 renderer.toneMapping=THREE.ACESFilmicToneMapping; renderer.toneMappingExposure=0.85; renderer.shadowMap.enabled=true; renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 document.body.appendChild(renderer.domElement);
-const scene=new THREE.Scene(); scene.background=new THREE.Color(0x07080c); scene.fog=new THREE.Fog(0x07080c,22,60);
+const scene=new THREE.Scene(); scene.background=new THREE.Color(0x0d0c0b); scene.fog=new THREE.Fog(0x0d0c0b,22,60);   // USED UNIVERSE: the depot
 { const pm=new THREE.PMREMGenerator(renderer); scene.environment=pm.fromScene(new RoomEnvironment(),0.04).texture; scene.environmentIntensity=0.55; }
 const camera=new THREE.PerspectiveCamera(32,1,0.1,200); camera.position.set(-9.5,4.2,-10.5);
 const controls=new OrbitControls(camera,renderer.domElement); controls.target.set(0,0.6,0); controls.enableDamping=true;
 controls.minDistance=6; controls.maxDistance=24; controls.maxPolarAngle=Math.PI*0.49;
 
 // the studio: a key with soft shadows, a cold fill, a hot rim from behind, and the team colour bouncing off the floor
-const key=new THREE.DirectionalLight(0xffffff,2.4); key.position.set(-6,10,-4); key.castShadow=true;
+const key=new THREE.DirectionalLight(0xffd0a0,2.4); key.position.set(-6,10,-4); key.castShadow=true;
 key.shadow.mapSize.set(2048,2048); Object.assign(key.shadow.camera,{left:-7,right:7,top:7,bottom:-7,near:1,far:30}); key.shadow.bias=-0.0004; scene.add(key);
-const fill=new THREE.DirectionalLight(0x9fb8ff,0.7); fill.position.set(8,3,-2); scene.add(fill);
+const fill=new THREE.DirectionalLight(0xcfe8e6,0.7); fill.position.set(8,3,-2); scene.add(fill);
 const rim=new THREE.DirectionalLight(0xffffff,2.2); rim.position.set(2,4,9); scene.add(rim);
 const bounce=new THREE.PointLight(0xffffff,1.2,9,2); bounce.position.set(0,-0.6,0); scene.add(bounce);
 // the floor: dark gloss, a turntable ring and the hangar grid
-const floor=new THREE.Mesh(new THREE.CircleGeometry(40,96),new THREE.MeshStandardMaterial({color:0x0b0d13,roughness:0.62,metalness:0.25,envMapIntensity:0.1}));
+const floor=new THREE.Mesh(new THREE.CircleGeometry(40,96),new THREE.MeshStandardMaterial({color:0x2b2824,roughness:0.95,metalness:0.05,envMapIntensity:0.1}));
 floor.rotation.x=-Math.PI/2; floor.position.y=-0.9; floor.receiveShadow=true; scene.add(floor);
 const ring=new THREE.Mesh(new THREE.RingGeometry(5.4,5.5,128),new THREE.MeshBasicMaterial({color:0xffffff,toneMapped:false}));
 ring.rotation.x=-Math.PI/2; ring.position.y=-0.89; scene.add(ring);
-const grid=new THREE.GridHelper(80,40,0x1d2230,0x131722); grid.position.y=-0.895; scene.add(grid);
+const grid=new THREE.GridHelper(80,26,0x3a352e,0x1c1916); grid.position.y=-0.895; scene.add(grid);
 
 const composer=new EffectComposer(renderer); composer.addPass(new RenderPass(scene,camera));
 const bloom=new UnrealBloomPass(new THREE.Vector2(1,1),0.32,0.35,0.95); composer.addPass(bloom); composer.addPass(new OutputPass());

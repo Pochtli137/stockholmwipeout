@@ -52,7 +52,7 @@ Skärmdumpar: `node sky_shots.cjs <utmapp>` (mot solen, bort från solen, över 
 - Materialnamnen i Blender styr beteendet i spelet: `pad_speed`/`pad_weapon` blir additiva (farten rullar, glyfen snurrar),
   `neon_*`/`light_*`/`core_*` får gå över 1.0 för bloomen, `light_0..4` är nedräkningsljusen på portalen.
 - Skeppens noder: `flap_L`/`flap_R` (luftbromsarnas gångjärn), `eng_L`/`eng_R` (munstyckena).
-- Bloomtröskeln är 1.4: bara emission (neon 2.6, kärnor 3.0, plattor 1.6) ska över. Blanka ytor i lågt solljus blev en vit boll; banan är därför satin (roughness 0.62).
+- Bloomtröskeln är 1.05 sedan used universe (se nedan): bara företagens skyltar, plattorna och skeppens dysor ska över.
 - Typsnitt: Orbitron och Rajdhani (SIL Open Font License, `fonts/`), katakana från systemets Hiragino.
 
 ## Skeppen (build_craft.py) och hangaren (wo2097/showroom.html)
@@ -114,3 +114,49 @@ With every flag off the audio is the deployed game's (8269ea8): the player's eng
 45 + 1.5·speed Hz, gain 0.026 + 0.0004·speed, 600 Hz lowpass straight to the output) and the big-beat music.
 Checked by function-by-function comparison against `git show 8269ea8:index.html` and by counting the nodes the page
 creates (no panner, convolver or compressor).
+
+## USED UNIVERSE (2026-09-29): the look Kim chose
+"det blir bättre med used universe och neoncorporate skyltar ja. cyber." Google's Stockholm stays untouched; everything
+we built is a worn, lived-in 2097, and **the only saturated light in the world belongs to the corporations**.
+
+- **Deck** (`make_textures.py` → `track.jpg`): old Slussen concrete and asphalt, newer and older patches, cracks,
+  skid marks on the racing line, oil stains, faded kerb and centre paint, drain grates, the league stencil. Unlit.
+- **Slab and footings** (`concrete.jpg`): formwork concrete with blowholes and rust runs. **Pylons, gantry and arch
+  frames** (`pylon.jpg`): rusty steel with invented tags (SLSN, KRÅK, NOLL7, RÅTT, GRUS, MÖRK, ZON9, TUBE, BETONG, SÖDER:
+  no real crews). World-scaled UVs via `MB.boxw`.
+- **Walls**: tunnelbana tile (30 × 15 cm, grout, each tile its own tint) carrying the brands as LIT light boxes
+  (`barrier_A/B` + `_e` emission maps), and a poster wall (`barrier_P`) with all eight parties as pasted-up paper
+  posters. The three walls alternate every 104 m, the two sides out of step.
+- **Light**: a fluorescent fitting on top of both walls every 3.2 m (7 126 of them; cold white on the left, sodium on
+  the right; ~8 % dead, ~3.5 % flickering: `tube_flick_*`), a top rail with posts, two conduits on the outside, and
+  178 sodium lamp posts every 64 m with an additive light pool on the deck (`pool_sodium`).
+- **Signs**: every brand is lit, in three kinds (`STYLES` in make_textures.py): LIGHTBOX (backlit acrylic), NEON
+  (tube letters on a weathered panel), LED (pixel panel). Billboards emit 1.35 / 1.9 / 1.4, the arches' LED faces 1.35,
+  the walls' light boxes 0.95, the tubes 0.62: the bloom threshold is 1.05, so the neon words glow and nothing else floods.
+  Three boards glitch (`board_*_flk`). The arches carry a corporate neon bar in the brand's colour.
+- **Craft**: duller paint, the clear coat worn thin, liveries and hull decals with chips, scratches and grime.
+- **Game** (index.html): a dusty evening sky (slate, a brown-amber band), grey-brown cloud undersides, a sodium-warm
+  key light, bloom 0.6 / radius 0.4 / threshold 1.05, a grade pass (desaturates the tired city but not the lit signs,
+  warm, dust haze, lifted blacks, vignette, grain), `flickTick` for the failing tubes and glitching signs. The HUD is
+  municipal equipment: sodium amber, tube white, worn red, scratched plates; the weapon slot moved under the lap box
+  (at the top centre it hid the gantry sign). The hangar and the showroom are a depot: oil-stained concrete, a sodium
+  work lamp, a tube behind; only the team rings keep their colour.
+
+### Politics, 2097: the eight Riksdag parties
+Satire of power, all eight treated alike: **exactly two neon billboards each** (dealt out evenly round the lap by
+build.py; the build log prints the count) and **one poster each** on the poster wall. Parody names in the brand manner,
+party colours, no party logos or symbols, no politicians, never a word about any group of people. Direktdemokraterna
+and parties outside the Riksdag are not included (Kim's call).
+
+| Parody | Party | Slogan |
+|---|---|---|
+| SOCIÅLDEMOKRATERNA | S | ALLA SKA MED. / FRIVILLIGT ELLER EJ. |
+| MODERÅTERNA | M | SÄNKT SKATT. / HÖJD KONTROLL. |
+| SVERIGEDEMOKRÄTERNA | SD | SVERIGE TILLBAKA. / TILL 1952. |
+| CENTERPÅRTIET | C | GRÖN TILLVÄXT. / BARA TILLVÄXT. |
+| VÄNSTERPÅRTIET | V | MAKTEN ÅT FOLKET. / FOLKET ÅT PARTIET. |
+| KRISTDEMOKRÄTERNA | KD | TRYGGA FAMILJER. / ÖVERVAKADE FAMILJER. |
+| LIBERÅLERNA | L | FRIHET. / MED PRENUMERATION. |
+| MILJÖPÅRTIET | MP | KLIMATNEUTRALT. / ENLIGT OSS. |
+
+(`PARTIES` in make_textures.py.)

@@ -21,13 +21,18 @@
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
 <style>
   /* ===== 2097 HUD: condensed techno type, clipped corners, hazard yellow, katakana subtitles ===== */
-  :root { --y:#ffe600; --c:#00e1ff; --m:#ff2e9a; --k:#05070b; --w:#f2f6ff; --g:#35ff8b; --r:#ff3b3b; }
+  /* USED UNIVERSE: sodium amber, tube white, worn red: the HUD is municipal equipment now, bolted on and scratched */
+  :root { --y:#e7b457; --c:#a9d3d6; --m:#d8604c; --k:#0a0908; --w:#ece6da; --g:#9dcf7c; --r:#d8453a; }
   html, body { margin:0; padding:0; height:100%; overflow:hidden; background:#05070b;
     font-family:"Rajdhani","Arial Narrow",Arial,sans-serif; color:var(--w); user-select:none; }
   #c { display:block; width:100%; height:100%; }
   #fx { position:fixed; inset:0; z-index:6; pointer-events:none; }
   .hud { position:fixed; z-index:10; letter-spacing:.14em; text-transform:uppercase; }
-  .plate { background:linear-gradient(135deg,rgba(5,7,11,.82),rgba(12,16,26,.62)); border-left:4px solid var(--y);
+  .plate { background:
+      repeating-linear-gradient(97deg,rgba(255,255,255,.025) 0 1px,transparent 1px 7px),
+      repeating-linear-gradient(-12deg,rgba(0,0,0,.18) 0 2px,transparent 2px 23px),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 .5 0 0 0 0 .45 0 0 0 0 .38 0 0 0 .22 0'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E"),
+      linear-gradient(135deg,rgba(18,16,14,.86),rgba(28,25,22,.7)); border-left:4px solid var(--y);
     clip-path:polygon(0 0,calc(100% - 16px) 0,100% 16px,100% 100%,16px 100%,0 calc(100% - 16px));
     padding:10px 18px 12px 14px; box-shadow:0 0 0 1px rgba(255,255,255,.06) inset; }
   .lbl { font:600 11px/1 "Rajdhani",sans-serif; letter-spacing:.32em; color:#9fb3c8; }
@@ -43,10 +48,11 @@
   #lapbox .row span.b { color:var(--y); }
   #posbox { right:24px; top:20px; text-align:right; border-left:0; border-right:4px solid var(--m);
     clip-path:polygon(16px 0,100% 0,100% calc(100% - 16px),calc(100% - 16px) 100%,0 100%,0 16px); padding:10px 16px 12px 22px; }
-  #posbox .big { font-size:64px; line-height:.95; color:var(--y); text-shadow:0 0 18px rgba(255,230,0,.45); }
+  #posbox .big { font-size:64px; line-height:.95; color:var(--y); text-shadow:0 2px 0 rgba(0,0,0,.6); }
   #posbox .ord { font-size:24px; color:var(--y); }
   #posbox .of { font-size:18px; color:#8aa0b8; }
-  #weapon { left:50%; top:18px; transform:translateX(-50%); display:flex; align-items:center; gap:12px; padding:8px 18px 8px 10px; border-left:4px solid var(--r); }
+  /* the weapon slot sits under the lap box: at the top centre it hid the start gantry's sign */
+  #weapon { left:24px; top:168px; display:flex; align-items:center; gap:12px; padding:8px 18px 8px 10px; border-left:4px solid var(--r); }
   #wslot { width:54px; height:54px; border:2px solid rgba(255,255,255,.25); display:grid; place-items:center; background:rgba(0,0,0,.5);
     clip-path:polygon(0 0,100% 0,100% 70%,70% 100%,0 100%); }
   #wslot canvas { width:46px; height:46px; }
@@ -54,7 +60,7 @@
   #wname.empty { color:#56687c; }
   #whint { font:600 10px/1.4 "Rajdhani",sans-serif; letter-spacing:.3em; color:#8aa0b8; }
   #speed { right:24px; bottom:22px; text-align:right; width:330px; }
-  #speed .num { font-size:78px; line-height:.9; color:var(--w); font-style:italic; text-shadow:0 0 22px rgba(0,225,255,.35); }
+  #speed .num { font-size:78px; line-height:.9; color:var(--w); font-style:italic; text-shadow:0 2px 0 rgba(0,0,0,.6); }
   #speed .unit { font:700 14px/1 "Orbitron",sans-serif; color:var(--c); letter-spacing:.2em; }
   .seg { display:flex; gap:3px; margin-top:6px; justify-content:flex-end; }
   .seg i { display:block; width:11px; height:10px; background:rgba(255,255,255,.08); transform:skewX(-24deg); }
@@ -63,15 +69,15 @@
   #help { left:24px; bottom:20px; font:600 11px/1.7 "Rajdhani",sans-serif; letter-spacing:.2em; color:#8aa0b8; }
   #help b { color:var(--y); font-weight:700; }
   #minimap { position:fixed; left:50%; transform:translateX(-50%); bottom:14px; z-index:10; opacity:.95;
-    filter:drop-shadow(0 0 6px rgba(0,225,255,.35)); }
+    filter:drop-shadow(0 1px 2px rgba(0,0,0,.8)); }
   #msg { left:0; right:0; top:38%; text-align:center; font-family:"Orbitron","Arial Black",sans-serif; font-weight:900; font-size:74px;
     font-style:italic; color:var(--w); letter-spacing:.06em; pointer-events:none;
-    text-shadow:0 0 30px rgba(0,225,255,.75), 4px 4px 0 rgba(255,46,154,.55); }
-  #msg.count { color:var(--y); text-shadow:0 0 40px rgba(255,230,0,.7), 6px 6px 0 rgba(0,0,0,.6); }
+    text-shadow:0 0 24px rgba(231,180,87,.45), 4px 4px 0 rgba(0,0,0,.6); }
+  #msg.count { color:var(--y); text-shadow:0 0 30px rgba(231,180,87,.55), 6px 6px 0 rgba(0,0,0,.6); }
   #sub { left:0; right:0; top:calc(38% + 150px); text-align:center; font:700 16px/1 "Rajdhani",sans-serif; letter-spacing:.5em; color:var(--c); pointer-events:none; }
   #sub .kata { display:block; margin:10px 0 0; font-size:13px; }
   #band { position:fixed; left:-5%; right:-5%; top:calc(38% - 6px); height:150px; z-index:9; pointer-events:none; display:none;
-    background:repeating-linear-gradient(-55deg,rgba(255,230,0,.95) 0 26px,rgba(5,7,11,.95) 26px 52px); transform:skewY(-4deg);
+    background:repeating-linear-gradient(-55deg,rgba(196,160,40,.9) 0 26px,rgba(20,18,16,.95) 26px 52px); transform:skewY(-4deg);
     mask-image:linear-gradient(90deg,transparent,#000 18%,#000 82%,transparent); opacity:.22; }
   #attrib { position:fixed; right:8px; bottom:4px; z-index:11; font-size:10px; color:#fff;
     text-shadow:0 1px 2px #000; opacity:.85; font-family:Arial; letter-spacing:0; }
@@ -91,7 +97,7 @@
   .stat span { font:700 clamp(11px,1vw,13px) "Rajdhani",sans-serif; letter-spacing:.3em; color:#cfe3f5; }
   .bar { display:grid; grid-template-columns:repeat(12,1fr); gap:3px; height:12px; }
   .bar i { background:rgba(255,255,255,.1); transform:skewX(-18deg); transition:background .25s; }
-  .bar i.on { background:var(--c); box-shadow:0 0 8px var(--c); }
+  .bar i.on { background:var(--y); box-shadow:none; }
   #select .nav { position:absolute; right:clamp(16px,3vw,48px); bottom:clamp(90px,14vh,150px); display:flex; gap:10px; pointer-events:auto; }
   #select .nav button, #selGo { font:900 clamp(13px,1.2vw,16px) "Orbitron",sans-serif; letter-spacing:.12em; color:var(--k); background:var(--y);
     border:0; padding:12px 18px; cursor:pointer; clip-path:polygon(10px 0,100% 0,calc(100% - 10px) 100%,0 100%); }
@@ -105,8 +111,8 @@
   @media (max-width:1100px){ #select .panel { width:min(400px,40vw); } }
   #results, #keyveil, #loadveil { position:fixed; inset:0; z-index:20; display:none;
     align-items:center; justify-content:center; background:
-    repeating-linear-gradient(-55deg,rgba(255,230,0,.05) 0 40px,transparent 40px 80px),rgba(3,5,9,.9); }
-  .panel { border-left:6px solid var(--y); padding:30px 46px 32px; background:rgba(8,11,18,.97); max-width:600px; text-align:left;
+    repeating-linear-gradient(-55deg,rgba(196,160,40,.05) 0 40px,transparent 40px 80px),rgba(10,9,8,.9); }
+  .panel { border-left:6px solid var(--y); padding:30px 46px 32px; background:rgba(20,18,16,.97); max-width:600px; text-align:left;
     clip-path:polygon(0 0,calc(100% - 28px) 0,100% 28px,100% 100%,28px 100%,0 calc(100% - 28px)); }
   .panel h1 { margin:0 0 4px; font:900 30px/1.1 "Orbitron",sans-serif; color:var(--w); letter-spacing:.08em; font-style:italic; }
   .panel .kata { display:block; margin:0 0 18px; font-size:12px; }
@@ -261,7 +267,7 @@ const sun=new THREE.DirectionalLight(0xfff1dc,1.5); sun.position.set(-400,700,30
 const composer=new EffectComposer(renderer);
 composer.setPixelRatio(Math.min(devicePixelRatio,2));
 composer.addPass(new RenderPass(scene,camera));
-const bloom=new UnrealBloomPass(new THREE.Vector2(innerWidth/2,innerHeight/2),0.6,0.3,1.4);   // only the neon (emission 1.6 to 3) crosses 1.4
+const bloom=new UnrealBloomPass(new THREE.Vector2(innerWidth/2,innerHeight/2),0.6,0.4,1.05);   // USED UNIVERSE: only the corporations' signs (emission 2.2+) and the pads cross; tubes (0.95) and the lit city stay under
 composer.addPass(bloom); composer.addPass(new OutputPass());
 function resizeComposer(){ composer.setSize(innerWidth,innerHeight); bloom.resolution.set(innerWidth/2,innerHeight/2); }
 addEventListener('resize',resizeComposer); resizeComposer();
@@ -277,9 +283,10 @@ const NEON=(hex,k=2.6)=>new THREE.Color(hex).multiplyScalar(k);
 const SUN_AZ=THREE.MathUtils.degToRad(292), SUN_EL=THREE.MathUtils.degToRad(5.5);   // WNW, 5.5 deg: sunset over Mälaren
 // azimuth from north, clockwise; east is -X in this frame, so the west-north-west sun sits at +X, slightly +Z
 const SUN_DIR=new THREE.Vector3(-Math.sin(SUN_AZ)*Math.cos(SUN_EL), Math.sin(SUN_EL), Math.cos(SUN_AZ)*Math.cos(SUN_EL)).normalize();
-const SKY={ zenith:new THREE.Color(0x140f3a), upper:new THREE.Color(0x3b2466), mid:new THREE.Color(0xb24a78),
-  horizSun:new THREE.Color(0xffa24f), horizAway:new THREE.Color(0x9a86b6), sun:new THREE.Color(0xfff0d0),
-  fogSun:new THREE.Color(0xe6a472), fogAway:new THREE.Color(0x8e86ac) };
+// USED UNIVERSE: a dusty Stockholm evening. Slate above, a brown-amber band where the dust holds the last light.
+const SKY={ zenith:new THREE.Color(0x1c2331), upper:new THREE.Color(0x3b4250), mid:new THREE.Color(0x86705f),
+  horizSun:new THREE.Color(0xe39a5a), horizAway:new THREE.Color(0x8d8883), sun:new THREE.Color(0xfff0d8),
+  fogSun:new THREE.Color(0xc59c78), fogAway:new THREE.Color(0x8b8783) };
 const GLSL_SKY_CONST=`
   const vec3 SUN_DIR=vec3(${SUN_DIR.x.toFixed(5)},${SUN_DIR.y.toFixed(5)},${SUN_DIR.z.toFixed(5)});
   const vec3 FOG_SUN=vec3(${SKY.fogSun.r.toFixed(4)},${SKY.fogSun.g.toFixed(4)},${SKY.fogSun.b.toFixed(4)});
@@ -336,7 +343,7 @@ const skyMat=new THREE.ShaderMaterial({ depthWrite:false, depthTest:false, side:
       vec4 c2=layer(d,6200.0,0.00018,vec2(0.004,0.0015),0.56,0.30,vec2(0.35,1.8));
       float horizonFade=smoothstep(0.012,0.14,h);
       vec3 lit=mix(vec3(1.0,0.70,0.44),vec3(1.0,0.86,0.66),smoothstep(0.1,0.5,h));
-      vec3 shade=mix(vec3(0.30,0.20,0.36),vec3(0.18,0.14,0.30),smoothstep(0.0,0.6,h));
+      vec3 shade=mix(vec3(0.33,0.30,0.29),vec3(0.22,0.22,0.25),smoothstep(0.0,0.6,h));   // grey-brown undersides, no lilac
       float silver=pow(max(mu,0.0),8.0);
       vec3 cc2=mix(shade*1.3,lit*1.15,c2.y)+silver*vec3(1.2,0.7,0.35)*(1.0-c2.x);
       col=mix(col,cc2,c2.x*0.55*horizonFade);
@@ -349,8 +356,8 @@ const skyMat=new THREE.ShaderMaterial({ depthWrite:false, depthTest:false, side:
 const skyDome=new THREE.Mesh(new THREE.SphereGeometry(40000,48,24),skyMat); skyDome.renderOrder=-1000; skyDome.frustumCulled=false;
 scene.add(skyDome);
 // the light on everything we built comes from that sun: warm key, lilac sky fill, a sky-lit environment for the gloss
-sun.color.set(0xffc58a); sun.intensity=2.4; sun.position.copy(SUN_DIR).multiplyScalar(1000);
-scene.traverse(o=>{ if(o.isHemisphereLight){ o.color.set(0xb7a4d8); o.groundColor.set(0x3a2630); o.intensity=0.7; } });
+sun.color.set(0xffd2a0); sun.intensity=1.9; sun.position.copy(SUN_DIR).multiplyScalar(1000);
+scene.traverse(o=>{ if(o.isHemisphereLight){ o.color.set(0xa19c92); o.groundColor.set(0x2e2a26); o.intensity=0.62; } });
 { const envScene=new THREE.Scene(); const d=new THREE.Mesh(new THREE.SphereGeometry(100,32,16),skyMat); envScene.add(d);
   const pm=new THREE.PMREMGenerator(renderer); scene.environment=pm.fromScene(envScene,0.02).texture; }
 
@@ -374,7 +381,7 @@ const raysMat=new THREE.ShaderMaterial({ uniforms:{ tColor:{value:null}, tDepth:
         vis=vis/25.0*uOn; vec2 axis=vec2(0.5)-uSun;
         for(int g=0;g<5;g++){ float k=float(g)*0.42+0.3; vec2 gp=uSun+axis*k*2.0; float gr=0.02+0.035*float(g%3);
           float dg=length((vUv-gp)*vec2(uAspect,1.0)); float ring=smoothstep(gr,gr*0.7,dg)*0.6+smoothstep(gr*1.1,gr,dg)*smoothstep(gr*0.9,gr,dg)*0.8;
-          vec3 tint=g==1?vec3(1.0,0.35,0.65):g==3?vec3(0.2,0.9,1.0):vec3(1.0,0.72,0.35); col+=tint*ring*0.10*vis; }
+          vec3 tint=g==1?vec3(0.9,0.55,0.4):g==3?vec3(0.55,0.75,0.8):vec3(1.0,0.72,0.35); col+=tint*ring*0.08*vis; }
         float streak=exp(-abs(vUv.y-uSun.y)*90.0)*exp(-abs(vUv.x-uSun.x)*3.0);   // an anamorphic streak through the sun
         col+=vec3(1.0,0.65,0.4)*streak*0.35*vis; }
       gl_FragColor=vec4(col,1.0); }`, depthTest:false, depthWrite:false });
@@ -439,6 +446,24 @@ class MotionPass{ constructor(){ this.enabled=true; this.needsSwap=true; this.cl
     U.tColor.value=readBuffer.texture; U.tDepth.value=sceneRT.depthTexture;
     r.setRenderTarget(this.renderToScreen?null:writeBuffer); r.render(mbScene,raysCam); } }
 composer.insertPass(new MotionPass(),1);   // after the sky and rays, before the bloom
+const gradeMat=new THREE.ShaderMaterial({ uniforms:{ tDiffuse:{value:null}, uT:{value:0} }, depthTest:false, depthWrite:false,
+  vertexShader:`varying vec2 vUv; void main(){ vUv=uv; gl_Position=vec4(position.xy,0.0,1.0); }`,
+  fragmentShader:`precision highp float; uniform sampler2D tDiffuse; uniform float uT; varying vec2 vUv;
+    float h(vec2 p){ return fract(sin(dot(p,vec2(12.9898,78.233)))*43758.5453); }
+    void main(){ vec3 c=texture2D(tDiffuse,vUv).rgb; float l=dot(c,vec3(0.2126,0.7152,0.0722));
+      float sat=max(c.r,max(c.g,c.b))-min(c.r,min(c.g,c.b));
+      c=mix(vec3(l),c,mix(0.84,1.0,smoothstep(0.35,0.7,sat)*smoothstep(0.5,1.2,l)));   // the tired city loses colour, the lit signs keep theirs
+      c*=vec3(1.05,1.0,0.9);                                      // warm, sodium-ish
+      c=mix(c,vec3(0.33,0.28,0.21),smoothstep(0.34,0.75,vUv.y)*0.07);   // dust hanging over the city
+      c=(c-0.02)*1.06+vec3(0.014,0.011,0.008);                   // lifted blacks, a touch more contrast
+      vec2 q=vUv-0.5; c*=1.0-0.42*dot(q,q)*1.6;                   // vignette
+      c+=(h(vUv*vec2(1920.,1080.)+uT)-0.5)*0.03;                  // grain
+      gl_FragColor=vec4(c,1.0); }` });
+const gradeScene=new THREE.Scene(); gradeScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2,2),gradeMat));
+class GradePass{ constructor(){ this.enabled=true; this.needsSwap=true; this.clear=false; this.renderToScreen=false; }
+  setSize(){} render(r,writeBuffer,readBuffer){ gradeMat.uniforms.tDiffuse.value=readBuffer.texture; gradeMat.uniforms.uT.value=(performance.now()/1000)%100;
+    r.setRenderTarget(this.renderToScreen?null:writeBuffer); r.render(gradeScene,raysCam); } }
+composer.insertPass(new GradePass(),composer.passes.length-1);   // after the bloom, before the output
 resizeComposer();
 const skyTick=(dt)=>{ skyMat.uniforms.uTime.value+=dt; skyDome.position.copy(camera.position); };
 
@@ -485,11 +510,11 @@ function drawSpeedFX(intensity){
     const n=Math.floor(12+intensity*70), inner=maxR*0.38; fxc.lineCap='round';
     for(let i=0;i<n;i++){ const a=fxRnd()*Math.PI*2, len=maxR*(0.12+fxRnd()*0.45)*intensity, r0=inner+fxRnd()*maxR*0.4;
       const x0=cx+Math.cos(a)*r0, y0=cy+Math.sin(a)*r0, x1=cx+Math.cos(a)*(r0+len), y1=cy+Math.sin(a)*(r0+len);
-      const hue=fxRnd(); fxc.strokeStyle=hue<0.15?`rgba(255,46,154,${0.25*intensity})`:hue<0.3?`rgba(255,230,0,${0.22*intensity})`:`rgba(200,240,255,${(0.06+0.3*fxRnd())*intensity})`;
+      const hue=fxRnd(); fxc.strokeStyle=hue<0.15?`rgba(216,96,76,${0.2*intensity})`:hue<0.3?`rgba(231,180,87,${0.2*intensity})`:`rgba(200,240,255,${(0.06+0.3*fxRnd())*intensity})`;
       fxc.lineWidth=1+intensity*2.2*fxRnd(); fxc.beginPath(); fxc.moveTo(x0,y0); fxc.lineTo(x1,y1); fxc.stroke(); } }
   if(boostFlash>0){ const g=fxc.createRadialGradient(cx,cy,maxR*0.1,cx,cy,maxR); g.addColorStop(0,`rgba(255,255,255,${boostFlash*0.25})`); g.addColorStop(1,`rgba(0,225,255,${boostFlash*0.45})`); fxc.fillStyle=g; fxc.fillRect(0,0,w,h); }
   if(hitFlash>0){ fxc.fillStyle=`rgba(255,40,40,${hitFlash*0.25})`; fxc.fillRect(0,0,w,h); }
-  if(shieldT>0){ fxc.strokeStyle=`rgba(0,225,255,${0.35+0.2*Math.sin(performance.now()*0.02)})`; fxc.lineWidth=14; fxc.strokeRect(7,7,w-14,h-14); }
+  if(shieldT>0){ fxc.strokeStyle=`rgba(169,211,214,${0.35+0.2*Math.sin(performance.now()*0.02)})`; fxc.lineWidth=14; fxc.strokeRect(7,7,w-14,h-14); }
 }
 /* ============================== GOOGLE TILES ============================== */
 // origin: Medborgarplatsen — local frame: +X väst, +Z norr, +Y upp
@@ -903,7 +928,13 @@ function tuneMaterial(m){
     for(const k of ['map','emissiveMap']) if(m[k]){ m[k].center.set(0.5,0.5); } }
   if(/^light_\d/i.test(m.name)) lightMats[+m.name.match(/\d/)[0]]=m;
   if(/^barrier_glass/i.test(m.name)){ m.transparent=true; m.depthWrite=false; }
+  if(/^pool/i.test(m.name)){ m.transparent=true; m.blending=THREE.AdditiveBlending; m.depthWrite=false; m.polygonOffset=true; m.polygonOffsetFactor=-2; m.polygonOffsetUnits=-2; }
+  if(/flick|_flk/i.test(m.name)&&!flickMats.includes(m)){ flickMats.push({ m, k:m.emissiveIntensity, p:/tube/.test(m.name)?0.9:0.35, off:0 }); }
 }
+// USED UNIVERSE: a few fluorescent tubes are failing, and a few corporate signs glitch. Cheap: one intensity per material.
+const flickMats=[];
+function flickTick(dt){ for(const f of flickMats){ if(f.off>0){ f.off-=dt; f.m.emissiveIntensity=f.k*(Math.random()<0.5?0.08:0.35); if(f.off<=0) f.m.emissiveIntensity=f.k; }
+    else if(Math.random()<f.p*dt){ f.off=0.05+Math.random()*(f.p>0.5?0.5:0.18); } } }
 function loadModels(){
   if(!TRACK_JSON) return Promise.resolve();
   const trackP=gltf.loadAsync('wo2097/assets/track.glb').then(g=>{ g.scene.traverse(o=>{ if(o.isMesh){ o.material=Array.isArray(o.material)?o.material:o.material; [].concat(o.material).forEach(tuneMaterial); o.frustumCulled=true; } });
@@ -1295,20 +1326,20 @@ const msg=document.getElementById('msg'), sub=document.getElementById('sub');
    locks in: a white flash, the team sting, the camera pushes in, then the countdown. ?check skips it. */
 let selectDone=CHECK||DUMP||REBUILD, selIdx=TEAM_CHOICE, selFrom=-1, selT=1, selDir=1, selLock=0, selSpin=0, selDrag=null;
 const hScene=new THREE.Scene(), hCam=new THREE.PerspectiveCamera(34,1,0.1,400); const hPods=[];
-{ hScene.background=new THREE.Color(0x05070b); hScene.fog=new THREE.Fog(0x05070b,40,90);
-  const key=new THREE.DirectionalLight(0xfff1e0,2.6); key.position.set(-6,10,8); hScene.add(key);
-  const rimM=new THREE.DirectionalLight(0xff2e9a,2.2); rimM.position.set(9,4,-8); hScene.add(rimM);
-  const rimC=new THREE.DirectionalLight(0x00e1ff,1.8); rimC.position.set(-9,3,-7); hScene.add(rimC);
-  hScene.add(new THREE.HemisphereLight(0x8aa0c8,0x0a0c12,0.6));
-  const grid=new THREE.GridHelper(120,60,0x2a3a4c,0x121a24); grid.position.y=-1.2; hScene.add(grid);
-  const floor=new THREE.Mesh(new THREE.CircleGeometry(60,64),new THREE.MeshStandardMaterial({ color:0x0b0f16, metalness:0.6, roughness:0.35 }));
+{ hScene.background=new THREE.Color(0x0d0c0b); hScene.fog=new THREE.Fog(0x0d0c0b,36,86);   // USED UNIVERSE: a depot under Slussen, not a showroom
+  const key=new THREE.DirectionalLight(0xffc98f,2.4); key.position.set(-6,10,8); hScene.add(key);   // a sodium work lamp
+  const rimM=new THREE.DirectionalLight(0xff9a4a,1.6); rimM.position.set(9,4,-8); hScene.add(rimM);
+  const rimC=new THREE.DirectionalLight(0xcfe8e6,1.5); rimC.position.set(-9,3,-7); hScene.add(rimC);   // a fluorescent tube behind
+  hScene.add(new THREE.HemisphereLight(0x8f8a80,0x14110e,0.55));
+  const grid=new THREE.GridHelper(120,40,0x3a352e,0x1c1916); grid.position.y=-1.2; hScene.add(grid);   // expansion joints in the slab
+  const floor=new THREE.Mesh(new THREE.CircleGeometry(60,64),new THREE.MeshStandardMaterial({ color:0x2b2824, metalness:0.05, roughness:0.95 }));   // oil-stained concrete
   floor.rotation.x=-Math.PI/2; floor.position.y=-1.21; hScene.add(floor); }
 function hangarPod(k){ if(hPods[k]) return hPods[k]; if(!SHIP_PROTOS) return null;
   const g=new THREE.Group(), model=SHIP_PROTOS[k].clone(true); g.add(model);
   const box=new THREE.Box3().setFromObject(model), c=box.getCenter(new THREE.Vector3()); model.position.sub(c); model.position.y+=0.2;
   const ring=new THREE.Mesh(new THREE.RingGeometry(5.4,5.7,96),new THREE.MeshBasicMaterial({ color:NEON(TEAMS[k].eng,1.6), toneMapped:false, side:THREE.DoubleSide }));
   ring.rotation.x=-Math.PI/2; ring.position.y=-1.18; g.add(ring);
-  const disc=new THREE.Mesh(new THREE.CylinderGeometry(5.3,5.5,0.18,72),new THREE.MeshStandardMaterial({ color:0x121821, metalness:0.8, roughness:0.25 }));
+  const disc=new THREE.Mesh(new THREE.CylinderGeometry(5.3,5.5,0.18,72),new THREE.MeshStandardMaterial({ color:0x3a3530, metalness:0.6, roughness:0.7 }));
   disc.position.y=-1.3; g.add(disc); g.visible=false; hScene.add(g); hPods[k]=g; return g; }
 function bars(id,v){ const el=document.getElementById(id); if(!el.children.length) for(let i=0;i<12;i++) el.appendChild(document.createElement('i'));
   const n=Math.round(v*12); [...el.children].forEach((b,i)=>b.classList.toggle('on',i<n)); }
@@ -1593,7 +1624,7 @@ function drawMinimap(){
   const pth=()=>{ g.beginPath(); for(let i=0;i<=160;i++){ const p=curve.getPointAt(i/160); const x=p.x*mmScale+mmOX, y=p.z*mmScale+mmOY; i?g.lineTo(x,y):g.moveTo(x,y); } };
   g.lineJoin='round'; pth(); g.strokeStyle='rgba(5,7,11,0.85)'; g.lineWidth=9; g.stroke();
   pth(); g.strokeStyle='rgba(242,246,255,0.9)'; g.lineWidth=3; g.stroke();
-  { const p=curve.getPointAt(0); g.fillStyle='#ffe600'; g.fillRect(p.x*mmScale+mmOX-5,p.z*mmScale+mmOY-5,10,10); }
+  { const p=curve.getPointAt(0); g.fillStyle='#e7b457'; g.fillRect(p.x*mmScale+mmOX-5,p.z*mmScale+mmOY-5,10,10); }
   for(let i=ships.length-1;i>=0;i--){ const s=ships[i], x=s.mesh.position.x*mmScale+mmOX, y=s.mesh.position.z*mmScale+mmOY;
     const a=Math.atan2(s.frame.fwd.x,s.frame.fwd.z), r=s.isPlayer?8:5.5;
     g.save(); g.translate(x,y); g.rotate(-a+Math.PI); g.beginPath(); g.moveTo(0,-r); g.lineTo(r*0.7,r*0.8); g.lineTo(-r*0.7,r*0.8); g.closePath();
@@ -1610,9 +1641,9 @@ function updateHUD(dt){
   const pos=order.indexOf(p)+1;
   elPos.textContent=pos; elOrd.textContent=ORD[pos-1];
   const sfh=(p.speed+p.boost)/MAXV;
-  fillSeg(SPD_SEG,Math.min(1,sfh/1.25),u=>u<0.55?'#00e1ff':u<0.85?'#ffe600':'#ff2e9a');
-  fillSeg(BST_SEG,boostMeter/100,()=>'#ffe600');
-  fillSeg(EN_SEG,energy/100,u=>energy<25?(Math.sin(performance.now()*0.02)>0?'#ff3b3b':'#5a0d0d'):energy<50?'#ffb300':'#35ff8b');
+  fillSeg(SPD_SEG,Math.min(1,sfh/1.25),u=>u<0.55?'#a9d3d6':u<0.85?'#e7b457':'#d8604c');   // tube white, sodium, worn red
+  fillSeg(BST_SEG,boostMeter/100,()=>'#e7b457');
+  fillSeg(EN_SEG,energy/100,u=>energy<25?(Math.sin(performance.now()*0.02)>0?'#ff3b3b':'#5a0d0d'):energy<50?'#e79a3a':'#9dcf7c');
   if(critT>0&&Math.floor(critT*2)%4===0&&flashT<=0) flash('ENERGY CRITICAL');
   if(flashT>0){ flashT-=dt; if(flashT<=0&&state==='race'){ msg.textContent=''; msg.style.fontSize='74px'; } }
 }
@@ -1628,7 +1659,7 @@ let last=performance.now();
 function loop(now){
   requestAnimationFrame(loop);
   let dt=Math.min((now-last)/1000,0.05); last=now;
-  skyTick(dt);
+  skyTick(dt); flickTick(dt);
   if(tiles){ camera.updateMatrixWorld();
     tiles.setResolutionFromRenderer(camera,renderer); tiles.update(); }
   snapTick(now); updateAttrib(now);
@@ -1637,9 +1668,9 @@ function loop(now){
     composer.render(); return; }
   if(state==='count'){
     countT-=dt; const n=Math.ceil(countT); const band=document.getElementById('band');
-    lightMats.forEach((m,i)=>{ if(!m) return; const lit=i<Math.min(5,Math.floor((4-countT)/4*5)+1); m.emissive.setRGB(lit?4:0.15,0,0); });
+    lightMats.forEach((m,i)=>{ if(!m) return; const lit=i<Math.min(5,Math.floor((4-countT)/4*5)+1); m.emissive.setRGB(lit?1.6:0.12,0,0); });   // under the new bloom threshold a light of 4 floods the frame
     if(countT<=0){ state='race'; msg.className='hud'; msg.textContent='GO'; msg.style.fontSize='120px'; flashT=0.8; boostFlash=0.7;
-      sub.innerHTML=''; band.style.display='none'; lapStart=0; raceTime=0; lightMats.forEach(m=>m&&m.emissive.setRGB(0,4,0.6)); }
+      sub.innerHTML=''; band.style.display='none'; lapStart=0; raceTime=0; lightMats.forEach(m=>m&&m.emissive.setRGB(0,1.6,0.25)); }
     else { msg.className='hud count'; msg.textContent=n; msg.style.fontSize='150px'; band.style.display='block';
       sub.innerHTML='STOCKHOLM GRAND PRIX · SAGL 2097 · 1 LAP<span class="kata">ᛋᛏᚢᚴᚼᚢᛚᛘᛋ᛫ᛋᛏᚢᚱᛅ᛫ᛒᚱᛁᛋ</span>'; } }
   if(state==='race') raceTime+=dt;
@@ -1676,6 +1707,11 @@ if(location.search.includes('check')) window.__sw={
   frameAt, mkFrame, hitsAt:(x,z)=>tiles?hitsAt(x,z):[], tilesIdle:()=>tiles?tilesIdle():true, player, ships:()=>ships, keys,
   state:()=>state, len:()=>TRACK_LEN, HALF_W, MAXV, curvAhead, camera, setPaused:v=>{ paused=v; },
   placeAt(t,lat=0){ const p=player(); p.t=t; p.lat=lat; p.speed=0; p.vlat=0; advance(p,0); camSnap=true; updateCamera(1/60); camera.updateMatrixWorld(); },
+  // where a material sits in the track glb: the first triangle of its group (a board, a wall chunk), for close-up shots
+  spot(re,nth=0){ const R=new RegExp(re); let out=null, k=0; trackGroup&&trackGroup.traverse(o=>{ if(out||!o.isMesh) return; const ms=[].concat(o.material);
+      for(const g of (o.geometry.groups.length?o.geometry.groups:[{start:0,count:o.geometry.index?o.geometry.index.count:0,materialIndex:0}])){ const m=ms[g.materialIndex];
+        if(!m||!R.test(m.name)) continue; if(k++<nth) continue; const idx=o.geometry.index, pos=o.geometry.attributes.position, v=new THREE.Vector3(), c=new THREE.Vector3();
+        for(let j=0;j<6;j++){ v.fromBufferAttribute(pos,idx?idx.getX(g.start+j):g.start+j); c.add(v); } c.multiplyScalar(1/6); o.localToWorld(c); out={x:c.x,y:c.y,z:c.z,mat:m.name}; break; } }); return out; },
   segHit(a,b){ const d=new THREE.Vector3().subVectors(b,a), L=d.length(); d.normalize(); const rc=new THREE.Raycaster(a,d,0,L);
     const h=rc.intersectObject(tiles.group,true); return h.length?h[0].distance:null; } };
 </script>
