@@ -1646,6 +1646,9 @@ function setHard(v){ HARD=!!v; try{ localStorage.setItem('sw_grepp',HARD?'hart':
 // 200 m-kurva), 1 = mycket förlåtande. Den styr två saker: styrhjälpen (skeppet tar själv 0,8*HARD_EASE av kurvan, du
 // styr resten) och grepptaket k (hur snävt du kan svänga i fart). Självrätningen visade sig inte bita i den här farten.
 const HARD_EASE=0.5;
+// AI_EASE: hur mycket motståndarna sänks. 0 = som förut, 1 = tydligt lättare. 0,5 ger ~3 % lägre toppfart och ~4 % lägre
+// kurvfart för AI:n, i båda lägena.
+const AI_EASE=0.5;
 const GRIP_K=()=>HARD?40+12*HARD_EASE:70;   // hard: also caps how tight the free-steering craft can turn at speed (k/v rad/s)
 let wallT=0, wallHits=0;   // hard mode accounting (and the checker's)
 const grepT=document.getElementById('grepT'); setHard(HARD); grepT.addEventListener('pointerdown',e=>{ e.preventDefault(); e.stopPropagation(); setHard(!HARD); });
@@ -1721,7 +1724,7 @@ function stepShip(s,dt){
       // balanserat: kompetenta men inte perfekta. bromsar måttligt i kurvor, toppfart runt spelarens.
       const look=curvAhead(tn0, 22+s.speed*1.2);
       const cornerV=look.m>1e-4 ? Math.sqrt((80+s.skill*28)*(HARD?GRIP_K()*1.3/70:1)*s.ph.grip/look.m) : 1e9;   // hard: the AI brakes and airbrakes into the same tighter grip
-      let target=Math.min(s.aiMax*s.ph.vmax*(1+0.02*Math.sin(raceTime*0.5+s.aiPhase)), Math.max(32,cornerV));
+      let target=Math.min(s.aiMax*(1-0.06*AI_EASE)*s.ph.vmax*(1+0.02*Math.sin(raceTime*0.5+s.aiPhase)), Math.max(32,cornerV*(1-0.08*AI_EASE)));
       for(const o of ships){ if(o===s) continue;
         let dT=o.t-s.t; if(dT>0 && dT*TRACK_LEN<20 && Math.abs(o.lat-s.lat)<4.5){
           target+=7; // slipstream
