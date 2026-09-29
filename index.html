@@ -110,8 +110,8 @@
   #tbFire { right:calc(env(safe-area-inset-right) + 116px); bottom:calc(env(safe-area-inset-bottom) + 90px); width:66px; height:66px; border-color:var(--r); }
   #tbAbL, #tbAbR { bottom:calc(env(safe-area-inset-bottom) + 138px); width:58px; height:40px; border-radius:10px; font-size:11px; }
   #tbAbL { left:calc(env(safe-area-inset-left) + 22px); } #tbAbR { left:calc(env(safe-area-inset-left) + 126px); }
-  #tbPause, #tbTilt { top:calc(env(safe-area-inset-top) + 86px); width:48px; height:34px; border-radius:8px; font-size:11px; }
-  #tbPause { right:calc(env(safe-area-inset-right) + 12px); } #tbTilt { right:calc(env(safe-area-inset-right) + 68px); }
+  #tbPause, #tbTilt { top:calc(env(safe-area-inset-top) + 8px); width:48px; height:34px; border-radius:8px; font-size:11px; }
+  #tbPause { left:calc(50% - 52px); } #tbTilt { left:calc(50% + 4px); }   /* top centre, clear of the HUD boxes on both sides */
   body.mobile #help, body.mobile #minimap { display:none; }
   body.mobile #lapbox { left:calc(env(safe-area-inset-left) + 10px); top:calc(env(safe-area-inset-top) + 6px); min-width:0; padding:6px 12px 8px 10px; }
   body.mobile #lapbox .big { font-size:26px; } body.mobile #lapbox .row { font-size:12px; margin-top:2px; }
@@ -120,9 +120,10 @@
   body.mobile #weapon { left:calc(env(safe-area-inset-left) + 10px); top:calc(env(safe-area-inset-top) + 108px); padding:4px 10px 4px 6px; gap:8px; }
   body.mobile #wslot { width:38px; height:38px; } body.mobile #wslot canvas { width:32px; height:32px; }
   body.mobile #wname { font-size:13px; min-width:80px; } body.mobile #whint { display:none; }
-  body.mobile #speed { right:auto; left:50%; bottom:auto; top:calc(env(safe-area-inset-top) + 6px); transform:translateX(-50%) scale(.62); transform-origin:top center; padding:6px 12px 8px; }
+  body.mobile #speed { left:auto; right:calc(env(safe-area-inset-right) + 10px); bottom:auto; top:calc(env(safe-area-inset-top) + 78px); transform:scale(.62); transform-origin:top right; padding:6px 12px 8px; }   /* under the position box: top centre hid the start gantry */
   body.mobile #speed .num { font-size:46px; }
   body.mobile #msg { transform:scale(.55); }
+  body.mobile #sub { top:calc(38% + 58px); font-size:12px; letter-spacing:.3em; }   /* the start line text stays above the thumbs */
   body.mobile .lbl { font-size:9px; } body.mobile .kata { font-size:10px; }
   body.mobile #select .top { font-size:11px; top:calc(env(safe-area-inset-top) + 8px); left:calc(env(safe-area-inset-left) + 12px); }
   body.mobile #select .panel { transform:scale(.62); transform-origin:left bottom; left:calc(env(safe-area-inset-left) + 12px); bottom:calc(env(safe-area-inset-bottom) + 12px); width:460px; }
@@ -132,6 +133,34 @@
   body.mobile #themesel .tp { width:40vw; } body.mobile #themesel { gap:2vh; } body.mobile #themesel .tp p { display:none; }
   body.mobile:not(.racing) #touch { display:none; }
   #fx { position:fixed; inset:0; z-index:6; pointer-events:none; }
+  /* RESPONSIVE HUD: --hs is set from the window size (hudLayout), so the HUD never covers the race on a small screen */
+  #lapbox, #posbox, #weapon, #speed, #help, #minimap, #district .plate2 { zoom:var(--hs,1); }   /* the full-width bands (#msg, #band, #sub) keep their own sizing */
+  body.shorthelp #help { display:none; }
+  body.mobile #touch { zoom:var(--hs,1); }
+  body.mobile #rotate { display:none !important; }   /* portrait is playable now: no forced rotate veil */
+  /* PORTRAIT PHONE: a slim top bar (lap and time left, position right), weapon and speed under it, touch controls at the bottom */
+  body.mobile.portrait #lapbox { left:calc(env(safe-area-inset-left) + 8px); top:calc(env(safe-area-inset-top) + 6px); padding:4px 10px 5px 8px; }
+  body.mobile.portrait #lapbox .kata, body.mobile.portrait #posbox .kata, body.mobile.portrait #lapbox br { display:none; }
+  body.mobile.portrait #lapbox .big { font-size:18px; } body.mobile.portrait #lapbox .of { font-size:11px; }
+  body.mobile.portrait #lapbox .row { font-size:11px; margin-top:1px; } body.mobile.portrait #lapbox .row:last-child { display:none; }
+  body.mobile.portrait #posbox { right:calc(env(safe-area-inset-right) + 8px); top:calc(env(safe-area-inset-top) + 6px); padding:4px 10px 5px 14px; }
+  body.mobile.portrait #posbox .big { font-size:28px; } body.mobile.portrait #posbox .ord { font-size:12px; } body.mobile.portrait #posbox .of { font-size:11px; }
+  body.mobile.portrait #weapon { left:calc(env(safe-area-inset-left) + 8px); top:calc(env(safe-area-inset-top) + 58px); padding:3px 8px 3px 5px; gap:6px; }
+  body.mobile.portrait #wslot { width:30px; height:30px; } body.mobile.portrait #wslot canvas { width:26px; height:26px; }
+  body.mobile.portrait #wname { font-size:11px; min-width:60px; }
+  body.mobile.portrait #speed { left:auto; right:calc(env(safe-area-inset-right) + 8px); top:calc(env(safe-area-inset-top) + 72px); bottom:auto;
+    transform:scale(.5); transform-origin:top right; }
+  body.mobile.portrait #msg { transform:scale(.42); } body.mobile.portrait #sub { transform:scale(.7); top:calc(38% + 70px); }
+  body.mobile.portrait #band { height:70px; top:calc(38% + 8px); }
+  body.mobile.portrait #district { top:22vh; } body.mobile.portrait #district .nm { font-size:24px; }
+  body.mobile.portrait #touch { zoom:calc(var(--hs,1) * .9); }
+  /* portrait menus: the two themes stacked, the craft on top with its panel under it */
+  body.mobile.portrait #themesel .row { flex-direction:column; gap:2.4vh; }
+  body.mobile.portrait #themesel .tp { width:82vw; } body.mobile.portrait #themesel .tp img { aspect-ratio:16/9; }
+  body.mobile.portrait #themesel .tp h2 { margin:8px 0 0; font-size:22px; }
+  body.mobile.portrait #select .panel { left:calc(env(safe-area-inset-left) + 12px); right:calc(env(safe-area-inset-right) + 12px); width:auto;
+    bottom:calc(env(safe-area-inset-bottom) + 76px); transform:scale(.78); transform-origin:left bottom; }
+  body.mobile.portrait #select .nav { right:50%; transform:translateX(50%); bottom:calc(env(safe-area-inset-bottom) + 14px); }
   .hud { position:fixed; z-index:10; letter-spacing:.14em; text-transform:uppercase; }
   .plate { background:
       repeating-linear-gradient(97deg,rgba(255,255,255,.025) 0 1px,transparent 1px 7px),
@@ -346,8 +375,22 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
    ?theme=neon|used skips the screen (and remembers it); ?check uses the remembered theme (default used). */
 // MOBILE: a touch-first phone (or ?mobile for testing). Only then do the touch controls, the compact HUD and the lighter
 // render profile switch on; desktop is untouched.
-const MOBILE=/[?&]mobile\b/.test(location.search)||(matchMedia('(pointer:coarse)').matches&&Math.min(screen.width,screen.height)<=1000);
+// Detection uses what real phones report (touch points, coarse pointer, no hover, a small screen), never the user agent.
+// ?mobile=1 forces it on, ?mobile=0 off. Tablets (iPad reports as a Mac but with touch points) get the touch UI too.
+const _mq=new URLSearchParams(location.search).get('mobile');
+const TOUCHDEV=(navigator.maxTouchPoints||0)>0||('ontouchstart' in window)||matchMedia('(pointer:coarse)').matches;
+const MOBILE=_mq==='0'?false:(_mq!==null?true:(TOUCHDEV&&(matchMedia('(pointer:coarse)').matches||matchMedia('(hover:none)').matches)
+  &&Math.min(screen.width,screen.height)<=1100));
 if(MOBILE) document.body.classList.add('mobile');
+if(MOBILE&&Math.min(screen.width,screen.height)>600) document.body.classList.add('tablet');
+// HUD LAYOUT: every HUD panel scales with the window through --hs (CSS zoom), on every device: a small desktop window gets a
+// small HUD too. Portrait is its own compact layout. Re-evaluated on resize and rotation.
+function hudLayout(){ const W=innerWidth, H=innerHeight, por=H>W; document.body.classList.toggle('portrait',por);
+  let hs; if(MOBILE) hs=por?Math.max(.8,Math.min(1.4,W/393)):Math.max(.8,Math.min(1.5,Math.min(W/852,H/393)));
+  else hs=Math.max(.5,Math.min(1,Math.min(W/1440,H/900)));
+  document.documentElement.style.setProperty('--hs',hs.toFixed(3));
+  document.body.classList.toggle('shorthelp',MOBILE||W<1150||H<720); }
+addEventListener('resize',hudLayout); addEventListener('orientationchange',()=>setTimeout(hudLayout,200)); hudLayout();
 const THEME=await (async()=>{ const q=new URLSearchParams(location.search).get('theme');
   let saved='used'; try{ saved=localStorage.getItem('swTheme')||'used'; }catch(e){}
   if(q==='neon'||q==='used'){ try{ localStorage.setItem('swTheme',q); }catch(e){} return q; }
@@ -1581,9 +1624,10 @@ function selectTick(dt){ if(!SHIP_PROTOS) return;
   // the craft sits right of centre, clear of the panel: the camera looks straight ahead from a point left of it
   // a little from above (Kim: +25° was too much, now about +13.5° over the old near-level view), and closer: the craft
   // fills about 18 % more of the frame than it did, still right of the stats panel
-  const narrow=innerWidth/innerHeight<1.7, off=(narrow?-5.2:-4.6)*(1-push), d0=narrow?27:24;
-  const el=Math.atan2(4.0,d0)+13.5*Math.PI/180, R=Math.hypot(4.0,d0)*(narrow?1.14:1.08)-push*9;
-  hCam.position.set(off,-0.4+R*Math.sin(el),R*Math.cos(el)); hCam.lookAt(off,-0.4,0);
+  const por=innerHeight>innerWidth, narrow=innerWidth/innerHeight<1.7, off=por?0:(narrow?-5.2:-4.6)*(1-push), d0=por?30:(narrow?27:24);
+  if(hCam.fov!==(por?58:34)){ hCam.fov=por?58:34; hCam.updateProjectionMatrix(); }   // portrait: a wider lens, the craft centred above the panel
+  const el=Math.atan2(4.0,d0)+13.5*Math.PI/180, R=Math.hypot(4.0,d0)*(por?1.0:(narrow?1.14:1.08))-push*9, ly=por?-4.2:-0.4;
+  hCam.position.set(off,-0.4+R*Math.sin(el),R*Math.cos(el)); hCam.lookAt(off,ly,0);
   renderer.setRenderTarget(null); renderer.render(hScene,hCam); }
 document.getElementById('selPrev').onclick=()=>{ ensureAudio(); selGo(-1); };
 document.getElementById('selNext').onclick=()=>{ ensureAudio(); selGo(1); };
@@ -1815,9 +1859,13 @@ function updateCamera(dt){
   camera.lookAt(camLook);
   fovKick=Math.max(0,fovKick-dt*1.6);
   // punchigare FOV: bredare synfält vid fart + kraftigt ryck vid boost
-  camera.fov=THREE.MathUtils.lerp(camera.fov,67+sf*20+fovKick*12,7*dt);
+  camera.fov=THREE.MathUtils.lerp(camera.fov,fovFor(67+sf*20+fovKick*12),7*dt);
   camera.updateProjectionMatrix();
 }
+
+// a tall screen keeps roughly the landscape view across: the vertical FOV opens up (capped, or it turns into a fisheye)
+function fovFor(v){ const a=camera.aspect; if(a>=1) return v;
+  return Math.min(108,2*Math.atan(Math.tan(v*Math.PI/360)*Math.min(2.2,1.1/a))*180/Math.PI); }
 
 /* ============================== HUD / MINIMAP ============================== */
 const elSpd=document.getElementById('spd'), elLap=document.getElementById('lap'),
