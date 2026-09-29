@@ -1,0 +1,13 @@
+{
+  "name": "STOCKHOLM WIPEOUT 2097",
+  "short_name": "SW 2097",
+  "start_url": "./",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#05070b",
+  "theme_color": "#05070b",
+  "icons": [
+    { "src": "wo2097/assets/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "wo2097/assets/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

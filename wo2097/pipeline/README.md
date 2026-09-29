@@ -208,3 +208,16 @@ that evokes the party with a 2097 twist, never the real logo, no text, no real p
 S a rose in a camera iris with a barbed-wire stem · M a padlock whose shackle is an M · SD a flower sealed in a snow
 globe · C a four-leaf clover with a barcode and a smokestack stem · V a fist gripping a remote control ·
 KD a faceless family inside a CCTV housing · L a torch with a price tag (¤) · MP a dandelion whose seeds are drones.
+
+## Mobile landscape (2026-09-29)
+A touch-first phone (`pointer:coarse` and a short side ≤ 1000 px, or `?mobile`) gets `body.mobile`: everything else is
+desktop as before. Portrait shows a "VÄND TELEFONEN" veil. Controls (Pointer Events, real multi-touch): the left thumb
+steers on an analog pad (`TOUCH.steer`), with AB L / AB R over it; the right thumb has GAS, BRAKE, TURBO and FIRE; PAUSE
+and TILT sit under the position box. Buttons press the same keys as the keyboard. TILT steers by tipping the phone
+(DeviceMotion; iOS asks permission and only over HTTPS). Haptics via `navigator.vibrate` where it exists (not iOS).
+Menus: swipe between themes and craft, tap to confirm; the first tap unlocks audio. The HUD shrinks into the safe area.
+Render profile on phones: pixel ratio ≤ 1.5, MSAA 2, tiles errorTarget 20 and a tile cache of about 180–250 MB
+(`lruCache` bytes, iOS kills tabs at ~1–1.5 GB), no speed blur, no god rays, bloom at quarter resolution.
+`manifest.webmanifest` + apple meta: "Add to Home Screen" runs full screen in landscape.
+Checked in Playwright emulation (iPhone 15 Pro and Pixel 8, landscape): a full lap driven with the touch pad and GAS only
+(147 s, no errors), swipes, taps, pause, the portrait veil; desktop check_lap still passes in both themes.

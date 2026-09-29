@@ -3,7 +3,10 @@
 <head>
 <meta charset="utf-8">
 <title>STOCKHOLM GRAND TOUR 2097 — Photoreal</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="SW 2097">
+<link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="wo2097/assets/icon-512.png">
 <link rel="icon" href="data:,">
 <!-- delningskort (Signal / sociala medier) -->
 <meta property="og:type" content="website">
@@ -59,7 +62,51 @@
   #themesel .run { font-family:'RunicT',sans-serif; letter-spacing:.14em; color:#8a8a90; margin-left:10px; }
   html, body { margin:0; padding:0; height:100%; overflow:hidden; background:#05070b;
     font-family:"Rajdhani","Arial Narrow",Arial,sans-serif; color:var(--w); user-select:none; }
-  #c { display:block; width:100%; height:100%; }
+  #c { display:block; width:100%; height:100%; touch-action:none; }
+  /* ===== MOBILE (landscape phones): portrait veil, touch controls, a compact HUD inside the safe area ===== */
+  #rotate { display:none; position:fixed; inset:0; z-index:200; background:#05070b; color:var(--w); align-items:center; justify-content:center;
+    text-align:center; font:900 22px/1.3 "Orbitron",sans-serif; letter-spacing:.12em; }
+  #rotate .ph { width:64px; height:110px; margin:0 auto 22px; border:4px solid var(--y); border-radius:12px; animation:rot 2.2s ease-in-out infinite; }
+  #rotate small { display:block; margin-top:10px; font:700 12px "Rajdhani",sans-serif; letter-spacing:.3em; color:#8aa0b8; }
+  @keyframes rot { 0%,30% { transform:rotate(0) } 60%,100% { transform:rotate(-90deg) } }
+  @media (orientation:portrait) { body.mobile #rotate { display:flex; } }
+  #touch { display:none; }
+  body.mobile #touch { display:block; position:fixed; inset:0; z-index:30; pointer-events:none; }
+  body.mobile #touch > * { pointer-events:auto; touch-action:none; -webkit-user-select:none; -webkit-touch-callout:none; }
+  #tpad { position:absolute; left:calc(env(safe-area-inset-left) + 18px); bottom:calc(env(safe-area-inset-bottom) + 16px); width:170px; height:112px;
+    border:2px solid rgba(255,255,255,.28); border-radius:56px; background:rgba(0,0,0,.22); }
+  #tknob { position:absolute; left:50%; top:50%; width:76px; height:76px; margin:-38px 0 0 -38px; border-radius:50%;
+    background:rgba(255,255,255,.18); border:2px solid var(--c); transition:transform .06s; }
+  .tb { position:absolute; border:2px solid rgba(255,255,255,.3); background:rgba(0,0,0,.28); color:var(--w); border-radius:50%;
+    font:900 12px "Orbitron",sans-serif; letter-spacing:.08em; display:grid; place-items:center; padding:0; }
+  .tb.on { background:rgba(255,255,255,.28); border-color:var(--y); }
+  #tbThrust { right:calc(env(safe-area-inset-right) + 18px); bottom:calc(env(safe-area-inset-bottom) + 16px); width:100px; height:100px; border-color:var(--c); font-size:14px; }
+  #tbBrake { right:calc(env(safe-area-inset-right) + 128px); bottom:calc(env(safe-area-inset-bottom) + 12px); width:66px; height:66px; }
+  #tbTurbo { right:calc(env(safe-area-inset-right) + 36px); bottom:calc(env(safe-area-inset-bottom) + 126px); width:66px; height:66px; border-color:var(--y); }
+  #tbFire { right:calc(env(safe-area-inset-right) + 116px); bottom:calc(env(safe-area-inset-bottom) + 90px); width:66px; height:66px; border-color:var(--r); }
+  #tbAbL, #tbAbR { bottom:calc(env(safe-area-inset-bottom) + 138px); width:58px; height:40px; border-radius:10px; font-size:11px; }
+  #tbAbL { left:calc(env(safe-area-inset-left) + 22px); } #tbAbR { left:calc(env(safe-area-inset-left) + 126px); }
+  #tbPause, #tbTilt { top:calc(env(safe-area-inset-top) + 86px); width:48px; height:34px; border-radius:8px; font-size:11px; }
+  #tbPause { right:calc(env(safe-area-inset-right) + 12px); } #tbTilt { right:calc(env(safe-area-inset-right) + 68px); }
+  body.mobile #help, body.mobile #minimap { display:none; }
+  body.mobile #lapbox { left:calc(env(safe-area-inset-left) + 10px); top:calc(env(safe-area-inset-top) + 6px); min-width:0; padding:6px 12px 8px 10px; }
+  body.mobile #lapbox .big { font-size:26px; } body.mobile #lapbox .row { font-size:12px; margin-top:2px; }
+  body.mobile #posbox { right:calc(env(safe-area-inset-right) + 10px); top:calc(env(safe-area-inset-top) + 6px); padding:6px 12px 8px 16px; }
+  body.mobile #posbox .big { font-size:40px; } body.mobile #posbox .ord { font-size:16px; }
+  body.mobile #weapon { left:calc(env(safe-area-inset-left) + 10px); top:calc(env(safe-area-inset-top) + 108px); padding:4px 10px 4px 6px; gap:8px; }
+  body.mobile #wslot { width:38px; height:38px; } body.mobile #wslot canvas { width:32px; height:32px; }
+  body.mobile #wname { font-size:13px; min-width:80px; } body.mobile #whint { display:none; }
+  body.mobile #speed { right:auto; left:50%; bottom:auto; top:calc(env(safe-area-inset-top) + 6px); transform:translateX(-50%) scale(.62); transform-origin:top center; padding:6px 12px 8px; }
+  body.mobile #speed .num { font-size:46px; }
+  body.mobile #msg { transform:scale(.55); }
+  body.mobile .lbl { font-size:9px; } body.mobile .kata { font-size:10px; }
+  body.mobile #select .top { font-size:11px; top:calc(env(safe-area-inset-top) + 8px); left:calc(env(safe-area-inset-left) + 12px); }
+  body.mobile #select .panel { transform:scale(.62); transform-origin:left bottom; left:calc(env(safe-area-inset-left) + 12px); bottom:calc(env(safe-area-inset-bottom) + 12px); width:460px; }
+  body.mobile #select .nav { right:calc(env(safe-area-inset-right) + 12px); bottom:calc(env(safe-area-inset-bottom) + 12px); transform:scale(.85); transform-origin:right bottom; }
+  body.mobile #select .hint, body.mobile #selDots { display:none; }
+  #themesel, #select { touch-action:none; }   /* swipes are ours, never a page scroll (a scroll cancels the pointer) */
+  body.mobile #themesel .tp { width:40vw; } body.mobile #themesel { gap:2vh; } body.mobile #themesel .tp p { display:none; }
+  body.mobile:not(.racing) #touch { display:none; }
   #fx { position:fixed; inset:0; z-index:6; pointer-events:none; }
   .hud { position:fixed; z-index:10; letter-spacing:.14em; text-transform:uppercase; }
   .plate { background:
@@ -192,6 +239,12 @@
 </div>
 <canvas id="minimap" width="240" height="240"></canvas>
 <div id="attrib"></div>
+<div id="rotate"><div><div class="ph"></div>VÄND TELEFONEN<small>STOCKHOLM WIPEOUT KÖRS LIGGANDE</small></div></div>
+<div id="touch"><div id="tpad"><div id="tknob"></div></div>
+  <button class="tb" id="tbAbL">AB L</button><button class="tb" id="tbAbR">AB R</button>
+  <button class="tb" id="tbThrust">GAS</button><button class="tb" id="tbBrake">BRAKE</button>
+  <button class="tb" id="tbTurbo">TURBO</button><button class="tb" id="tbFire">FIRE</button>
+  <button class="tb" id="tbPause">❚❚</button><button class="tb" id="tbTilt">TILT</button></div>
 
 <div id="keyveil"><div class="panel">
   <h1>STOCKHOLM GRAND TOUR 2097</h1><span class="kata">ᛋᛏᚢᚴᚼᚢᛚᛘᛋ᛫ᛋᛏᚢᚱᛅ᛫ᛒᚱᛁᛋ</span>
@@ -266,6 +319,10 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
    NEON (the 2097 look of b08a156) or USED (the worn Stockholm). Picked on the first screen, before anything is built,
    because the sky and fog colours compile into every shader and only the chosen theme's assets are downloaded.
    ?theme=neon|used skips the screen (and remembers it); ?check uses the remembered theme (default used). */
+// MOBILE: a touch-first phone (or ?mobile for testing). Only then do the touch controls, the compact HUD and the lighter
+// render profile switch on; desktop is untouched.
+const MOBILE=/[?&]mobile\b/.test(location.search)||(matchMedia('(pointer:coarse)').matches&&Math.min(screen.width,screen.height)<=1000);
+if(MOBILE) document.body.classList.add('mobile');
 const THEME=await (async()=>{ const q=new URLSearchParams(location.search).get('theme');
   let saved='used'; try{ saved=localStorage.getItem('swTheme')||'used'; }catch(e){}
   if(q==='neon'||q==='used'){ try{ localStorage.setItem('swTheme',q); }catch(e){} return q; }
@@ -278,7 +335,10 @@ const THEME=await (async()=>{ const q=new URLSearchParams(location.search).get('
     const kd=e=>{ if(['ArrowLeft','KeyA'].includes(e.code)){ cur=0; show(); } else if(['ArrowRight','KeyD'].includes(e.code)){ cur=1; show(); }
       else if(e.code==='Enter'||e.code==='Space'){ e.preventDefault(); done(); } e.stopImmediatePropagation(); };
     addEventListener('keydown',kd,true);
-    P.forEach((x,i)=>{ x.onmouseenter=()=>{ cur=i; show(); }; x.onclick=()=>{ cur=i; show(); done(); }; }); }); })();
+    let sw=null, swiped=false;   // phones: a swipe moves between the two, a tap on a panel confirms it
+    el.addEventListener('pointerdown',e=>{ sw={x:e.clientX,t:e.timeStamp}; swiped=false; });
+    el.addEventListener('pointerup',e=>{ if(sw&&Math.abs(e.clientX-sw.x)>60&&e.timeStamp-sw.t<700){ cur=e.clientX<sw.x?1:0; show(); swiped=true; } sw=null; });
+    P.forEach((x,i)=>{ x.onmouseenter=()=>{ cur=i; show(); }; x.onclick=()=>{ if(swiped){ swiped=false; return; } cur=i; show(); done(); }; }); }); })();
 const USED=THEME==='used'; document.body.classList.add('theme-'+THEME);
 // everything that differs between the two looks; the tiles, the track line and the physics are shared
 const TH=USED?{
@@ -318,7 +378,7 @@ if(!API_KEY&&!DEMO&&!REBUILD){ loadveil.style.display='none'; keyveil.style.disp
 /* ============================== SETUP ============================== */
 const canvas=document.getElementById('c');
 const renderer=new THREE.WebGLRenderer({ canvas, antialias:true });
-renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.setPixelRatio(Math.min(devicePixelRatio,MOBILE?1.5:2));   // phones: 1.5 is sharp enough and saves a third of the fill
 const scene=new THREE.Scene();
 scene.background=new THREE.Color(0x9ec8e8);
 scene.fog=new THREE.Fog(0xaccbe6, 2500, 11000);
@@ -337,11 +397,11 @@ scene.add(new THREE.HemisphereLight(0xcfe6ff,0x1a2230,0.75));
 const sun=new THREE.DirectionalLight(0xfff1dc,1.5); sun.position.set(-400,700,300); scene.add(sun);
 { const pm=new THREE.PMREMGenerator(renderer); scene.environment=pm.fromScene(new RoomEnvironment(),0.04).texture; }
 const composer=new EffectComposer(renderer);
-composer.setPixelRatio(Math.min(devicePixelRatio,2));
+composer.setPixelRatio(Math.min(devicePixelRatio,MOBILE?1.5:2));
 composer.addPass(new RenderPass(scene,camera));
 const bloom=new UnrealBloomPass(new THREE.Vector2(innerWidth/2,innerHeight/2),...TH.bloom);   // USED UNIVERSE: only the corporations' NEON crosses (sign frames 2.6, box edges 1.3, pads 1.6); the lettering (<=1.0), tubes and city stay under, so no text smears
 composer.addPass(bloom); composer.addPass(new OutputPass());
-function resizeComposer(){ composer.setSize(innerWidth,innerHeight); bloom.resolution.set(innerWidth/2,innerHeight/2); }
+function resizeComposer(){ composer.setSize(innerWidth,innerHeight); const bd=MOBILE?4:2; bloom.resolution.set(innerWidth/bd,innerHeight/bd); }
 addEventListener('resize',resizeComposer); resizeComposer();
 const NEON=(hex,k=2.6)=>new THREE.Color(hex).multiplyScalar(k);
 
@@ -433,7 +493,7 @@ scene.traverse(o=>{ if(o.isHemisphereLight){ o.color.set(TH.hemi[0]); o.groundCo
   const pm=new THREE.PMREMGenerator(renderer); scene.environment=pm.fromScene(envScene,0.02).texture; }
 
 /* ---- god rays and lens flare: a post pass over the rendered frame, masked by depth ---- */
-const sceneRT=new THREE.WebGLRenderTarget(1,1,{ type:THREE.HalfFloatType, samples:4 });
+const sceneRT=new THREE.WebGLRenderTarget(1,1,{ type:THREE.HalfFloatType, samples:MOBILE?2:4 });
 sceneRT.depthTexture=new THREE.DepthTexture(1,1); sceneRT.depthTexture.type=THREE.UnsignedIntType;
 const raysMat=new THREE.ShaderMaterial({ uniforms:{ tColor:{value:null}, tDepth:{value:null}, uSun:{value:new THREE.Vector2()}, uOn:{value:0},
     uAspect:{value:1}, uCol:{value:new THREE.Color(0xffb46a)} },
@@ -464,7 +524,7 @@ class SkyRenderPass{ constructor(){ this.enabled=true; this.needsSwap=true; this
     const sp=SUN_DIR.clone().multiplyScalar(30000).add(camera.position).project(camera);
     const fwd=new THREE.Vector3(); camera.getWorldDirection(fwd);
     const facing=fwd.dot(SUN_DIR), onScreen=1-THREE.MathUtils.smoothstep(Math.max(Math.abs(sp.x),Math.abs(sp.y)),1.0,1.6);
-    raysMat.uniforms.uOn.value=facing>0.05&&sp.z<1?onScreen*THREE.MathUtils.smoothstep(facing,0.05,0.5):0;
+    raysMat.uniforms.uOn.value=MOBILE?0:(facing>0.05&&sp.z<1?onScreen*THREE.MathUtils.smoothstep(facing,0.05,0.5):0);   // no god rays on phones
     raysMat.uniforms.uSun.value.set(sp.x*0.5+0.5,sp.y*0.5+0.5); raysMat.uniforms.uAspect.value=camera.aspect;
     raysMat.uniforms.tColor.value=sceneRT.texture; raysMat.uniforms.tDepth.value=sceneRT.depthTexture;
     r.setRenderTarget(writeBuffer); r.render(raysScene,raysCam); } }
@@ -517,7 +577,7 @@ class MotionPass{ constructor(){ this.enabled=true; this.needsSwap=true; this.cl
     U.uAspect.value=camera.aspect; U.uNear.value=camera.near; U.uFar.value=camera.far;
     U.tColor.value=readBuffer.texture; U.tDepth.value=sceneRT.depthTexture; U.tMark.value=sceneRT.texture;
     r.setRenderTarget(this.renderToScreen?null:writeBuffer); r.render(mbScene,raysCam); } }
-composer.insertPass(new MotionPass(),1);   // after the sky and rays, before the bloom
+{ const mp=new MotionPass(); if(MOBILE) mp.enabled=false; composer.insertPass(mp,1); }   // after the sky and rays, before the bloom; off on phones
 const gradeMat=new THREE.ShaderMaterial({ uniforms:{ tDiffuse:{value:null}, uT:{value:0} }, depthTest:false, depthWrite:false,
   vertexShader:`varying vec2 vUv; void main(){ vUv=uv; gl_Position=vec4(position.xy,0.0,1.0); }`,
   fragmentShader:`precision highp float; uniform sampler2D tDiffuse; uniform float uT; varying vec2 vUv;
@@ -605,7 +665,9 @@ if(API_KEY){
   tiles.registerPlugin(new ReorientationPlugin({ lat:ORIGIN.lat*D2R, lon:ORIGIN.lon*D2R, height:ORIGIN.h }));
   tiles.setCamera(camera);
   tiles.setResolutionFromRenderer(camera, renderer);
-  tiles.errorTarget=10; // full detalj från start → korrekta gatuhöjder (ingen grov skräpgeometri)
+  tiles.errorTarget=MOBILE?20:10; // full detalj från start → korrekta gatuhöjder (ingen grov skräpgeometri); telefoner: grövre
+  if(MOBILE&&tiles.lruCache){ const c=tiles.lruCache;   // iOS kills a tab at ~1-1.5 GB: keep the tile cache near 250 MB
+    if('maxBytesSize' in c){ c.minBytesSize=0.18e9; c.maxBytesSize=0.25e9; } c.minSize=Math.min(c.minSize||2000,2000); c.maxSize=Math.min(c.maxSize||3000,3000); }
   tiles.addEventListener('load-tile-set',()=>{
     if(!rootLoaded){ rootLoaded=true; loadStartTime=performance.now(); } });
   scene.add(tiles.group);
@@ -1212,6 +1274,36 @@ addEventListener('keydown',e=>{ keys[e.code]=true;
   if(e.code==='Space'&&state==='race'&&!paused) fireWeapon();
   ensureAudio(); });
 addEventListener('keyup',e=>{ keys[e.code]=false; });
+// TOUCH: the left thumb steers on a pad (analog), the right thumb has gas, brake, turbo and fire; airbrakes over the pad.
+// Buttons press the same keys as the keyboard, so the physics sees one input. Pointer Events give real multi-touch.
+const TOUCH={ steer:0, tilt:false, tiltSteer:0 };
+if(MOBILE){ const $=id=>document.getElementById(id), buzz=ms=>{ try{ navigator.vibrate&&navigator.vibrate(ms); }catch(e){} };
+  addEventListener('pointerdown',()=>ensureAudio());   // the first tap unlocks audio
+  const pad=$('tpad'), knob=$('tknob'); let padId=null, padX=0;
+  pad.addEventListener('pointerdown',e=>{ padId=e.pointerId; padX=pad.getBoundingClientRect().left+pad.offsetWidth/2; pad.setPointerCapture(e.pointerId); move(e); });
+  const move=e=>{ if(e.pointerId!==padId) return; const dx=Math.max(-1,Math.min(1,(e.clientX-padX)/60)); TOUCH.steer=Math.sign(dx)*Math.pow(Math.abs(dx),1.3); knob.style.transform=`translateX(${dx*46}px)`; };
+  pad.addEventListener('pointermove',move);
+  const release=e=>{ if(e.pointerId!==padId) return; padId=null; TOUCH.steer=0; knob.style.transform=''; };
+  pad.addEventListener('pointerup',release); pad.addEventListener('pointercancel',release);
+  const hold=(id,code,ms)=>{ const b=$(id); const on=e=>{ keys[code]=true; b.classList.add('on'); b.setPointerCapture(e.pointerId); if(ms) buzz(ms); e.preventDefault(); };
+    const off=()=>{ keys[code]=false; b.classList.remove('on'); };
+    b.addEventListener('pointerdown',on); for(const ev of ['pointerup','pointercancel','lostpointercapture']) b.addEventListener(ev,off); };
+  hold('tbThrust','ArrowUp'); hold('tbBrake','ArrowDown'); hold('tbTurbo','ShiftLeft',12); hold('tbAbL','KeyQ'); hold('tbAbR','KeyE');
+  $('tbFire').addEventListener('pointerdown',e=>{ e.preventDefault(); $('tbFire').classList.add('on'); setTimeout(()=>$('tbFire').classList.remove('on'),120);
+    if(state==='race'&&!paused){ fireWeapon(); buzz(20); } });
+  $('tbPause').addEventListener('pointerdown',e=>{ e.preventDefault(); if(state==='count'||state==='race') paused=!paused; });
+  // TILT (optional): steer by tipping the phone like a wheel. iOS asks for permission, and only over HTTPS.
+  $('tbTilt').addEventListener('pointerdown',async e=>{ e.preventDefault();
+    if(!TOUCH.tilt){ try{ if(typeof DeviceMotionEvent!=='undefined'&&DeviceMotionEvent.requestPermission){ if(await DeviceMotionEvent.requestPermission()!=='granted') return; } }catch(err){ return; }
+      TOUCH.tilt=true; $('tbTilt').classList.add('on'); }
+    else { TOUCH.tilt=false; TOUCH.tiltSteer=0; $('tbTilt').classList.remove('on'); } });
+  addEventListener('devicemotion',e=>{ if(!TOUCH.tilt||!e.accelerationIncludingGravity) return;
+    const a=(screen.orientation&&screen.orientation.angle)||window.orientation||90, gy=e.accelerationIncludingGravity.y||0;
+    TOUCH.tiltSteer=Math.max(-1,Math.min(1,(a===90||a===-270?gy:-gy)/4.5)); });
+  // craft select: a quick sideways swipe changes craft (a slow drag still spins it)
+  let sw=null; canvas.addEventListener('pointerdown',e=>{ if(state==='select') sw={x:e.clientX,t:e.timeStamp}; });   // event time, not handler time: a busy frame must not eat the swipe
+  addEventListener('pointerup',e=>{ if(sw&&state==='select'&&Math.abs(e.clientX-sw.x)>60&&e.timeStamp-sw.t<700) selGo(e.clientX<sw.x?1:-1); sw=null; });
+}
 let actx=null,engGain=null,oscs=[],audioOn=true;
 let musicGain=null,mFilter=null,musAnalyser=null,sharedNoise=null,distCurve=null,nextStep=0,mstep=0;
 const BPM=130, STEPDUR=60/BPM/4; // 16-delar, big beat-tempo
@@ -1522,6 +1614,7 @@ function stepShip(s,dt){
     // RAILIG styrning: gas/broms + sidled längs splinen, skeppet följer banans riktning
     const thrust=keys['ArrowUp']||keys['KeyW'], brake=keys['ArrowDown']||keys['KeyS'];
     let steer=(keys['ArrowLeft']||keys['KeyA']?-1:0)+(keys['ArrowRight']||keys['KeyD']?1:0);
+    if(MOBILE) steer=Math.max(-1,Math.min(1,steer+(TOUCH.tilt?TOUCH.tiltSteer:TOUCH.steer)));   // the touch pad / tilt, analog
     const abL=keys['KeyQ'], abR=keys['KeyE'];
     if(state==='race'){
       if(thrust) s.speed+=ACCEL*s.ph.acc*dt;
@@ -1749,6 +1842,7 @@ function loop(now){
   if(tiles){ camera.updateMatrixWorld();
     tiles.setResolutionFromRenderer(camera,renderer); tiles.update(); }
   snapTick(now); updateAttrib(now);
+  if(MOBILE){ const r=state==='count'||state==='race'; if(r!==document.body.classList.contains('racing')) document.body.classList.toggle('racing',r); }   // touch controls only on the grid and in the race
   if(state==='select'){ updateAudio(); selectTick(dt); return; }
   if(paused){ if(!pauseMsg) pauseMsg={t:msg.textContent,fs:msg.style.fontSize,c:msg.className};   // what the banner said before the pause
     msg.className='hud'; msg.textContent='PAUSE'; msg.style.fontSize='64px';
