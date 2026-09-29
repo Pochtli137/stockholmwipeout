@@ -1642,7 +1642,11 @@ const MAXV=66, ACCEL=27, BRAKE=46, DRAG=0.34;
 let HARD=(()=>{ const q=new URLSearchParams(location.search).get('grepp'); if(q==='hart'||q==='hard') return true; if(q==='normal') return false;
   try{ return localStorage.getItem('sw_grepp')==='hart'; }catch(e){ return false; } })();
 function setHard(v){ HARD=!!v; try{ localStorage.setItem('sw_grepp',HARD?'hart':'normal'); }catch(e){} const g=document.getElementById('grepT'); if(g) g.textContent='G · GREPP: '+(HARD?'HÅRT':'NORMAL'); }
-const GRIP_K=()=>HARD?40:70;   // hard: also caps how tight the free-steering craft can turn at speed (k/v rad/s)
+// HARD_EASE: en ratt för hur förlåtande hårt grepp är. 0 = som första versionen (släppt spak når väggen på ~0,9 s i en
+// 200 m-kurva), 1 = mycket förlåtande. Den styr två saker: styrhjälpen (skeppet tar själv 0,8*HARD_EASE av kurvan, du
+// styr resten) och grepptaket k (hur snävt du kan svänga i fart). Självrätningen visade sig inte bita i den här farten.
+const HARD_EASE=0.5;
+const GRIP_K=()=>HARD?40+12*HARD_EASE:70;   // hard: also caps how tight the free-steering craft can turn at speed (k/v rad/s)
 let wallT=0, wallHits=0;   // hard mode accounting (and the checker's)
 const grepT=document.getElementById('grepT'); setHard(HARD); grepT.addEventListener('pointerdown',e=>{ e.preventDefault(); e.stopPropagation(); setHard(!HARD); });
 let boostMeter=50, shake=0, fovKick=0;
@@ -1668,7 +1672,7 @@ function stepMissiles(dt){ for(let i=missiles.length-1;i>=0;i--){ const m=missil
 function shipT(s){ return ((s.t%1)+1)%1; }
 // FREE STEERING (hard mode, player only). CURV's sign: + means the outside of the bend is +lat, so with no input the
 // track turning under the craft rotates psi toward +lat at curvature*v. psi_dot = omega + signed*v - align*psi.
-const FS={ align:0.25, auth:1.25, authV:170, abYaw:0.55, abDrag:12, abCap:1.35, cross:0.4 };
+const FS={ align:0.25, assist:0.8*HARD_EASE, auth:1.25, authV:170, abYaw:0.55, abDrag:12, abCap:1.35, cross:0.4 };
 function freeSteer(s,dt,steer,abL,abR){
   const v=Math.max(0,s.speed+s.boost), kap=curvAhead(shipT(s),1).signed;
   const auth=FS.auth/(1+v/FS.authV)*s.ph.steer;                 // steering falls off a little at very high speed
@@ -1676,7 +1680,7 @@ function freeSteer(s,dt,steer,abL,abR){
   const cap=GRIP_K()*s.ph.grip*((abL||abR)?FS.abCap:1)/Math.max(v,12);   // grip: no tighter than k/v
   w=Math.max(-cap,Math.min(cap,w));
   if(abL) s.speed-=FS.abDrag*dt; if(abR) s.speed-=FS.abDrag*dt;
-  s.psi=(s.psi||0)+(w+kap*v-FS.align*(s.psi||0))*dt;
+  s.psi=(s.psi||0)+(w+kap*v*(1-FS.assist)-FS.align*(s.psi||0))*dt;   // the assist takes its share of the bend
   s.psi=Math.max(-1.2,Math.min(1.2,s.psi));
   s.speed-=s.speed*FS.cross*Math.sin(s.psi)**2*dt;               // crossways is slow
   s.vlat=v*Math.sin(s.psi);                                     // lat moves with the heading (integrated below)

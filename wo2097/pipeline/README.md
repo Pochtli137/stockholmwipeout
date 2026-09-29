@@ -232,3 +232,5 @@ psi är vinkeln mellan skeppet och banans tangent, `t += v·cos psi`, `lat += v�
 ger extra gir och broms och lyfter taket 1,35 gånger. Väggen: rakt in studsar och kostar fart och sköld, snett glider längs.
 Kameran följer skeppets riktiga kurs till 70 %. AI:n går kvar på räls men bromsar för samma snävare kurvor.
 Konstanterna står i `FS` i index.html. `check_lap.cjs` tar `GREPP=hart` och kör då en styrande bot.
+
+**HARD_EASE (2026-09-29):** en ratt i index.html för hur förlåtande hårt grepp är (0 = första versionen, 1 = mycket förlåtande, default 0,5). Den ger styrhjälp (skeppet tar 0,8·HARD_EASE av kurvan) och höjer grepptaket k = 40 + 12·HARD_EASE. Med 0,5: släppt spak når väggen på 0,88/1,08/1,77 s i 160/200/300 m-kurvor (var 0,68/0,88/1,23). Självrätningen (FS.align) höjdes först men bet inte i den farten.
