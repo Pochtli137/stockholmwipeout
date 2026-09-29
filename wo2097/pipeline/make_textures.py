@@ -379,18 +379,3 @@ for i,T in enumerate(TEAMS):
     d.text((24,int(h*.33)),T['team']+'  '+T['n'],font=fit(d,T['team']+'  '+T['n'],FONTS[T['f']],40,w*.52,minsz=16),fill=K if T['a'] in ('#f2f6ff','#d6deeb','#ffcd00','#ffb3c7','#1ed760') else W,anchor='lm')
     im=chips(im,i+10); save(grime(im,0.35,600+i,24,rust=0.25,runs=1.0),f'hull_{i}.jpg')
 print('textures ->',OUT, len(os.listdir(OUT)))
-
-# ============================================================ DISTRICT GATES · a Stockholm street-name sign in enamel
-# one per stadsdel the lap enters (track.json districts): white on Stockholm blue, a white inset rim, the name big and
-# the runes under it. Wear only on the rim, like every face here: the letters stay crisp at race speed.
-import json as _json
-DIST=[]
-for _x in _json.load(open(os.path.join(H,'..','assets','track.json')))['districts']:
-    if _x['name'] not in DIST: DIST.append(_x['name'])
-for gi,nm in enumerate(DIST):
-    w,h=1280,256; im=Image.new('RGB',(w,h),(27,70,146)); d=ImageDraw.Draw(im)
-    d.rounded_rectangle([14,14,w-14,h-14],radius=26,outline=(240,242,236),width=9)
-    up=nm.upper(); d.text((w//2,int(h*.47)),up,font=fit(d,up,cond,128,w-170,minsz=80),fill=(244,244,238),anchor='mm')   # clear of the rim, the Ö's dots too
-    d.text((w//2,int(h*.82)),runes(up),font=rn(30),fill=(214,224,240),anchor='mm')
-    im=edge_wear(im,900+gi,12); save(im,f'dist_{gi}.jpg'); save(fade(im,0.12),f'dist_{gi}_e.jpg')
-print('district signs',len(DIST))

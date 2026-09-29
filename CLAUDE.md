@@ -20,9 +20,6 @@ Publikt repo `Pochtli137/stockholmwipeout`. Live https://stockholmwipeout.vercel
   (`FX.particles`, `SFX.padSound`, `SFX.newPlayerEngine`, `SFX.spatial`, `SFX.hangar`).
 - **Runor (yngre futharken) i stället för katakana**, Noto Sans Runic inbäddad.
 - WebGPU provat och avvisat: tiles-biblioteket kräver WebGLRenderer.
-- **Stadsdelar (Rez):** ingen flourish vid upplockningar. Vid varje ny stadsdel: en liten port, ENTERING-titeln och sedan
-  stadsdelens eget unika move på nästa taktslag, samtidigt som musiken droppar och får ett nytt lager (högst sju).
-  Musiken börjar som den deployade; allt i `wo2097/pipeline/README.md`. Flagga `SFX.rezLayers`.
 
 ## Grenar
 - `main`: live, neon-2097-versionen.

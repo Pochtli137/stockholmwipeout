@@ -1171,7 +1171,7 @@ const glowTex=glowTexture();
 //                   facade slapbacks, the positional pad/weapon/hit/scrape sounds and their bus compressor
 //   SFX.hangar    : the craft-select blips and the lock-in sting
 // All off = the audio of the deployed game (8269ea8): the player's engine and the big-beat music, nothing else.
-const FX={ particles:false }, SFX={ padSound:false, newPlayerEngine:false, spatial:false, hangar:false, rezLayers:true };
+const FX={ particles:false }, SFX={ padSound:false, newPlayerEngine:false, spatial:false, hangar:false };
 /* ============================== PARTICLES ==============================
    Two pooled point clouds, one draw call each: GLOW (additive, crosses the bloom: exhaust, boost, sparks, impacts)
    and DUST (normal blend: leaves and grit kicked off the street under low track, impact smoke). CPU-simulated in
@@ -1545,11 +1545,11 @@ function updateAudio(){ if(!actx||!audioOn||!engGain) return;
   if(musicGain){
     const e=musicEnergy();
     // master-filtret öppnar sig med energin (dovt → ljust), volymen växer något
-    mFilter.frequency.setTargetAtTime(520+e*e*15500+(SFX.rezLayers&&REZ.level>=6?3200:0), actx.currentTime, 0.5);
+    mFilter.frequency.setTargetAtTime(520+e*e*15500, actx.currentTime, 0.5);
     musicGain.gain.setTargetAtTime(paused?0.05:(state==='race'?0.24+e*0.13:0.2), actx.currentTime, 0.5);
     if(!paused){ const la=actx.currentTime+0.13;
       if(nextStep<actx.currentTime-0.4) nextStep=actx.currentTime+0.05;
-      while(nextStep<la){ scheduleStep(nextStep,mstep); rezStep(nextStep,mstep%16,mAbs); mstep=(mstep+1)%CYCLE_STEPS; mAbs++; nextStep+=STEPDUR; } }
+      while(nextStep<la){ scheduleStep(nextStep,mstep); mstep=(mstep+1)%CYCLE_STEPS; nextStep+=STEPDUR; } }
   } }
 window.__mus=()=>{ if(!musAnalyser) return {state:actx?actx.state:'no actx'};
   const buf=new Float32Array(musAnalyser.fftSize); musAnalyser.getFloatTimeDomainData(buf);
@@ -1644,11 +1644,11 @@ window.__select=()=>({ state, sel:selIdx, done:selectDone, choice:TEAM_CHOICE })
 function startRace(){
   if(!selectDone){ enterSelect(); return; }
   loadveil.style.display='none';
-  if(actx){ mstep=0; nextStep=actx.currentTime+0.1; } rezReset(); // stegringen börjar om med loppet
+  if(actx){ mstep=0; nextStep=actx.currentTime+0.1; } // stegringen börjar om med loppet
   spawnShips(); camSnap=true; state='count'; countT=3.999; raceTime=0; lapTimes=[]; lapStart=0; resetKit();
 }
 function restart(){ document.getElementById('results').style.display='none'; paused=false; pauseMsg=null;
-  if(actx){ mstep=0; nextStep=actx.currentTime+0.1; } rezReset();
+  if(actx){ mstep=0; nextStep=actx.currentTime+0.1; }
   spawnShips(); camSnap=true; state='count'; countT=3.999; raceTime=0; lapTimes=[]; lapStart=0; resetKit();
   msg.textContent=''; sub.innerHTML=''; }
 function resetKit(){ energy=100; weapon=null; shieldT=0; boostMeter=50; for(const m of missiles) scene.remove(m.spr); missiles.length=0; drawWeaponIcon(); }
@@ -1660,7 +1660,7 @@ let boostMeter=50, shake=0, fovKick=0;
 // 2097 kit: shield energy (the walls eat it), one weapon slot, missiles in flight, flashes for the FX layer
 let energy=100, weapon=null, shieldT=0, boostFlash=0, hitFlash=0, critT=0; const missiles=[];
 const WEAPONS=['TURBO','SHIELD','MISSILE'];
-function pickWeapon(){ weapon=player()&&player().weap&&Math.random()<0.6?'MISSILE':WEAPONS[Math.floor(Math.random()*WEAPONS.length)]; flash(weapon); drawWeaponIcon(); if(player()) sfxAt('pickup',player().mesh.position); }
+function pickWeapon(){ flourish(player(),'roll'); weapon=player()&&player().weap&&Math.random()<0.6?'MISSILE':WEAPONS[Math.floor(Math.random()*WEAPONS.length)]; flash(weapon); drawWeaponIcon(); if(player()) sfxAt('pickup',player().mesh.position); }
 function fireWeapon(){ const p=player(); if(!weapon||!p) return;
   sfxAt(weapon==='TURBO'?'turbo':weapon==='SHIELD'?'shield':'fire',p.mesh.position);
   if(weapon==='TURBO'){ p.boost=Math.max(p.boost,42); fovKick=1; boostFlash=1; }
@@ -1742,22 +1742,15 @@ function stepShip(s,dt){
   const tn=shipT(s);
   for(const pad of PADS){ let dT=Math.abs(tn-pad.t); dT=Math.min(dT,1-dT);
     if(dT*TRACK_LEN<6&&Math.abs(s.lat-pad.lat)<3.6){ const had=s.boost; s.boost=Math.max(s.boost,24); if(had<12&&SFX.padSound) sfxAt('pad',s.mesh.position);
+      if(had<12) flourish(s,s.isPlayer?'roll':'flick');
       if(s.isPlayer){ boostMeter=Math.min(100,boostMeter+30); if(had<12){ fovKick=1; boostFlash=Math.max(boostFlash,0.55); } } } }
   advance(s,dt);
 }
-// DISTRICT MOVES (Rez): only on entering a stadsdel, after its gate and its title, the player's craft does that
-// district's own manoeuvre. On the mesh only: physics, steering, hitboxes and the camera never see it. A small engine
-// pulse and a faint team-colour rim, never a white-out. The AI do no moves. f(k,e,dir) -> roll/yaw/pitch (rad), lift (m).
-const MOVES={
-  'Södermalm':  { d:1.10, f:(k,e,s)=>({ roll:s*e*Math.PI*4 }) },                                          // double barrel roll
-  'Gamla stan': { d:1.20, f:(k,e,s)=>({ roll:s*e*Math.PI*2, lift:Math.sin(k*Math.PI)*1.1, pitch:-Math.sin(k*Math.PI*2)*0.16 }) },   // slow corkscrew, nose dipping through it
-  'Norrmalm':   { d:0.90, f:(k)=>({ roll:0.72*Math.sin(k*Math.PI*2)*Math.sin(k*Math.PI) }) },               // wing-flick salute, left then right
-  'Östermalm':  { d:1.20, f:(k,e,s)=>({ yaw:s*e*Math.PI*2, lift:Math.sin(k*Math.PI)*0.45 }) },               // a flat 360° pirouette
-  'Kungsholmen':{ d:1.00, f:(k,e,s)=>({ lift:Math.sin(k*Math.PI)*2.4, roll:s*e*Math.PI*2 }) },             // a hop with one roll
-  'Marieberg':  { d:1.00, f:(k)=>({ roll:Math.sin(k*Math.PI*6)*0.34*Math.sin(k*Math.PI), pitch:Math.sin(k*Math.PI*6+1.2)*0.07*Math.sin(k*Math.PI) }) },   // a wobble wave down the wings
-  'Långholmen': { d:1.20, f:(k,e,s)=>({ roll:s*Math.PI*Math.sin(k*Math.PI) }) } };                          // a lazy half roll and back
-const _flCol=new THREE.Color(), _flUp=new THREE.Vector3(), _flTo=new THREE.Vector3(), _flRt=new THREE.Vector3();
-function flourish(s,name){ if(!s||!s.isPlayer||s.flT>0) return; s.flK=MOVES[name]?name:'Södermalm'; s.flD=MOVES[s.flK].d; s.flT=s.flD; s.flDir=Math.random()<0.5?-1:1;
+// REZ FLOURISH: a pickup or a new district and the craft shows off, on the mesh only (physics, steering, hitboxes and
+// the camera never see it): the player does a quick barrel roll, the AI a wing flick; the engines pulse and the hull
+// flashes in team colour for about half a second.
+const _flCol=new THREE.Color();
+function flourish(s,kind){ if(!s||s.flT>0) return; s.flK=kind; s.flD=kind==='roll'?0.55:0.4; s.flT=s.flD; s.flDir=Math.random()<0.5?-1:1;
   if(!s.flMats){ s.flMats=[]; s.mesh.traverse(o=>{ if(o.isMesh) [].concat(o.material).forEach(m=>{ if(m&&m.emissive&&!s.flMats.some(x=>x.m===m)) s.flMats.push({m,c:m.emissive.clone(),i:m.emissiveIntensity}); }); }); } }
 // DISTRICT TITLES: the stadsdelar the racing line enters (real OSM boundaries, wo2097/pipeline/districts.py)
 const DISTRICTS=(TRACK_JSON&&TRACK_JSON.districts)||[]; let distLastT=null, distShownAt=-99, distPending=null;
@@ -1765,61 +1758,8 @@ const DISTRICTS=(TRACK_JSON&&TRACK_JSON.districts)||[]; let distLastT=null, dist
 function districtTick(){ const p=player(); if(!p||state!=='race'||!DISTRICTS.length) { distLastT=null; distPending=null; return; } const now=shipT(p);
   if(distLastT!==null&&now!==distLastT){ const a=distLastT, b=now;
     for(const d of DISTRICTS){ const crossed=a<=b?(d.t>a&&d.t<=b):(d.t>a||d.t<=b); if(crossed&&raceTime>3) distPending=d; } }
-  if(distPending&&raceTime-distShownAt>5){ distShownAt=raceTime; showDistrict(distPending); queueMove(distPending); distPending=null; }
-  rezApproach(p,now); rezMoveTick(p);
+  if(distPending&&raceTime-distShownAt>5){ distShownAt=raceTime; showDistrict(distPending); flourish(p,'roll'); distPending=null; }
   distLastT=now; }
-/* REZ LAYERS: the deployed big-beat loop escalates with the district sequence. A riser and a snare fill lead into each
-   gate; the move starts on the next beat after the title has settled, and the drop (an impact plus a NEW layer that stays)
-   lands on that downbeat, through the same step clock (nextStep/STEPDUR). Seven layers at most. Flag: SFX.rezLayers. */
-const REZ={ level:0, drop:null, fb:null, armed:{}, log:[], t0:null };
-let mAbs=0;
-function rezReset(){ REZ.level=0; REZ.drop=null; REZ.fb=null; REZ.armed={}; REZ.log.length=0; REZ.t0=null; mAbs=0; }
-function rezOn(){ return SFX.rezLayers&&actx&&audioOn&&musicGain&&!paused; }
-function queueMove(d){ const p=player(); if(!p) return;
-  if(rezOn()){ const want=actx.currentTime+0.6; let k=Math.max(1,Math.ceil((want-nextStep)/STEPDUR)); while((mAbs+k)%4!==0) k++;
-    REZ.drop={ step:mAbs+k, at:nextStep+k*STEPDUR, name:d.name, scheduled:false, moved:false }; }
-  else REZ.fb={ at:raceTime+0.7, name:d.name }; }
-function rezMoveTick(p){
-  if(REZ.drop&&REZ.drop.scheduled&&!REZ.drop.moved&&actx&&actx.currentTime>=REZ.drop.at+(actx.outputLatency||actx.baseLatency||0)){ REZ.drop.moved=true; flourish(p,REZ.drop.name); }
-  if(REZ.fb&&raceTime>=REZ.fb.at){ flourish(p,REZ.fb.name); REZ.fb=null; } }
-// the lead-in: ~2 s before the next gate, a riser that ends on the step nearest the crossing and a 16th snare fill before it
-function rezApproach(p,now){ if(!rezOn()||raceTime<2) return; const v=Math.max(20,p.speed+p.boost);
-  for(let i=0;i<DISTRICTS.length;i++){ const d=DISTRICTS[i]; let dt=(d.t-now); if(dt<0) dt+=1; const eta=dt*TRACK_LEN/v, key=i+'_'+p.lap;
-    if(eta<2.1&&eta>0.5&&!REZ.armed[key]){ REZ.armed[key]=1; const tc=actx.currentTime+eta;
-      let kc=Math.round((tc-nextStep)/STEPDUR); if(kc<5) return; const tcq=nextStep+kc*STEPDUR;
-      const rs=Math.max(nextStep+STEPDUR,tcq-1.8); mRiser(rs);
-      for(let j=4;j>=1;j--) mSnare(tcq-j*STEPDUR); return; } } }
-// per 16th, after the deployed step: the drop, then every layer the race has earned so far
-const ARP=[220,261.63,329.63,440,329.63,261.63,220,164.81], LEAD=[440,0,0,523.25,0,0,587.33,0,659.25,0,587.33,0,523.25,0,0,0];
-function rezStep(t,i,abs){ if(!SFX.rezLayers) return; if(REZ.t0===null) REZ.t0=t-abs*STEPDUR;
-  const dr=REZ.drop; if(dr&&!dr.scheduled&&abs>=dr.step){ dr.scheduled=true; dr.at=t; mImpact(t); if(REZ.level<7) REZ.level++;
-    REZ.log.push({ name:dr.name, level:REZ.level, abs, t:+t.toFixed(4), beat:abs%4===0, gridErrMs:+(((t-REZ.t0)-abs*STEPDUR)*1000).toFixed(2) }); }
-  const L=REZ.level, bar=(abs/16|0); if(!L) return;
-  if(i%4===2) rSub(t,i<8?55:41.2,STEPDUR*1.7);                                       // 1: sub-bass on the offbeats
-  if(L>=2) rArp(t,ARP[i%8]*(bar%2?2:1),STEPDUR*0.9);                                    // 2: a 16th arpeggio, up an octave every other bar
-  if(L>=3&&(i===0||i===10)) rChord(t,STEPDUR*2.2);                                      // 3: chord hits
-  if(L>=4){ if(i===4||i===12) rClap(t); if(i%2===1) rShake(t); }                          // 4: claps and a shaker
-  if(L>=5&&bar%2===0&&LEAD[i]) rLead(t,LEAD[i],STEPDUR*1.8);                              // 5: the lead hook
-  if(L>=7){ if(i%2===0) rRide(t); if(bar%4===3&&i>=12) rTom(t,[196,165,147,110][i-12]); }   // 7: ride and tom fills (6 is the open filter, in updateAudio)
-}
-function rOut(g){ g.connect(musicGain); }
-function rSub(t,f,dur){ const o=actx.createOscillator(),g=actx.createGain(); o.type='sine'; o.frequency.value=f;
-  g.gain.setValueAtTime(0.0001,t); g.gain.linearRampToValueAtTime(0.42,t+0.01); g.gain.exponentialRampToValueAtTime(0.0001,t+dur); o.connect(g); rOut(g); o.start(t); o.stop(t+dur+0.02); }
-function rArp(t,f,dur){ const o=actx.createOscillator(),g=actx.createGain(),lp=actx.createBiquadFilter(); o.type='square'; o.frequency.value=f; lp.type='lowpass'; lp.frequency.value=2600;
-  g.gain.setValueAtTime(0.0001,t); g.gain.linearRampToValueAtTime(0.045,t+0.005); g.gain.exponentialRampToValueAtTime(0.0001,t+dur); o.connect(lp); lp.connect(g); rOut(g); o.start(t); o.stop(t+dur+0.02); }
-function rChord(t,dur){ for(const f of [220,261.63,329.63,392]){ const o=actx.createOscillator(),g=actx.createGain(),lp=actx.createBiquadFilter(); o.type='sawtooth'; o.frequency.value=f; lp.type='lowpass'; lp.frequency.value=3200; lp.Q.value=3;
-  g.gain.setValueAtTime(0.0001,t); g.gain.linearRampToValueAtTime(0.04,t+0.008); g.gain.exponentialRampToValueAtTime(0.0001,t+dur); o.connect(lp); lp.connect(g); rOut(g); o.start(t); o.stop(t+dur+0.02); } }
-function rClap(t){ for(const off of [0,0.012,0.024]){ const s=noiseSrc(),bp=actx.createBiquadFilter(),g=actx.createGain(); bp.type='bandpass'; bp.frequency.value=1300; bp.Q.value=0.9;
-  g.gain.setValueAtTime(0.0001,t+off); g.gain.linearRampToValueAtTime(0.22,t+off+0.003); g.gain.exponentialRampToValueAtTime(0.0001,t+off+0.12); s.connect(bp); bp.connect(g); rOut(g); s.start(t+off); s.stop(t+off+0.14); } }
-function rShake(t){ const s=noiseSrc(),hp=actx.createBiquadFilter(),g=actx.createGain(); hp.type='highpass'; hp.frequency.value=6500;
-  g.gain.setValueAtTime(0.0001,t); g.gain.linearRampToValueAtTime(0.05,t+0.01); g.gain.exponentialRampToValueAtTime(0.0001,t+0.07); s.connect(hp); hp.connect(g); rOut(g); s.start(t); s.stop(t+0.08); }
-function rLead(t,f,dur){ const o=actx.createOscillator(),o2=actx.createOscillator(),g=actx.createGain(),lp=actx.createBiquadFilter(); o.type='square'; o2.type='sawtooth'; o.frequency.value=f; o2.frequency.value=f*1.005;
-  lp.type='lowpass'; lp.Q.value=4; lp.frequency.setValueAtTime(3800,t); lp.frequency.exponentialRampToValueAtTime(900,t+dur);
-  g.gain.setValueAtTime(0.0001,t); g.gain.linearRampToValueAtTime(0.06,t+0.01); g.gain.exponentialRampToValueAtTime(0.0001,t+dur); o.connect(lp); o2.connect(lp); lp.connect(g); rOut(g); o.start(t); o2.start(t); o.stop(t+dur+0.02); o2.stop(t+dur+0.02); }
-function rRide(t){ const s=noiseSrc(),bp=actx.createBiquadFilter(),g=actx.createGain(); bp.type='bandpass'; bp.frequency.value=9000; bp.Q.value=3;
-  g.gain.setValueAtTime(0.0001,t); g.gain.linearRampToValueAtTime(0.06,t+0.003); g.gain.exponentialRampToValueAtTime(0.0001,t+0.3); s.connect(bp); bp.connect(g); rOut(g); s.start(t); s.stop(t+0.32); }
-function rTom(t,f){ const o=actx.createOscillator(),g=actx.createGain(); o.type='sine'; o.frequency.setValueAtTime(f*1.6,t); o.frequency.exponentialRampToValueAtTime(f,t+0.12);
-  g.gain.setValueAtTime(0.0001,t); g.gain.linearRampToValueAtTime(0.45,t+0.004); g.gain.exponentialRampToValueAtTime(0.0001,t+0.3); o.connect(g); rOut(g); o.start(t); o.stop(t+0.32); }
 const DIST_LOG=[];
 function showDistrict(d){ DIST_LOG.push({name:d.name,at:+raceTime.toFixed(1)}); const el=document.getElementById('district'); el.querySelector('.nm').textContent=d.name; el.querySelector('.rn').textContent=d.rn||'';
   el.classList.remove('on'); void el.offsetWidth; el.classList.add('on'); }
@@ -1843,17 +1783,10 @@ function advance(s,dt){
   s.mesh.rotateY(s.yaw); s.mesh.rotateZ(s.roll);
   let flPulse=0;
   if(s.flT>0){ s.flT=Math.max(0,s.flT-dt); const k=1-s.flT/s.flD, e=k<0.5?2*k*k:1-Math.pow(-2*k+2,2)/2; flPulse=Math.sin(k*Math.PI);
-    const mv=MOVES[s.flK].f(k,e,s.flDir);
-    if(mv.lift) s.mesh.translateY(mv.lift); if(mv.yaw) s.mesh.rotateY(mv.yaw); if(mv.pitch) s.mesh.rotateX(mv.pitch); if(mv.roll) s.mesh.rotateZ(mv.roll);
-    const a=flPulse*0.12;   // a faint team-colour rim, not a flash
-    // the anti-grav emitters glow under the hull (neon_craft_*): when a move turns the belly toward the camera (about 60 deg
-    // of roll or more) or shows the craft side-on, they would flare into the lens, so they fade out smoothly and come back
-    _flUp.set(0,1,0).applyQuaternion(s.mesh.quaternion); _flTo.copy(camera.position).sub(s.mesh.position).normalize();
-    _flRt.set(1,0,0).applyQuaternion(s.mesh.quaternion);   // and edge-on from the side (a pirouette): the rim strips read as a white bar
-    const belly=THREE.MathUtils.smoothstep(_flUp.dot(_flTo),-0.05,0.4)*(1-THREE.MathUtils.smoothstep(Math.abs(_flRt.dot(_flTo)),0.4,0.8));
-    for(const x of s.flMats){ const em=/^neon_craft/.test(x.m.name)?belly:1;
-      if(s.flT>0){ x.m.emissive.copy(x.c).lerp(_flCol.setHex(s.color),a); x.m.emissiveIntensity=(x.i+a*0.3)*em; } else { x.m.emissive.copy(x.c); x.m.emissiveIntensity=x.i; } } }
-  const sf=Math.min(1.4,(s.speed+s.boost)/MAXV), glow=(0.9+Math.min(1,sf)*0.8+(s.boost>1?0.4:0))*(1+flPulse*0.45), ud=s.mesh.userData;
+    if(s.flK==='roll') s.mesh.rotateZ(s.flDir*e*Math.PI*2); else s.mesh.rotateZ(s.flDir*Math.sin(k*Math.PI*2)*0.45);
+    const a=flPulse*(s.flK==='roll'?0.3:0.18);   // a brief tint, not a white-out: the bloom does the rest
+    for(const x of s.flMats){ if(s.flT>0){ x.m.emissive.copy(x.c).lerp(_flCol.setHex(s.color),a); x.m.emissiveIntensity=x.i+a*0.5; } else { x.m.emissive.copy(x.c); x.m.emissiveIntensity=x.i; } } }
+  const sf=Math.min(1.4,(s.speed+s.boost)/MAXV), glow=(0.9+Math.min(1,sf)*0.8+(s.boost>1?0.4:0))*(1+flPulse*0.9), ud=s.mesh.userData;
   ud.engL.scale.set(glow,glow,1); ud.engR.scale.set(glow,glow,1);
   // airbrakes: the player's Q/E, the AI when it scrubs speed for a corner
   const want=s.isPlayer?((keys['KeyQ']?1:0)||(keys['KeyE']?1:0)?1:0):(s.braking?0.8:0);
@@ -2062,7 +1995,7 @@ if(location.search.includes('check')) window.__SUN=SUN_DIR;
 window.__theme=THEME;
 if(location.search.includes('check')) window.__sw={
   frameAt, mkFrame, hitsAt:(x,z)=>tiles?hitsAt(x,z):[], tilesIdle:()=>tiles?tilesIdle():true, player, ships:()=>ships, keys,
-  districts:()=>DISTRICTS, district:i=>showDistrict(DISTRICTS[i]), distLog:()=>DIST_LOG, flourish:(k='Södermalm')=>{ const p=player(); if(p){ p.flT=0; flourish(p,k); } }, rez:()=>REZ, mAbs:()=>mAbs, actx:()=>actx, musicGain:()=>musicGain, musAnalyser:()=>musAnalyser,
+  districts:()=>DISTRICTS, district:i=>showDistrict(DISTRICTS[i]), distLog:()=>DIST_LOG, flourish:(k='roll')=>{ const p=player(); if(p){ p.flT=0; flourish(p,k); } },
   passes:()=>composer.passes, bloomPass:bloom, flickN:()=>flickMats.length, state:()=>state, len:()=>TRACK_LEN, HALF_W, MAXV, curvAhead, camera, setPaused:v=>{ paused=v; },
   placeAt(t,lat=0){ const p=player(); p.t=t; p.lat=lat; p.speed=0; p.vlat=0; advance(p,0); camSnap=true; updateCamera(1/60); camera.updateMatrixWorld(); },
   // where a material sits in the track glb: the first triangle of its group (a board, a wall chunk), for close-up shots
