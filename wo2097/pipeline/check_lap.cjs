@@ -9,7 +9,7 @@
 const PW=process.env.PW||'/Users/kimdahlroth/.nvm/versions/node/v25.1.0/lib/node_modules/@playwright/cli/node_modules/playwright';
 const {chromium}=require(PW); const fs=require('fs'); const path=require('path');
 const OUT=process.argv[2]||path.join(__dirname,'check'); fs.mkdirSync(OUT,{recursive:true});
-const URL='http://localhost:8820/index.html?check&theme='+(process.env.THEME||'neon')+'&grepp='+(process.env.GREPP||'normal');   // THEME=neon|used, GREPP=normal|hart
+const URL='http://localhost:'+(process.env.PORT||8820)+'/index.html?check&theme='+(process.env.THEME||'neon')+'&grepp='+(process.env.GREPP||'normal');   // THEME=neon|used, GREPP=normal|hart
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 async function open(b){ const p=await b.newPage({viewport:{width:1440,height:900}}); const errs=[];
   p.on('pageerror',e=>errs.push(e.message)); p.on('console',m=>{ if(m.type()==='error'&&!/404/.test(m.text())) errs.push(m.text()); });
@@ -79,7 +79,7 @@ async function open(b){ const p=await b.newPage({viewport:{width:1440,height:900
     const r=await p.evaluate(()=>{ const f=__chk.ft.slice().sort((a,b)=>a-b), q=x=>+f[Math.floor(x*(f.length-1))].toFixed(1);
       const res=document.getElementById('results'); return { finished:__chk.done, results:getComputedStyle(res).display!=='none', raceS:+((performance.now()-__chk.t0)/1000).toFixed(0),
         frameMs:{ median:q(0.5), p95:q(0.95), p99:q(0.99), max:q(1) }, fpsMedian:+(1000/q(0.5)).toFixed(0), maxYawDegPerS:+(__chk.yaw*57.3).toFixed(0), maxLateralG:+__chk.latg.toFixed(1),
-        cameraOccludedFrames:__chk.occ, checkedFrames:Math.floor(__chk.frames/3) }; });
+        cameraOccludedFrames:__chk.occ, checkedFrames:Math.floor(__chk.frames/3), airtimeLandings:__sw.stats().airtime }; });
     await p.screenshot({path:path.join(OUT,'race_end.png')});
     report.race={ ...r, screenshotSpeedsKmh:midSpeed, errors:errs.slice(0,5) }; await p.close(); }
   fs.writeFileSync(path.join(OUT,'report.json'),JSON.stringify(report,null,1)); console.log(JSON.stringify(report,null,1)); await b.close(); })();

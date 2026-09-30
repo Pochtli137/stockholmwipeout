@@ -831,10 +831,22 @@ let TRACK_LEN=curve.getLength();
 const HALF_W=8, CLEARANCE=6;
 
 const UP=new THREE.Vector3(0,1,0);
+// FEEL, per track frame from track.json: the bank (rad) and the half width; the tubes as [t0,t1]. Null = flat, HALF_W.
+let BANK=TRACK_JSON&&TRACK_JSON.bank?Float32Array.from(TRACK_JSON.bank):null;
+let HWA=TRACK_JSON&&TRACK_JSON.hw?Float32Array.from(TRACK_JSON.hw):null;
+let TUBES=TRACK_JSON&&TRACK_JSON.tubes?TRACK_JSON.tubes:[];
+function lerpArr(a,t){ const n=a.length, x=(((t%1)+1)%1)*n, i=Math.floor(x)%n, k=x-Math.floor(x); return a[i]*(1-k)+a[(i+1)%n]*k; }
+function hwAt(t){ return HWA?lerpArr(HWA,t):HALF_W; }
+function tubeAt(t){ t=((t%1)+1)%1; let k=0; for(const [a,b] of TUBES){ const e=0.0015;   // 0..1, eased over ~17 m at the mouths
+    if(t>a-e&&t<b+e) k=Math.max(k,Math.min(1,(t-(a-e))/(2*e),((b+e)-t)/(2*e))); } return k; }
+const _bt=new THREE.Vector3();
 function frameAt(t,out){ t=((t%1)+1)%1;
   curve.getPointAt(t,out.p); curve.getTangentAt(t,out.fwd).normalize();
   out.right.crossVectors(out.fwd,UP).normalize();
-  out.up.crossVectors(out.right,out.fwd).normalize(); return out; }
+  out.up.crossVectors(out.right,out.fwd).normalize();
+  if(BANK){ const b=lerpArr(BANK,t); if(b){ const c=Math.cos(b), s=Math.sin(b); _bt.copy(out.right);   // banked into the bend
+      out.right.multiplyScalar(c).addScaledVector(out.up,s); out.up.multiplyScalar(c).addScaledVector(_bt,-s); } }
+  return out; }
 const mkFrame=()=>({p:new THREE.Vector3(),fwd:new THREE.Vector3(),
   right:new THREE.Vector3(),up:new THREE.Vector3()});
 
@@ -978,6 +990,37 @@ function winMin(a,w){ const n=a.length; return a.map((_,i)=>{ let m=1e9; for(let
 function gauss(a,sig){ const n=a.length, r=Math.ceil(sig*3), k=[]; let sum=0;
   for(let j=-r;j<=r;j++){ const v=Math.exp(-0.5*(j/sig)**2); k.push(v); sum+=v; }
   return a.map((_,i)=>{ let acc=0; for(let j=-r;j<=r;j++) acc+=k[j+r]*a[(i+j+n)%n]; return acc/sum; }); }
+// ---- FEEL (2026-09-30, "feel and attitude"): the lap is a WipEout 2097 rollercoaster, still on rails. Where the survey
+// says the city leaves open space (water, open squares) the deck dives toward it and climbs back: in each drop window the
+// line may follow the city's own requirement (+ a buffer) with short dips and ramps up to FEEL.slope, and outside the
+// windows the old profile is the floor, so the rest of the lap is unchanged. Crests get a vertical radius of ~235 m, so at
+// race speed the craft goes light over them (the airtime is visual: see AIR). Prototype and plots: wo2097/pipeline/feel/.
+// Metres are along the survey (the racing line from design_track.py), start at Slussen.
+const FEEL={ on:true, slope:0.19, closeM:16, buffer:1.5, smoothM:10, finalM:14,
+  drops:[ ['SLUSSEN · STRÖMMEN',250,1000], ['NYBROVIKEN',1440,1830], ['NORRMALM',4380,4680], ['KLARA SJÖ',5340,5700],
+          ['NORR MÄLARSTRAND',7340,7560], ['SÖDER',9150,9700] ],
+  // wide and quiet (no pads, 10.5 m half width wherever the tiles leave room at +-11.5 m) before the big moments:
+  // the water of Strömmen before the climb and the dive into Nybroviken, and Klara sjö before Kungsholmen
+  wide:[ [430,960], [5420,5640] ], wideHW:10.5,
+  // enclosed neon tubes (built in Blender) over open water, where the survey finds nothing within +-11.5 m of the deck:
+  // the dive into Nybroviken ends inside one, and a shorter one covers the bottom of the drop at Norr Mälarstrand
+  tubes:[ [1590,1815], [7395,7545] ],
+  // speed pads: chains of three into every drop, two more on the way down; none in the quiet wide sections
+  chain:3, chainGapM:36,
+  // banking: degrees = min(bankMax, bankK * curvature), faded out on near-straights, smoothed along the lap
+  bankMax:20, bankK:3000, bankFloor:5, bankSmoothM:45,
+  camBank:0.75, dropFov:8, dropFX:0.3, tubeFX:0.35, tubeDim:0.7,
+  airAt:[1416,5325,7326], airZoneM:70 };   // the airtime crests (m along the lap): Nybroviken, Klara sjö, Norr Mälarstrand; every other crest holds the deck
+function feelProfile(base,req,n,ds){
+  const F=FEEL, inwin=new Uint8Array(n);
+  for(const [,a,b] of F.drops) for(let i=Math.max(0,Math.ceil(a/ds));i<=Math.min(n-1,Math.floor(b/ds));i++) inwin[i]=1;
+  const reqB=req.map(v=>v+F.buffer), w=Math.max(1,Math.round(F.closeM/ds));
+  const envD=winMin(winMax(reqB,w),w).map((v,i)=>Math.max(v,reqB[i]));
+  const floor=base.map((v,i)=>inwin[i]?envD[i]:v);
+  for(let pass=0;pass<3;pass++){ for(let i=0;i<n;i++) floor[i]=Math.max(floor[i],floor[(i-1+n)%n]-F.slope*ds);
+    for(let i=n-1;i>=0;i--) floor[i]=Math.max(floor[i],floor[(i+1)%n]-F.slope*ds); }
+  let h=floor.slice(); for(let it=0;it<60;it++){ h=gauss(h,F.smoothM/ds); for(let i=0;i<n;i++) h[i]=Math.max(h[i],floor[i]); }
+  return gauss(h,F.finalM/ds); }
 function designProfile(S){
   const n=S.n, ds=S.ds, P=PROFILE;
   const ground=closedFill(S.ground), top=closedFill(S.top.map((v,i)=>v==null?null:Math.max(v,ground[i]??v)));
@@ -995,6 +1038,7 @@ function designProfile(S){
   for(let it=0;it<80;it++){ h=gauss(h,sg); for(let i=0;i<n;i++) h[i]=Math.max(h[i],env[i]+P.buffer); }
   h=gauss(h,P.finalSmoothM/ds);
   for(let i=0;i<n;i++) if(h[i]<env[i]) console.warn('profile undercuts its envelope at',Math.round(i*ds),'m');
+  if(FEEL.on) h=feelProfile(h,req,n,ds);   // the rollercoaster: drops into the open water and squares (FEEL below)
   let maxSlope=0, maxVc=0, lifted=0;
   for(let i=0;i<n;i++){ const a=h[(i-1+n)%n], b=h[i], c=h[(i+1)%n];
     maxSlope=Math.max(maxSlope,Math.abs(c-b)/ds); const a3=h[(i-3+n)%n], c3=h[(i+3)%n]; maxVc=Math.max(maxVc,Math.abs(c3-2*b+a3)/((3*ds)**2));
@@ -1002,10 +1046,49 @@ function designProfile(S){
   return { h, ground, top, stats:{ maxSlopePct:+(maxSlope*100).toFixed(2), minVertRadius:Math.round(1/Math.max(maxVc,1e-6)), liftedPct:+(lifted/n*100).toFixed(1),
     maxLift:Math.round(Math.max(...h.map((v,i)=>v-ground[i]))) } };
 }
+// FEEL data for the lap, per track frame (SEG): the bank (rad, + raises the +lat side, which is the outside of a + bend)
+// and the half width; plus the tubes, the drop windows and the speed pads, all in track parameter t. Published in
+// track.json for Blender and read back by the game, so both lay the deck the same way.
+function feelLayout(S,R,SEG){
+  const F=FEEL, NS=S.n, ds=S.ds, f=mkFrame(), f2=mkFrame(), toT=m=>m/(NS*ds);
+  const saveB=BANK, saveW=HWA; BANK=null; HWA=null;   // headings from the unbanked line
+  const kap=new Float32Array(SEG), dl=TRACK_LEN/SEG;
+  for(let i=0;i<SEG;i++){ frameAt(i/SEG,f); frameAt((i+1)/SEG,f2);
+    let d=Math.atan2(f2.fwd.x,f2.fwd.z)-Math.atan2(f.fwd.x,f.fwd.z); while(d>Math.PI) d-=2*Math.PI; while(d<-Math.PI) d+=2*Math.PI; kap[i]=d/dl; }
+  let deg=[...kap].map(k=>{ let v=Math.min(F.bankMax,F.bankK*Math.abs(k)); if(v<F.bankFloor) v*=v/F.bankFloor; return Math.sign(k)*v; });
+  // the curvature map says + turns raise +lat: check its sign against CURV's convention, which the rail's grip uses
+  deg=gauss(deg,F.bankSmoothM/dl); const bank=deg.map(v=>v*Math.PI/180);
+  // half width: the default, or wideHW inside a wide window wherever both arch posts (+-11.5 m) are clear of the deck
+  const hw=new Float32Array(SEG).fill(HALF_W), postOK=new Uint8Array(NS);
+  for(let i=0;i<NS;i++){ const a=S.postL[i], b=S.postR[i], y=R.h[i]; postOK[i]=((a==null||a<y-0.5)&&(b==null||b<y-0.5))?1:0; }
+  const okW=winMin([...postOK],Math.round(20/ds));   // room for 20 m either side, or it stays narrow
+  const want=new Array(SEG).fill(HALF_W);
+  for(let i=0;i<SEG;i++){ const m=i/SEG*NS*ds, si=Math.round(i/SEG*NS)%NS;
+    for(const [a,b] of F.wide) if(m>=a&&m<=b&&okW[si]) want[i]=F.wideHW; }
+  const hs=gauss(want,40/dl); for(let i=0;i<SEG;i++) hw[i]=Math.max(HALF_W,Math.min(F.wideHW,hs[i]));
+  // tubes: the deck stays at the default width inside
+  const tubes=F.tubes.map(([a,b])=>[toT(a),toT(b)]);
+  for(let i=0;i<SEG;i++){ const t=i/SEG; for(const [a,b] of tubes) if(t>=a-0.004&&t<=b+0.004) hw[i]=HALF_W; }
+  // speed pads: the old even rhythm, minus the quiet wide sections, plus a chain of three into every drop and two on the way down
+  const drops=F.drops.map(([n,a,b])=>{ const i0=Math.round(a/ds), i1=Math.round(b/ds); let lo=i0;
+    for(let i=i0;i<=i1;i++) if(R.h[i%NS]<R.h[lo%NS]) lo=i;
+    let cr=lo; for(let i=lo;i>=lo-Math.round(420/ds);i--) if(R.h[(i+NS)%NS]>R.h[(cr+NS)%NS]) cr=i;
+    return { n, t0:toT(a), t1:toT(b), crest:toT(cr*ds), low:toT(lo*ds), drop:+(R.h[(cr+NS)%NS]-R.h[lo%NS]).toFixed(1) }; });
+  const chain=[]; for(const d of drops){ const nearStart=d.crest*TRACK_LEN<200||(1-d.crest)*TRACK_LEN<200;   // Slussen: the launch is the lead-in, the grid keeps clear
+    if(!nearStart) for(let k=F.chain;k>=1;k--) chain.push({t:d.crest-toT(k*F.chainGapM-12),lat:0});
+    chain.push({t:d.crest+(d.low-d.crest)*0.4,lat:0}); chain.push({t:d.crest+(d.low-d.crest)*0.75,lat:0}); }
+  const quiet=t=>F.wide.some(([a,b])=>t>=toT(a)&&t<=toT(b));
+  const even=Array.from({length:135},(_,i)=>({ t:(i+0.55)/135, lat:[-3.5,0,3.5][i%3] }))
+    .filter(p=>!quiet(p.t)&&!chain.some(c=>Math.abs(c.t-p.t)*TRACK_LEN<55));
+  const pads=[...even,...chain].map(p=>({t:((p.t%1)+1)%1,lat:p.lat})).sort((a,b)=>a.t-b.t);
+  BANK=saveB; HWA=saveW;
+  return { bank, hw, tubes, drops, pads }; }
 function publishTrack(S){
   const R=designProfile(S), N=CP.length, NS=S.n, at=(arr,u)=>{ const x=((u%1)+1)%1*NS, i=Math.floor(x)%NS, j=(i+1)%NS, k=x-Math.floor(x); return arr[i]*(1-k)+arr[j]*k; };
   for(let i=0;i<N;i++) CP[i].y=at(R.h,i/N);
   curve.updateArcLengths(); TRACK_LEN=curve.getLength(); rebuildCurvature();
+  const FL=FEEL.on?feelLayout(S,R,2400):null;
+  if(FL){ BANK=Float32Array.from(FL.bank); HWA=Float32Array.from(FL.hw); TUBES=FL.tubes; PADS.length=0; PADS.push(...FL.pads); }
   // pylon feet: whatever is straight under the centre (street, roof or deck), never above the slab
   const under=closedFill(S.topC).map((v,i)=>Math.min(v,R.h[i]-1.5));
   GROUND=[...Array(N).keys()].map(i=>at(under,i/N));
@@ -1016,7 +1099,8 @@ function publishTrack(S){
   window.__dump={ cp:CP.map(v=>[+v.x.toFixed(3),+v.y.toFixed(3),+v.z.toFixed(3)]), frames, clear, trackLen:TRACK_LEN, halfW:HALF_W,
     pads:PADS.map(p=>[p.t,p.lat]), wpads:WPADS.map(p=>[p.t,p.lat]),
     arches:ARCH_AT.map(a=>({...a, ...nearestT(a.lat,a.lon)})), snapped:S.top.filter(v=>v!=null).length, n:N,
-    profile:R.stats, survey:S };
+    profile:R.stats, survey:S,
+    ...(FL?{ bank:FL.bank.map(v=>+v.toFixed(4)), hw:[...FL.hw].map(v=>+v.toFixed(2)), tubes:FL.tubes, drops:FL.drops }:{}) };
   document.getElementById('loadtxt').textContent='dump klar · '+JSON.stringify(R.stats);
 }
 async function dumpWalk(){
@@ -1073,6 +1157,8 @@ function curvAhead(t,dist){
 let trackGroup=null;
 const PADS=Array.from({length:135},(_,i)=>({ t:(i+0.55)/135, lat:[-3.5,0,3.5][i%3] }));
 const WPADS=Array.from({length:16},(_,i)=>({ t:(i+0.27)/16, lat:[-3.5,3.5,0][i%3] }));
+// FEEL: the pads the dump laid out (chains into the drops, none in the quiet wide sections) replace the even rhythm
+if(TRACK_JSON&&TRACK_JSON.pads&&TRACK_JSON.drops){ PADS.length=0; for(const [t,lat] of TRACK_JSON.pads) PADS.push({t,lat}); }
 // sponsor arches over the real places: nearest point on the lap to each landmark
 // b = brand index in make_textures.py BRANDS (6 KLARNÅ, 17 SKATTEVERK-X, 8 SJ 2097, 13 SECURITAZ, 16 FÖRSÄKRINGSKASSÅN)
 const ARCH_AT=[ {n:'NORRMALMSTORG',lat:59.3337,lon:18.0733,b:6}, {n:'STADSHUSET',lat:59.3275,lon:18.0545,b:17},
@@ -1182,7 +1268,7 @@ function emitShip(s,dt,sf){ if(!FX.particles||s.mesh.position.distanceToSquared(
     let n=Math.floor(dt*(28+sf*40)+Math.random());
     while(n-->0) GLOW.emit(_pp.x+R()*0.2,_pp.y+R()*0.2,_pp.z+R()*0.2,-fx*6+R()*1.5,-fy*6+R()*1.5+0.4,-fz*6+R()*1.5, _pc.r*1.25,_pc.g*1.25,_pc.b*1.25, 0.14+sf*0.12, 0.16+Math.random()*0.12, 0, 0.9);
     if(s.boost>1){ n=Math.floor(dt*90+Math.random()); while(n-->0) GLOW.emit(_pp.x+R()*0.3,_pp.y+R()*0.3,_pp.z+R()*0.3,-fx*14+R()*3,-fy*14+R()*3,-fz*14+R()*3, 1.6,2.0,2.6, 0.32, 0.3+Math.random()*0.2, 0, 0.88); } }
-  if(Math.abs(s.lat)>=HALF_W-2.01&&spd>12){ const side=Math.sign(s.lat), rx=f.right.x*side, rz=f.right.z*side;
+  if(Math.abs(s.lat)>=hwAt(shipT(s))-2.01&&spd>12){ const side=Math.sign(s.lat), rx=f.right.x*side, rz=f.right.z*side;
     _pp.copy(s.mesh.position).addScaledVector(f.right,side*1.6); let n=Math.floor(dt*(220+spd*3)+Math.random());
     while(n-->0){ const v=spd*(0.05+Math.random()*0.25); GLOW.emit(_pp.x,_pp.y+0.3+R()*0.4,_pp.z,-fx*v-rx*(3+Math.random()*9),3+Math.random()*11,-fz*v-rz*(3+Math.random()*9), 4.2,2.1+Math.random()*0.9,0.6, 0.22+Math.random()*0.16, 0.3+Math.random()*0.35, 30, 0.95); } }
   if(survey&&spd>28){ const i=Math.round(shipT(s)*survey.n)%survey.n, ground=survey.ground[i], h=s.mesh.position.y-ground;
@@ -1748,14 +1834,14 @@ function stepShip(s,dt){
       for(const o of ships){ if(o===s) continue;
         let dT=o.t-s.t; if(dT>0 && dT*TRACK_LEN<20 && Math.abs(o.lat-s.lat)<4.5){
           target+=7; // slipstream
-          overtakeBias=(o.lat>=0?-1:1)*(HALF_W-2.5); break; } }
+          overtakeBias=(o.lat>=0?-1:1)*(hwAt(tn0)-2.5); break; } }
       s.braking=target<s.speed-(HARD?3:6); s.speed+=(target-s.speed)*(target<s.speed?(HARD?4.6:3.6):1.9)*dt;
       // mild jakt om långt bakom spelaren, så fältet inte tappas helt (lätt gummiband)
       const gap=player().t-s.t;
       if(gap>0) s.speed+=Math.min(gap*0.9,1.4)*dt*10;
     } else s.speed=0;
     const c60=curvAhead(tn0,70);
-    let wantLat=Math.abs(c60.signed)>0.0018 ? -Math.sign(c60.signed)*(HALF_W-2.6) : 0;
+    let wantLat=Math.abs(c60.signed)>0.0018 ? -Math.sign(c60.signed)*(hwAt(tn0)-2.6) : 0;
     if(overtakeBias) wantLat=wantLat*0.35+overtakeBias*0.65;
     for(const pad of PADS){ let dT=pad.t-tn0; dT-=Math.round(dT);
       if(dT>0 && dT*TRACK_LEN<140){ wantLat=wantLat*0.2+pad.lat*0.8; break; } }
@@ -1763,7 +1849,7 @@ function stepShip(s,dt){
     s.roll=THREE.MathUtils.lerp(s.roll,-s.vlat*0.05,6*dt);
   }
   s.lat+=s.vlat*dt;
-  const lim=HALF_W-2;
+  const lim=hwAt(shipT(s))-2;   // FEEL: the deck widens in the quiet sections
   if(Math.abs(s.lat)>lim){ const hitNow=!s.onWall; s.onWall=true; s.lat=Math.sign(s.lat)*lim;
     if(HARD&&s.isPlayer){ const into=Math.sign(s.psi||0)===Math.sign(s.lat)?Math.abs(s.psi||0):0;
       if(into>0.22){ if(hitNow){ s.speed*=0.72; s.boost*=0.4; energy=Math.max(0,energy-8); shake=Math.min(shake+0.9,1.4); wallHits++; }   // head-on: bounce and slow
@@ -1775,7 +1861,7 @@ function stepShip(s,dt){
     if(s.isPlayer){ shake=Math.min(shake+0.4,1.2); if(state==='race') wallT+=dt; } }
   else s.onWall=false;
   s.boost=Math.max(0,s.boost-22*dt);
-  if(s.isPlayer){ const wall=Math.abs(s.lat)>=HALF_W-2.01;
+  if(s.isPlayer){ const wall=Math.abs(s.lat)>=lim-0.01;
     if(wall&&shieldT<=0) energy=Math.max(0,energy-(HARD?40:26)*s.ph.drain*dt); else energy=Math.min(100,energy+1.8*dt);
     shieldT=Math.max(0,shieldT-dt);
     if(energy<=0){ s.speed=Math.min(s.speed,MAXV*s.ph.vmax*0.7); critT+=dt; } else critT=0;
@@ -1787,9 +1873,31 @@ function stepShip(s,dt){
       if(s.isPlayer){ boostMeter=Math.min(100,boostMeter+30); if(had<12){ fovKick=1; boostFlash=Math.max(boostFlash,0.55); } } } }
   advance(s,dt);
 }
+// FEEL · GRAVITY: the rail still sets the pace, but a descent adds a little and a climb takes a little (s.gv, m/s), so the
+// fastest moments come on the way down. FEEL · AIR: over a crest the track falls away faster than gravity can follow,
+// and the craft goes light. Its height over the deck (s.air) follows a ballistic arc; t, lat and speed never see it,
+// so the race is unchanged. It lands with a thud: a camera jolt and a short suspension squash.
+const AIR={ g:9.81, probe:4, lift:0.5, squashK:0.06, squashMax:0.55, shakeK:0.12 }, GRAV={ k:1.6, decay:0.5, min:-6, max:10 };
+const _fa=mkFrame(), _fb=mkFrame();
+let tubeFX=0; const HEMI=scene.children.find(o=>o.isHemisphereLight)||null;
+let dropFX=0;   // the player's descent, 0..1, for the lens and the speed lines
+function airZone(t){ const m=(((t%1)+1)%1)*TRACK_LEN; return FEEL.airAt.some(c=>Math.abs(m-c)<FEEL.airZoneM); }
+function airStep(s,dt,t,f){
+  if(!(dt>0)) return;
+  const v=s.speed+s.boost+(s.gv||0), d=AIR.probe/TRACK_LEN;
+  const aT=v*v*(frameAt(t-d,_fa).p.y-2*f.p.y+frameAt(t+d,_fb).p.y)/(AIR.probe*AIR.probe);   // the deck's vertical acceleration under the craft
+  if((s.air||0)>0||(aT<-AIR.g-AIR.lift&&airZone(t))){ s.airV=(s.airV||0)+(-AIR.g-aT)*dt; s.air=(s.air||0)+s.airV*dt;
+    if(s.air<=0){ const hit=-s.airV; s.air=0; s.airV=0;
+      if(hit>0.8){ s.squash=Math.min(AIR.squashMax,hit*AIR.squashK); s.airT=(s.airT||0)+1;
+        if(s.isPlayer){ shake=Math.min(shake+hit*AIR.shakeK,1.4); airtimeCount++; } } } }
+  s.squash=(s.squash||0)*Math.exp(-dt*7); }
+let airtimeCount=0;
 function advance(s,dt){
   const prev=shipT(s);
-  s.t+=(s.speed+s.boost)*(HARD&&s.isPlayer?Math.cos(s.psi||0):1)*dt/TRACK_LEN;
+  if(dt>0){ const slope=s.frame?s.frame.fwd.y:0;
+    s.gv=THREE.MathUtils.clamp((s.gv||0)+(-slope*AIR.g*GRAV.k-(s.gv||0)*GRAV.decay)*dt,GRAV.min,GRAV.max);
+    if(s.isPlayer) dropFX+=(THREE.MathUtils.clamp(-slope*5,0,1)-dropFX)*Math.min(1,dt*4); }
+  s.t+=(s.speed+s.boost+(s.gv||0))*(HARD&&s.isPlayer?Math.cos(s.psi||0):1)*dt/TRACK_LEN;
   const now=shipT(s);
   if(prev>0.9&&now<0.1&&state==='race'){
     if(!s.crossedStart){ s.crossedStart=true; if(s.isPlayer) lapStart=raceTime; }
@@ -1800,11 +1908,13 @@ function advance(s,dt){
       if(s.lap>TOTAL_LAPS&&!s.done){ s.done=true; s.finishTime=raceTime;
         if(s.isPlayer) finishRace(); } } }
   frameAt(now,s.frame); const f=s.frame;
+  airStep(s,dt,now,f);
   s.mesh.position.copy(f.p).addScaledVector(f.right,s.lat)
-    .addScaledVector(f.up,1.5+Math.sin(performance.now()*0.004+s.aiPhase*7)*0.15);
+    .addScaledVector(f.up,1.5+Math.sin(performance.now()*0.004+s.aiPhase*7)*0.15-(s.squash||0)*0.9).addScaledVector(UP,s.air||0);
   const basis=new THREE.Matrix4().makeBasis(f.right,f.up,f.fwd.clone().negate());
   s.mesh.quaternion.setFromRotationMatrix(basis);
   s.mesh.rotateY(s.yaw); s.mesh.rotateZ(s.roll);
+  if(s.air>0||s.squash>0.01) s.mesh.rotateX(THREE.MathUtils.clamp((s.airV||0)*0.02,-0.2,0.2)-(s.squash||0)*0.25);   // nose up on the way up, down on the way down, dips as it lands
   const sf=Math.min(1.4,(s.speed+s.boost)/MAXV), glow=0.9+Math.min(1,sf)*0.8+(s.boost>1?0.4:0), ud=s.mesh.userData;
   ud.engL.scale.set(glow,glow,1); ud.engR.scale.set(glow,glow,1);
   // airbrakes: the player's Q/E, the AI when it scrubs speed for a corner
@@ -1853,7 +1963,7 @@ function finishRace(){
 }
 
 /* ============================== KAMERA ============================== */
-const camPos=new THREE.Vector3(0,60,150), camLook=new THREE.Vector3();
+const camPos=new THREE.Vector3(0,60,150), camLook=new THREE.Vector3(), camUp=new THREE.Vector3(0,1,0), _cu=new THREE.Vector3();
 const loadFrame=mkFrame(), lookFrame=mkFrame();
 let camSnap=true; // snäpp kameran rätt vid race-start, inget svep från default-läget
 function updateCamera(dt){
@@ -1880,10 +1990,12 @@ function updateCamera(dt){
     camPos.x+=(Math.random()-0.5)*j; camPos.y+=(Math.random()-0.5)*j; }
   camera.position.copy(camPos);
   camLook.lerp(lookT,1-Math.pow(MC?MC.stiff:0.0005,dt));
+  // FEEL: the horizon tilts with the banked deck (most of the way, so the city still reads level-ish)
+  camUp.lerp(_cu.copy(UP).lerp(f.up,FEEL.camBank).normalize(),1-Math.pow(0.02,dt)).normalize(); camera.up.copy(camUp);
   camera.lookAt(camLook);
   fovKick=Math.max(0,fovKick-dt*1.6);
   // punchigare FOV: bredare synfält vid fart + kraftigt ryck vid boost (phones: a capped version, see mobCam)
-  camera.fov=THREE.MathUtils.lerp(camera.fov,MC?Math.min(MC.fovMax,MC.fov0+Math.min(sf,1.5)*MC.fovK+fovKick*MC.kick):fovFor(67+sf*20+fovKick*12),7*dt);
+  camera.fov=THREE.MathUtils.lerp(camera.fov,MC?Math.min(MC.fovMax,MC.fov0+Math.min(sf,1.5)*MC.fovK+fovKick*MC.kick+dropFX*3):fovFor(67+sf*20+fovKick*12+dropFX*FEEL.dropFov),7*dt);   // FEEL: the lens opens on the way down
   camera.updateProjectionMatrix();
 }
 
@@ -1937,7 +2049,7 @@ function drawMinimap(){
 }
 function updateHUD(dt){
   const p=player(); if(!p) return;
-  elSpd.textContent=Math.round((p.speed+p.boost)*8.5);
+  elSpd.textContent=Math.round(Math.max(0,p.speed+p.boost+(p.gv||0))*8.5);
   elLap.textContent=Math.min(p.lap,TOTAL_LAPS);
   elTime.textContent=fmt(state==='race'?raceTime-lapStart:0);
   elBest.textContent=bestLap?fmt(bestLap):'--';
@@ -1990,7 +2102,10 @@ function loop(now){
     stepMissiles(dt); if(FX.particles){ GLOW.tick(dt); DUST.tick(dt); } boostFlash=Math.max(0,boostFlash-dt*1.8); hitFlash=Math.max(0,hitFlash-dt*2);
     updateHUD(dt); drawMinimap();
     { const p=player(); const sf=(p.speed+p.boost)/MAXV;
-      drawSpeedFX(state==="race"?Math.min(1,Math.max(0,(sf-0.45)/0.55)):0);
+      // FEEL: the streaks thicken on the way down and inside a tube; the tube shuts the evening sun out (its ribs light it)
+      tubeFX+=(tubeAt(shipT(p))-tubeFX)*Math.min(1,dt*5);
+      sun.intensity=TH.sunI*(1-FEEL.tubeDim*tubeFX); if(HEMI) HEMI.intensity=TH.hemi[2]*(1-0.5*FEEL.tubeDim*tubeFX);
+      drawSpeedFX(state==="race"?Math.min(1,Math.max(0,(sf-0.45)/0.55)+dropFX*FEEL.dropFX+tubeFX*FEEL.tubeFX):0);
       POSTFX.on=state==='race'; POSTFX.sf=sf; POSTFX.boost=Math.min(1,(p.boost>1?0.6:0)+boostFlash); POSTFX.ship.copy(p.mesh.position); }
   } else if(camOverride){ POSTFX.on=false; camera.position.copy(camOverride.p); camera.lookAt(camOverride.l);
   } else if(rootLoaded){
@@ -2015,7 +2130,7 @@ if(location.search.includes('check')) window.__SUN=SUN_DIR;
 window.__theme=THEME;
 if(location.search.includes('check')) window.__sw={
   frameAt, mkFrame, hitsAt:(x,z)=>tiles?hitsAt(x,z):[], tilesIdle:()=>tiles?tilesIdle():true, player, ships:()=>ships, keys,
-  stats:()=>({ hard:HARD, energy, wallT, wallHits, raceTime, state }), grip:()=>GRIP_K(),
+  stats:()=>({ hard:HARD, energy, wallT, wallHits, raceTime, state, airtime:airtimeCount }), grip:()=>GRIP_K(),
   passes:()=>composer.passes, bloomPass:bloom, flickN:()=>flickMats.length, state:()=>state, len:()=>TRACK_LEN, HALF_W, MAXV, curvAhead, camera, setPaused:v=>{ paused=v; },
   placeAt(t,lat=0){ const p=player(); p.t=t; p.lat=lat; p.speed=0; p.vlat=0; advance(p,0); camSnap=true; updateCamera(1/60); camera.updateMatrixWorld(); },
   // where a material sits in the track glb: the first triangle of its group (a board, a wall chunk), for close-up shots
