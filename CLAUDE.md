@@ -20,8 +20,11 @@ Publikt repo `Pochtli137/stockholmwipeout`. Live https://stockholmwipeout.vercel
   (`FX.particles`, `SFX.padSound`, `SFX.newPlayerEngine`, `SFX.spatial`, `SFX.hangar`).
 - **Runor (yngre futharken) i stället för katakana**, Noto Sans Runic inbäddad.
 - WebGPU provat och avvisat: tiles-biblioteket kräver WebGLRenderer.
-- **Grepp hårt = fri styrning, standard sedan 2026-09-29.** `?grepp=normal` eller G i pausen ger rälsen. Rattar: `HARD_EASE`
-  (styrhjälp och grepptak, 0,5) och `AI_EASE` (motståndarnas fart, 0,5), överst i fysikdelen av index.html.
+- **Rälsen är spelet (Kim 2026-09-30):** "ett spel som handlar mer om upplevelse och samhällskritik". Fri styrning finns bara
+  bakom den dolda utvecklarflaggan `?grepp=hart` (ingen G-växel, inget sparat val). `AI_EASE` (motståndarnas fart, 0,5) gäller
+  alltid; `HARD_EASE` bara under flaggan. Rattarna står överst i fysikdelen av index.html.
+- **Titelskärmen** har ett eget S:t Erik-märke i neonrör (krönt, skäggigt huvud i profil i en ring). Det är ett nytt märke, **inte**
+  Stockholms registrerade vapen (skyddat enligt lagen 1970:498), så rita aldrig av det officiella vapnet.
   Detaljer i `wo2097/pipeline/README.md`.
 
 ## Grenar

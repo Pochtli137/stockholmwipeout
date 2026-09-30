@@ -197,6 +197,17 @@
   #loadveil.title { background:radial-gradient(ellipse at 50% 42%,rgba(5,7,11,.15),rgba(5,7,11,.72) 70%),linear-gradient(180deg,rgba(5,7,11,.55),transparent 30%,transparent 70%,rgba(5,7,11,.8)) !important;
     flex-direction:column; gap:4vh; touch-action:none; cursor:pointer; }
   .tlogo { text-align:center; transform:skewX(-8deg); transition:transform .8s cubic-bezier(.6,0,.2,1), opacity .8s, filter .8s; }
+  .tlogo .terik { display:block; margin:0 auto 1.2vh; width:min(clamp(84px,11vw,170px),17vh); height:auto; overflow:visible; transform:skewX(8deg);
+    filter:drop-shadow(0 0 4px rgba(0,225,255,.9)) drop-shadow(0 0 14px rgba(0,225,255,.45)); animation:erik-in 1.4s cubic-bezier(.2,.7,.2,1) both; }
+  .terik * { fill:none; stroke-linecap:round; stroke-linejoin:round; vector-effect:non-scaling-stroke; }
+  .terik .er-disc { fill:rgba(4,6,12,.72); stroke:none; }
+  .terik .er-ring { stroke:#ff2e9a; stroke-width:2; stroke-dasharray:14 6; opacity:.85; }
+  .terik .er-crown { stroke:#ffe600; stroke-width:3.6; }
+  .terik .er-head { stroke:#e9fbff; stroke-width:4.2; }
+  .terik .er-line { stroke:#7ff0ff; stroke-width:2.6; }
+  @keyframes erik-in { from { opacity:0; transform:skewX(8deg) translateY(-18px) scale(.85); } to { opacity:1; transform:skewX(8deg); } }
+  body.mobile.portrait .tlogo .terik { width:clamp(64px,22vw,110px); }
+  @media (max-height:500px){ .tlogo .trune, .tlogo .tsub { display:none; } .tlogo .terik { width:15vh; margin-bottom:.6vh; } }   /* phone landscape: TAP must clear the load line */
   .tlogo .t1 { font:900 clamp(22px,3.4vw,52px) "Orbitron",sans-serif; letter-spacing:.42em; color:var(--w); text-shadow:0 0 18px rgba(0,225,255,.55); padding-left:.42em; }
   .tlogo .t2 { font:900 clamp(56px,11vw,176px)/.92 "Orbitron",sans-serif; letter-spacing:.04em; color:#fff;
     text-shadow:0 0 24px rgba(0,225,255,.9),0 0 60px rgba(0,225,255,.45),6px 6px 0 rgba(255,46,154,.85); }
@@ -277,7 +288,6 @@
 <canvas id="minimap" width="240" height="240"></canvas>
 <div id="attrib"></div>
 <div id="rotate"><div><div class="ph"></div>VÄND TELEFONEN<small>STOCKHOLM WIPEOUT KÖRS LIGGANDE</small></div></div>
-<div id="grepT" class="hud" style="display:none;position:fixed;left:0;right:0;top:calc(33% + 90px);text-align:center;font-size:18px;letter-spacing:.2em;color:#ffd24a;cursor:pointer;z-index:12;pointer-events:auto"></div>
 <div id="touch"><div id="tpad"><div id="tknob"></div></div>
   <button class="tb" id="tbAbL">AB L</button><button class="tb" id="tbAbR">AB R</button>
   <button class="tb" id="tbThrust">GAS</button><button class="tb" id="tbBrake">BRAKE</button>
@@ -302,7 +312,15 @@
 </div></div>
 
 <div id="loadveil" class="title" style="display:flex">
-  <div class="tlogo"><div class="t1">STOCKHOLM</div><div class="t2">WIPEOUT</div><div class="t3">2097</div>
+  <div class="tlogo"><svg class="terik" viewBox="0 0 200 200" aria-label="S:t Erik" role="img">
+    <!-- An original neon mark for the game: a crowned king's head in profile, facing left. Not Stockholm's registered arms. -->
+    <circle class="er-disc" cx="100" cy="102" r="92"/><circle class="er-ring" cx="100" cy="102" r="92"/>
+    <path class="er-crown" d="M76 66 L79 38 L92 52 L104 25 L116 52 L129 36 L134 62 Z"/>
+    <circle class="er-crown" cx="79" cy="33" r="3.2"/><circle class="er-crown" cx="104" cy="19" r="3.6"/><circle class="er-crown" cx="129" cy="31" r="3.2"/>
+    <path class="er-head" d="M78 68 C74 75 72 81 72 87 L66 94 L56 104 L66 108 C65 112 65 115 67 117 L63 121 L68 125 C61 141 66 159 81 171 C88 176 95 180 101 184 C104 174 111 164 114 154 C117 148 117 144 116 140"/>
+    <path class="er-head" d="M134 64 C145 78 147 93 141 107 C147 119 143 131 133 139 C126 145 121 151 119 161"/>
+    <path class="er-line" d="M79 91 L87 90 M111 100 C119 95 124 108 116 114 M74 137 C80 142 76 150 82 156 C87 161 84 167 90 172 M88 132 C94 138 90 146 96 152 C101 157 99 164 102 170 M114 158 L121 186"/>
+  </svg><div class="t1">STOCKHOLM</div><div class="t2">WIPEOUT</div><div class="t3">2097</div>
     <div class="trune">ᛋᛏᚢᚴᚼᚢᛚᛘ᛫ᚢᛁᛒᛁᚢᛏ</div><div class="tsub">SAGL · STOCKHOLM ANTI-GRAVITY LEAGUE</div></div>
   <div id="tpress">LADDAR STOCKHOLM</div>
   <div class="tload"><div id="loadbar"><div id="loadfill"></div></div><div id="loadtxt">väntar på tiles ...</div></div>
@@ -1293,7 +1311,6 @@ addEventListener('keydown',e=>{ keys[e.code]=true;
   if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code)) e.preventDefault();
   if(e.code==='KeyM') toggleAudio();
   if(e.code==='KeyP'&&(state==='count'||state==='race')) paused=!paused;   // pause only means something on the grid and in the race
-  if(e.code==='KeyG'&&paused) setHard(!HARD);
   if(e.code==='KeyR'&&snapDone) restart();
   if(e.code==='Space'&&state==='race'&&!paused) fireWeapon();
   ensureAudio(); });
@@ -1649,16 +1666,14 @@ function fmt(t){ const m=Math.floor(t/60),s=t-m*60; return m+':'+s.toFixed(2).pa
 
 /* ============================== FYSIK ============================== */
 const MAXV=66, ACCEL=27, BRAKE=46, DRAG=0.34;
-// GREPP HÅRT (?grepp=hart, or G in the pause) = FREE STEERING. The player's craft keeps its own heading: psi is the angle
+// GREPP HÅRT (only with ?grepp=hart, a hidden dev flag) = FREE STEERING. The player's craft keeps its own heading: psi is the angle
 // between the craft and the track tangent. The track turns under you (psi drifts outward at curvature*v), so you must
 // steer through every bend; let go and you reach the outer wall in about a second. Grip caps how tight you can turn at
 // speed (k/v rad/s, k=40), the airbrakes add yaw and drag and lift the cap x1.35. The AI stays on rails, braking for the
 // same tighter corners. Normal mode is the old rail, unchanged.
-// Default ON since 2026-09-29 (Kim). ?grepp=normal or G in the pause gives the old rail. The choice lives under a new key
-// (sw_grepp2): the old sw_grepp was written as 'normal' on every visit, so it cannot be read as anyone's choice.
-let HARD=(()=>{ const q=new URLSearchParams(location.search).get('grepp'); if(q==='hart'||q==='hard') return true; if(q==='normal') return false;
-  try{ return localStorage.getItem('sw_grepp2')!=='normal'; }catch(e){ return true; } })();
-function setHard(v){ HARD=!!v; try{ localStorage.setItem('sw_grepp2',HARD?'hart':'normal'); }catch(e){} const g=document.getElementById('grepT'); if(g) g.textContent='G · GREPP: '+(HARD?'HÅRT':'NORMAL'); }
+// RAIL IS THE GAME (Kim 2026-09-30): "ett spel som handlar mer om upplevelse och samhällskritik". Everyone rides the rail;
+// free steering exists only behind ?grepp=hart for development. No toggle, and nothing stored: an old sw_grepp2 is ignored.
+const HARD=(()=>{ const q=new URLSearchParams(location.search).get('grepp'); return q==='hart'||q==='hard'; })();
 // HARD_EASE: en ratt för hur förlåtande hårt grepp är. 0 = som första versionen (släppt spak når väggen på ~0,9 s i en
 // 200 m-kurva), 1 = mycket förlåtande. Den styr två saker: styrhjälpen (skeppet tar själv 0,8*HARD_EASE av kurvan, du
 // styr resten) och grepptaket k (hur snävt du kan svänga i fart). Självrätningen visade sig inte bita i den här farten.
@@ -1668,7 +1683,6 @@ const HARD_EASE=0.5;
 const AI_EASE=0.5;
 const GRIP_K=()=>HARD?40+12*HARD_EASE:70;   // hard: also caps how tight the free-steering craft can turn at speed (k/v rad/s)
 let wallT=0, wallHits=0;   // hard mode accounting (and the checker's)
-const grepT=document.getElementById('grepT'); setHard(HARD); grepT.addEventListener('pointerdown',e=>{ e.preventDefault(); e.stopPropagation(); setHard(!HARD); });
 let boostMeter=50, shake=0, fovKick=0;
 // 2097 kit: shield energy (the walls eat it), one weapon slot, missiles in flight, flashes for the FX layer
 let energy=100, weapon=null, shieldT=0, boostFlash=0, hitFlash=0, critT=0; const missiles=[];
@@ -1968,8 +1982,7 @@ function loop(now){
   if(state==='select'){ updateAudio(); selectTick(dt); return; }
   if(paused){ if(!pauseMsg) pauseMsg={t:msg.textContent,fs:msg.style.fontSize,c:msg.className};   // what the banner said before the pause
     msg.className='hud'; msg.textContent='PAUSE'; msg.style.fontSize='64px';
-    grepT.style.display='block'; composer.render(); return; }
-  if(grepT.style.display!=='none') grepT.style.display='none';
+    composer.render(); return; }
   if(pauseMsg){ if(msg.textContent==='PAUSE'){ msg.textContent=pauseMsg.t==='PAUSE'?'':pauseMsg.t; msg.style.fontSize=pauseMsg.fs; msg.className=pauseMsg.c; }
     pauseMsg=null; }   // resumed: give the banner back, never leave PAUSE on screen
   if(state==='count'){
@@ -2013,7 +2026,7 @@ if(location.search.includes('check')) window.__SUN=SUN_DIR;
 window.__theme=THEME;
 if(location.search.includes('check')) window.__sw={
   frameAt, mkFrame, hitsAt:(x,z)=>tiles?hitsAt(x,z):[], tilesIdle:()=>tiles?tilesIdle():true, player, ships:()=>ships, keys,
-  stats:()=>({ hard:HARD, energy, wallT, wallHits, raceTime, state }), setHard, grip:()=>GRIP_K(),
+  stats:()=>({ hard:HARD, energy, wallT, wallHits, raceTime, state }), grip:()=>GRIP_K(),
   passes:()=>composer.passes, bloomPass:bloom, flickN:()=>flickMats.length, state:()=>state, len:()=>TRACK_LEN, HALF_W, MAXV, curvAhead, camera, setPaused:v=>{ paused=v; },
   placeAt(t,lat=0){ const p=player(); p.t=t; p.lat=lat; p.speed=0; p.vlat=0; advance(p,0); camSnap=true; updateCamera(1/60); camera.updateMatrixWorld(); },
   // where a material sits in the track glb: the first triangle of its group (a board, a wall chunk), for close-up shots

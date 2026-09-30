@@ -230,7 +230,10 @@ Checked in Playwright emulation (iPhone 15 Pro and Pixel 8, landscape): a full l
 (147 s, no errors), swipes, taps, pause, the portrait veil; desktop check_lap still passes in both themes.
 
 
-## Grepp hårt: fri styrning (`?grepp=hart`, G i pausen, av som standard)
+## Grepp hårt: fri styrning (bara `?grepp=hart`, dold utvecklarflagga)
+
+**2026-09-30:** Kim valde rälsen som spelet. G-växeln och det sparade valet är borttagna; fri styrning finns bara bakom flaggan.
+
 Normalläget är den gamla rälsen: skeppet följer banans riktning och styrningen flyttar det bara i sidled. På det här varvet
 (minsta radie 120 m) biter greppgränsen aldrig, så man behöver inte styra. **Grepp hårt** ger spelaren en egen kurs:
 psi är vinkeln mellan skeppet och banans tangent, `t += v·cos psi`, `lat += v·sin psi`, och banan vrider sig under skeppet
