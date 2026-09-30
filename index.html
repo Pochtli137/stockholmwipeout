@@ -831,14 +831,14 @@ let TRACK_LEN=curve.getLength();
 const HALF_W=8, CLEARANCE=6;
 
 const UP=new THREE.Vector3(0,1,0);
-// FEEL, per track frame from track.json: the bank (rad) and the half width; the tubes as [t0,t1]. Null = flat, HALF_W.
+// FEEL, per track frame from track.json: the bank (rad) and the half width; the jump gaps as [t0,t1]. Null = flat, HALF_W.
 let BANK=TRACK_JSON&&TRACK_JSON.bank?Float32Array.from(TRACK_JSON.bank):null;
 let HWA=TRACK_JSON&&TRACK_JSON.hw?Float32Array.from(TRACK_JSON.hw):null;
-let TUBES=TRACK_JSON&&TRACK_JSON.tubes?TRACK_JSON.tubes:[];
+let GAPS=TRACK_JSON&&TRACK_JSON.gaps?TRACK_JSON.gaps:[];
 function lerpArr(a,t){ const n=a.length, x=(((t%1)+1)%1)*n, i=Math.floor(x)%n, k=x-Math.floor(x); return a[i]*(1-k)+a[(i+1)%n]*k; }
 function hwAt(t){ return HWA?lerpArr(HWA,t):HALF_W; }
-function tubeAt(t){ t=((t%1)+1)%1; let k=0; for(const [a,b] of TUBES){ const e=0.0015;   // 0..1, eased over ~17 m at the mouths
-    if(t>a-e&&t<b+e) k=Math.max(k,Math.min(1,(t-(a-e))/(2*e),((b+e)-t)/(2*e))); } return k; }
+// the jump: 0..1 across a gap in the deck (the rail runs on through the air on a ballistic arc), -1 on the deck
+function gapAt(t){ t=((t%1)+1)%1; for(const [a,b] of GAPS) if(t>=a&&t<=b) return (t-a)/(b-a); return -1; }
 const _bt=new THREE.Vector3();
 function frameAt(t,out){ t=((t%1)+1)%1;
   curve.getPointAt(t,out.p); curve.getTangentAt(t,out.fwd).normalize();
@@ -1002,25 +1002,61 @@ const FEEL={ on:true, slope:0.19, closeM:16, buffer:1.5, smoothM:10, finalM:14,
   // wide and quiet (no pads, 10.5 m half width wherever the tiles leave room at +-11.5 m) before the big moments:
   // the water of Strömmen before the climb and the dive into Nybroviken, and Klara sjö before Kungsholmen
   wide:[ [430,960], [5420,5640] ], wideHW:10.5,
-  // enclosed neon tubes (built in Blender) over open water, where the survey finds nothing within +-11.5 m of the deck:
-  // the dive into Nybroviken ends inside one, and a shorter one covers the bottom of the drop at Norr Mälarstrand
-  tubes:[ [1590,1815], [7395,7545] ],
+  // MORE Z (Kim 2026-09-30: "give me more z up and down in general"): the whole lap may dip wherever the city leaves an
+  // open space longer than ~2 x openM (water, squares, parks), and rolling hills ride on top of it every stepM, raised
+  // cosines of halfM either side; each drop gets a taller hill before it (dropHill) so the big dives get bigger.
+  openM:45, hills:{ stepM:430, halfM:215, amp:[12,9,14,10], dropHill:14, skipM:[[-170,170],[7500,8560]] },
+  // THE JUMP (Kim: "give me a jump over västerbron"): the lap runs along Västerbron from Kungsholmen to Långholmen. A
+  // ramp climbs off the bridge, the deck ends at the lip, the rail flies a ballistic arc over the arch's crown (a parabola
+  // tuned to race speed, ~84 m/s) with no track under it, and a landing ramp takes it back down to the bridge.
+  jump:{ name:'VÄSTERBRON', rampM:7690, lipM:7960, landM:8220, outM:8440, s0:0.18, overTop:32 },
   // speed pads: chains of three into every drop, two more on the way down; none in the quiet wide sections
   chain:3, chainGapM:36,
   // banking: degrees = min(bankMax, bankK * curvature), faded out on near-straights, smoothed along the lap
   bankMax:20, bankK:3000, bankFloor:5, bankSmoothM:45,
-  camBank:0.75, dropFov:8, dropFX:0.3, tubeFX:0.35, tubeDim:0.7,
+  camBank:0.75, dropFov:8, dropFX:0.3,
   airAt:[1416,5325,7326], airZoneM:70 };   // the airtime crests (m along the lap): Nybroviken, Klara sjö, Norr Mälarstrand; every other crest holds the deck
 function feelProfile(base,req,n,ds){
   const F=FEEL, inwin=new Uint8Array(n);
   for(const [,a,b] of F.drops) for(let i=Math.max(0,Math.ceil(a/ds));i<=Math.min(n-1,Math.floor(b/ds));i++) inwin[i]=1;
-  const reqB=req.map(v=>v+F.buffer), w=Math.max(1,Math.round(F.closeM/ds));
+  const reqB=req.map(v=>v+F.buffer), w=Math.max(1,Math.round(F.closeM/ds)), wo=Math.max(1,Math.round(F.openM/ds));
   const envD=winMin(winMax(reqB,w),w).map((v,i)=>Math.max(v,reqB[i]));
-  const floor=base.map((v,i)=>inwin[i]?envD[i]:v);
+  const envO=winMin(winMax(reqB,wo),wo).map((v,i)=>Math.max(v,reqB[i]));   // outside the drops: only the big open spaces
+  const floor=base.map((v,i)=>inwin[i]?envD[i]:Math.min(v,envO[i]));
   for(let pass=0;pass<3;pass++){ for(let i=0;i<n;i++) floor[i]=Math.max(floor[i],floor[(i-1+n)%n]-F.slope*ds);
     for(let i=n-1;i>=0;i--) floor[i]=Math.max(floor[i],floor[(i+1)%n]-F.slope*ds); }
   let h=floor.slice(); for(let it=0;it<60;it++){ h=gauss(h,F.smoothM/ds); for(let i=0;i<n;i++) h[i]=Math.max(h[i],floor[i]); }
-  return gauss(h,F.finalM/ds); }
+  h=gauss(h,F.finalM/ds);
+  // rolling hills: raised cosines every stepM, a taller one on the crest before every drop; hills only ever add height,
+  // so nothing they cross can come through the deck
+  const H=F.hills, L=n*ds, bumps=[];
+  const skip=m=>H.skipM.some(([a,b])=>{ const mm=a<0&&m>L/2?m-L:m; return mm>=a&&mm<=b; });
+  const lows=F.drops.map(([,a,b])=>{ const i0=Math.round(a/ds), i1=Math.round(b/ds); let lo=i0; for(let i=i0;i<=i1;i++) if(h[i%n]<h[lo%n]) lo=i; return lo*ds; });
+  for(const [,a] of F.drops){ const c=a-40; if(!skip(c)) bumps.push([c,H.dropHill]); }
+  for(let k=0,m=H.stepM*0.5;m<L;m+=H.stepM,k++){ if(skip(m)) continue;
+    if(lows.some(lo=>Math.abs(lo-m)<H.halfM+60)||bumps.some(([c])=>Math.abs(c-m)<H.halfM*1.4)) continue;
+    bumps.push([m,H.amp[k%H.amp.length]]); }
+  for(const [c,a] of bumps) for(let j=-H.halfM;j<=H.halfM;j+=ds){ const i=((Math.round((c+j)/ds))%n+n)%n; h[i]+=a*0.5*(1+Math.cos(Math.PI*j/H.halfM)); }
+  for(let i=0;i<n;i++) h[i]=Math.max(h[i],floor[i]);
+  for(let pass=0;pass<2;pass++){ for(let i=0;i<n;i++) h[i]=Math.max(h[i],h[(i-1+n)%n]-F.slope*ds);   // raise-only: grades stay under the limit
+    for(let i=n-1;i>=0;i--) h[i]=Math.max(h[i],h[(i+1)%n]-F.slope*ds); }
+  // the jump over Västerbron: the arc across the gap is pinned (a parabola tuned to race speed), with 60 m of straight
+  // launch line before the lip and landing line after it; everything else relaxes around it, so the ramps blend in
+  const pin=new Map(), J=F.jump;
+  if(J){ const il=Math.round(J.lipM/ds), id=Math.round(J.landM/ds), D=(id-il)*ds, run=Math.round(60/ds);
+    let topG=-1e9; for(let i=il;i<=id;i++) topG=Math.max(topG,req[i%n]);
+    const Hl=Math.max(h[Math.round(J.rampM/ds)%n]+12, topG+J.overTop-J.s0*D/4);   // the apex clears the bridge's crown by overTop
+    for(let i=il-run;i<=id+run;i++){ let y;
+      if(i<il) y=Hl-J.s0*(il-i)*ds; else if(i<=id){ const x=(i-il)*ds; y=Hl+J.s0*x-(J.s0/D)*x*x; } else y=Hl-J.s0*(i-id)*ds;
+      const u=i<il?(i-(il-run))/run:i>id?((id+run)-i)/run:1, w=u*u*(3-2*u);   // soft at the far ends of the run lines
+      pin.set((i%n+n)%n,[Math.max(y,floor[(i%n+n)%n]),w]); }
+    F.jumpStats={ lipH:+Hl.toFixed(1), apexH:+(Hl+J.s0*D/4).toFixed(1), overCrown:+(Hl+J.s0*D/4-topG).toFixed(1), gapM:Math.round(D) }; }
+  const pinIt=()=>{ for(const [i,[y,w]] of pin) h[i]=Math.max(floor[i],w*y+(1-w)*h[i]); };
+  pinIt();
+  // relax: smooth, never under the city, pins back; the hills and the ramps round off to a large vertical radius
+  for(let it=0;it<80;it++){ h=gauss(h,F.smoothM/ds); for(let i=0;i<n;i++) h[i]=Math.max(h[i],floor[i]); pinIt(); }
+  h=gauss(h,F.finalM/ds); pinIt();
+  return h; }
 function designProfile(S){
   const n=S.n, ds=S.ds, P=PROFILE;
   const ground=closedFill(S.ground), top=closedFill(S.top.map((v,i)=>v==null?null:Math.max(v,ground[i]??v)));
@@ -1066,9 +1102,9 @@ function feelLayout(S,R,SEG){
   for(let i=0;i<SEG;i++){ const m=i/SEG*NS*ds, si=Math.round(i/SEG*NS)%NS;
     for(const [a,b] of F.wide) if(m>=a&&m<=b&&okW[si]) want[i]=F.wideHW; }
   const hs=gauss(want,40/dl); for(let i=0;i<SEG;i++) hw[i]=Math.max(HALF_W,Math.min(F.wideHW,hs[i]));
-  // tubes: the deck stays at the default width inside
-  const tubes=F.tubes.map(([a,b])=>[toT(a),toT(b)]);
-  for(let i=0;i<SEG;i++){ const t=i/SEG; for(const [a,b] of tubes) if(t>=a-0.004&&t<=b+0.004) hw[i]=HALF_W; }
+  // the jump gap: no deck between the lip and the landing
+  const gaps=F.jump?[[toT(F.jump.lipM),toT(F.jump.landM)]]:[];
+  for(let i=0;i<SEG;i++){ const t=i/SEG; for(const [a,b] of gaps) if(t>=a-0.01&&t<=b+0.01) hw[i]=HALF_W; }
   // speed pads: the old even rhythm, minus the quiet wide sections, plus a chain of three into every drop and two on the way down
   const drops=F.drops.map(([n,a,b])=>{ const i0=Math.round(a/ds), i1=Math.round(b/ds); let lo=i0;
     for(let i=i0;i<=i1;i++) if(R.h[i%NS]<R.h[lo%NS]) lo=i;
@@ -1077,18 +1113,19 @@ function feelLayout(S,R,SEG){
   const chain=[]; for(const d of drops){ const nearStart=d.crest*TRACK_LEN<200||(1-d.crest)*TRACK_LEN<200;   // Slussen: the launch is the lead-in, the grid keeps clear
     if(!nearStart) for(let k=F.chain;k>=1;k--) chain.push({t:d.crest-toT(k*F.chainGapM-12),lat:0});
     chain.push({t:d.crest+(d.low-d.crest)*0.4,lat:0}); chain.push({t:d.crest+(d.low-d.crest)*0.75,lat:0}); }
-  const quiet=t=>F.wide.some(([a,b])=>t>=toT(a)&&t<=toT(b));
+  if(F.jump) for(let k=4;k>=1;k--) chain.push({t:toT(F.jump.lipM-k*F.chainGapM),lat:0});   // four pads fire you off the lip
+  const quiet=t=>F.wide.some(([a,b])=>t>=toT(a)&&t<=toT(b))||(F.jump&&t>=toT(F.jump.lipM-8)&&t<=toT(F.jump.landM+40));
   const even=Array.from({length:135},(_,i)=>({ t:(i+0.55)/135, lat:[-3.5,0,3.5][i%3] }))
     .filter(p=>!quiet(p.t)&&!chain.some(c=>Math.abs(c.t-p.t)*TRACK_LEN<55));
-  const pads=[...even,...chain].map(p=>({t:((p.t%1)+1)%1,lat:p.lat})).sort((a,b)=>a.t-b.t);
+  const pads=[...even,...chain].map(p=>({t:((p.t%1)+1)%1,lat:p.lat})).filter(p=>!gaps.some(([a,b])=>p.t>=a-0.001&&p.t<=b+0.004)).sort((a,b)=>a.t-b.t);
   BANK=saveB; HWA=saveW;
-  return { bank, hw, tubes, drops, pads }; }
+  return { bank, hw, gaps, drops, pads }; }
 function publishTrack(S){
   const R=designProfile(S), N=CP.length, NS=S.n, at=(arr,u)=>{ const x=((u%1)+1)%1*NS, i=Math.floor(x)%NS, j=(i+1)%NS, k=x-Math.floor(x); return arr[i]*(1-k)+arr[j]*k; };
   for(let i=0;i<N;i++) CP[i].y=at(R.h,i/N);
   curve.updateArcLengths(); TRACK_LEN=curve.getLength(); rebuildCurvature();
   const FL=FEEL.on?feelLayout(S,R,2400):null;
-  if(FL){ BANK=Float32Array.from(FL.bank); HWA=Float32Array.from(FL.hw); TUBES=FL.tubes; PADS.length=0; PADS.push(...FL.pads); }
+  if(FL){ BANK=Float32Array.from(FL.bank); HWA=Float32Array.from(FL.hw); GAPS=FL.gaps; PADS.length=0; PADS.push(...FL.pads); }
   // pylon feet: whatever is straight under the centre (street, roof or deck), never above the slab
   const under=closedFill(S.topC).map((v,i)=>Math.min(v,R.h[i]-1.5));
   GROUND=[...Array(N).keys()].map(i=>at(under,i/N));
@@ -1097,10 +1134,10 @@ function publishTrack(S){
     frames.push([...f.p.toArray(),...f.right.toArray(),...f.up.toArray(),...f.fwd.toArray(), groundAt(u)]);
     clear.push([rel(S.postL,u,f.p.y),rel(S.postR,u,f.p.y),rel(S.outL,u,f.p.y),rel(S.outR,u,f.p.y)]); }
   window.__dump={ cp:CP.map(v=>[+v.x.toFixed(3),+v.y.toFixed(3),+v.z.toFixed(3)]), frames, clear, trackLen:TRACK_LEN, halfW:HALF_W,
-    pads:PADS.map(p=>[p.t,p.lat]), wpads:WPADS.map(p=>[p.t,p.lat]),
+    pads:PADS.map(p=>[p.t,p.lat]), wpads:WPADS.map(p=>[offGap(p.t,typeof FL!=='undefined'&&FL?FL.gaps:GAPS),p.lat]),
     arches:ARCH_AT.map(a=>({...a, ...nearestT(a.lat,a.lon)})), snapped:S.top.filter(v=>v!=null).length, n:N,
     profile:R.stats, survey:S,
-    ...(FL?{ bank:FL.bank.map(v=>+v.toFixed(4)), hw:[...FL.hw].map(v=>+v.toFixed(2)), tubes:FL.tubes, drops:FL.drops }:{}) };
+    ...(FL?{ bank:FL.bank.map(v=>+v.toFixed(4)), hw:[...FL.hw].map(v=>+v.toFixed(2)), gaps:FL.gaps, drops:FL.drops, jump:FEEL.jumpStats||null }:{}) };
   document.getElementById('loadtxt').textContent='dump klar · '+JSON.stringify(R.stats);
 }
 async function dumpWalk(){
@@ -1117,7 +1154,7 @@ async function dumpWalk(){
   const SEG=1600, f=mkFrame(), frames=[];
   for(let i=0;i<SEG;i++){ frameAt(i/SEG,f); frames.push([...f.p.toArray(),...f.right.toArray(),...f.up.toArray(),...f.fwd.toArray(), groundAt(i/SEG)]); }
   window.__dump={ cp:CP.map(v=>[+v.x.toFixed(3),+v.y.toFixed(3),+v.z.toFixed(3)]), frames, trackLen:TRACK_LEN, halfW:HALF_W,
-    pads:PADS.map(p=>[p.t,p.lat]), wpads:WPADS.map(p=>[p.t,p.lat]),
+    pads:PADS.map(p=>[p.t,p.lat]), wpads:WPADS.map(p=>[offGap(p.t,typeof FL!=='undefined'&&FL?FL.gaps:GAPS),p.lat]),
     arches:ARCH_AT.map(a=>({...a, ...nearestT(a.lat,a.lon)})), snapped:snapped.filter(Boolean).length, n:N };
   document.getElementById('loadtxt').textContent='dump klar';
 }
@@ -1157,6 +1194,8 @@ function curvAhead(t,dist){
 let trackGroup=null;
 const PADS=Array.from({length:135},(_,i)=>({ t:(i+0.55)/135, lat:[-3.5,0,3.5][i%3] }));
 const WPADS=Array.from({length:16},(_,i)=>({ t:(i+0.27)/16, lat:[-3.5,3.5,0][i%3] }));
+function offGap(t,gaps){ for(const [a,b] of gaps||GAPS) if(t>=a-0.002&&t<=b+0.004) return b+0.006; return t; }   // no weapon pad in the air over Västerbron
+for(const w of WPADS) w.t=offGap(w.t);
 // FEEL: the pads the dump laid out (chains into the drops, none in the quiet wide sections) replace the even rhythm
 if(TRACK_JSON&&TRACK_JSON.pads&&TRACK_JSON.drops){ PADS.length=0; for(const [t,lat] of TRACK_JSON.pads) PADS.push({t,lat}); }
 // sponsor arches over the real places: nearest point on the lap to each landmark
@@ -1879,11 +1918,15 @@ function stepShip(s,dt){
 // so the race is unchanged. It lands with a thud: a camera jolt and a short suspension squash.
 const AIR={ g:9.81, probe:4, lift:0.5, squashK:0.06, squashMax:0.55, shakeK:0.12 }, GRAV={ k:1.6, decay:0.5, min:-6, max:10 };
 const _fa=mkFrame(), _fb=mkFrame();
-let tubeFX=0; const HEMI=scene.children.find(o=>o.isHemisphereLight)||null;
+let jumpCam=0, timeScale=1;   // THE JUMP: the camera pulls back and time slows a touch at the top of the arc
 let dropFX=0;   // the player's descent, 0..1, for the lens and the speed lines
 function airZone(t){ const m=(((t%1)+1)%1)*TRACK_LEN; return FEEL.airAt.some(c=>Math.abs(m-c)<FEEL.airZoneM); }
 function airStep(s,dt,t,f){
   if(!(dt>0)) return;
+  const g=gapAt(t);   // THE JUMP: the rail itself is the arc, so no extra lift; the landing is the event
+  if(g>=0){ s.inGap=true; s.air=0; s.airV=0; s.squash=(s.squash||0)*Math.exp(-dt*7); return; }
+  if(s.inGap){ s.inGap=false; s.squash=AIR.squashMax; s.airT=(s.airT||0)+1;
+    if(s.isPlayer){ shake=Math.min(shake+1.1,1.6); airtimeCount++; boostFlash=Math.max(boostFlash,0.35); } }
   const v=s.speed+s.boost+(s.gv||0), d=AIR.probe/TRACK_LEN;
   const aT=v*v*(frameAt(t-d,_fa).p.y-2*f.p.y+frameAt(t+d,_fb).p.y)/(AIR.probe*AIR.probe);   // the deck's vertical acceleration under the craft
   if((s.air||0)>0||(aT<-AIR.g-AIR.lift&&airZone(t))){ s.airV=(s.airV||0)+(-AIR.g-aT)*dt; s.air=(s.air||0)+s.airV*dt;
@@ -1977,7 +2020,7 @@ function updateCamera(dt){
   // speed FOV opens to ~105 deg; on a phone that shrank the craft to 4 % of the width. Here the lag stays under a metre,
   // the lens is capped, and the camera sits a touch higher so the craft rides in the lower-middle third above the thumbs.
   const MC=MOBILE?mobCam():null;
-  const target=p.mesh.position.clone().addScaledVector(backLevel,MC?MC.back:12).addScaledVector(UP,MC?MC.up:4.6)
+  const target=p.mesh.position.clone().addScaledVector(backLevel,(MC?MC.back:12)+jumpCam*9).addScaledVector(UP,(MC?MC.up:4.6)+jumpCam*4)
     .addScaledVector(f.right,p.lat*0.08);
   const lookT=p.mesh.position.clone().addScaledVector(fwdLevel,MC?MC.look:12).addScaledVector(UP,MC?MC.lookUp:1.4);
   if(camSnap){ camPos.copy(target); camLook.copy(lookT); camSnap=false; }
@@ -2075,7 +2118,10 @@ let last=performance.now();
 function loop(now){
   requestAnimationFrame(loop);
   let dt=Math.min((now-last)/1000,0.05); last=now;
-  skyTick(dt); flickTick(dt);
+  { const pg=(state==='race'&&ships.length)?gapAt(shipT(player())):-1;   // THE JUMP: ~0.7x for the middle of the flight
+    const want=pg>=0.3&&pg<=0.7?0.7:1; timeScale+=(want-timeScale)*Math.min(1,dt*6); jumpCam+=((pg>=0?1:0)-jumpCam)*Math.min(1,dt*(pg>=0?2.5:1.5)); }
+  const rdt=dt; dt*=timeScale;
+  skyTick(rdt); flickTick(rdt);
   if(tiles){ camera.updateMatrixWorld();
     tiles.setResolutionFromRenderer(camera,renderer); tiles.update(); }
   snapTick(now); updateAttrib(now);
@@ -2102,10 +2148,8 @@ function loop(now){
     stepMissiles(dt); if(FX.particles){ GLOW.tick(dt); DUST.tick(dt); } boostFlash=Math.max(0,boostFlash-dt*1.8); hitFlash=Math.max(0,hitFlash-dt*2);
     updateHUD(dt); drawMinimap();
     { const p=player(); const sf=(p.speed+p.boost)/MAXV;
-      // FEEL: the streaks thicken on the way down and inside a tube; the tube shuts the evening sun out (its ribs light it)
-      tubeFX+=(tubeAt(shipT(p))-tubeFX)*Math.min(1,dt*5);
-      sun.intensity=TH.sunI*(1-FEEL.tubeDim*tubeFX); if(HEMI) HEMI.intensity=TH.hemi[2]*(1-0.5*FEEL.tubeDim*tubeFX);
-      drawSpeedFX(state==="race"?Math.min(1,Math.max(0,(sf-0.45)/0.55)+dropFX*FEEL.dropFX+tubeFX*FEEL.tubeFX):0);
+      // FEEL: the streaks thicken on the way down
+      drawSpeedFX(state==="race"?Math.min(1,Math.max(0,(sf-0.45)/0.55)+dropFX*FEEL.dropFX):0);
       POSTFX.on=state==='race'; POSTFX.sf=sf; POSTFX.boost=Math.min(1,(p.boost>1?0.6:0)+boostFlash); POSTFX.ship.copy(p.mesh.position); }
   } else if(camOverride){ POSTFX.on=false; camera.position.copy(camOverride.p); camera.lookAt(camOverride.l);
   } else if(rootLoaded){

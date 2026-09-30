@@ -18,13 +18,13 @@ FR=np.array([[np.nan if v is None else v for v in f] for f in D['frames']],np.fl
 CLR=np.array([[np.nan if v is None else v for v in c] for c in D.get('clear',[[None]*4]*SEG)],np.float64)
 NB=len([f for f in os.listdir(TEX) if f.startswith('bill_')])
 def clear_at(t): return CLR[int(round((t%1.0)*SEG))%SEG]
-# FEEL (2026-09-30): per-frame half width (wide quiet sections) and the enclosed tubes, from the dump; the bank is already
-# in the frames' right/up vectors
+# FEEL (2026-09-30): per-frame half width (wide quiet sections) and the jump gaps, from the dump; the bank is already
+# in the frames' right/up vectors. The tubes are gone (Kim: "remove the tunnel thingie bars").
 HWA=np.array(D['hw'],np.float64) if 'hw' in D else np.full(SEG,HW)
 def hw_at(t): x=(t%1.0)*SEG; i=int(x)%SEG; k=x-int(x); return HWA[i]*(1-k)+HWA[(i+1)%SEG]*k
-TUBES=D.get('tubes',[])
-def in_tube(t,margin=0.0):
-    t=t%1.0; return any(a-margin<=t<=b+margin for a,b in TUBES)
+GAPS=D.get('gaps',[])
+def in_gap(t,margin=0.0):   # THE JUMP: no deck, barrier, pylon or pad between the lip and the landing
+    t=t%1.0; return any(a-margin<=t<=b+margin for a,b in GAPS)
 BAR_H, SLAB = 1.7, 0.9
 def G2B(v): return (v[0],-v[2],v[1])      # game frame -> Blender (glTF export maps it back)
 
@@ -97,6 +97,7 @@ m_metal=mat('frame_metal',col=(0.06,0.07,0.1),rough=0.35,metal=0.85); m_haz=mat(
 S=MB(); U=MB(); B=MB(); N=MB()
 dist=0.0; dl=L/SEG
 for i in range(SEG):
+    if in_gap((i+0.5)/SEG): continue
     p0,r0,u0,f0,g0=frame(i); p1,r1,u1,f1,g1=frame(i+1); v0=i*dl/32; v1=(i+1)*dl/32
     HW0,HW1=HWA[i%SEG],HWA[(i+1)%SEG]
     Lp0,Rp0,Lp1,Rp1=p0-r0*HW0,p0+r0*HW0,p1-r1*HW1,p1+r1*HW1
@@ -115,55 +116,37 @@ for i in range(SEG):
 S.build('track_surface',trk); U.build('track_under',trk); B.build('track_barriers',trk); N.build('track_neon',trk)
 log('track ribbons',SEG,'segments')
 
-# ------------------------------------------------------------------ FEEL: the tubes
-# Neon ribs every 5 m from the left wall top over the deck to the right, a smoked glass shell between them, three neon
-# strips running the length (the crown and +-35 deg, so the streaks rush past overhead) and a heavy portal at each mouth.
-TUBE_TOP, RIB_W, RIB_EVERY, NSEG = 9.5, 0.5, 5.0, 14
-m_ribC=mat('neon_tube_C',col=(0,0,0),emit_col=srgb('#00e1ff'),emit=2.4,double=True)
-m_ribM=mat('neon_tube_M',col=(0,0,0),emit_col=srgb('#ff2e9a'),emit=2.6,double=True)
-m_glass=mat('tube_glass',col=(0.02,0.03,0.06),rough=0.08,metal=0.6,double=True)
-bs=m_glass.node_tree.nodes['Principled BSDF']; bs.inputs['Alpha'].default_value=0.42
-for attr,val in (('surface_render_method','BLENDED'),('blend_method','BLEND')):
-    try: setattr(m_glass,attr,val)
-    except Exception: pass
-def arc(t,th,inset=0.0):   # a point on the tube's cross-section at angle th (-pi/2 left wall top .. +pi/2 right)
-    p,r,u,fw,_=at(t); w=hw_at(t)+0.9-inset
-    return p+r*(w*math.sin(th))+u*(BAR_H+(TUBE_TOP-BAR_H-inset)*math.cos(th))
-TB=MB(); ribs=0
-ths=[-math.pi/2+math.pi*k/NSEG for k in range(NSEG+1)]
-for a,b in TUBES:
-    n_r=max(2,int((b-a)*L/RIB_EVERY))
-    for j in range(n_r+1):
-        t=a+(b-a)*j/n_r; d=RIB_W/2/L; mr=m_ribM if j%4==0 else m_ribC
-        for k in range(NSEG):   # the rib: a band on the inside of the shell
-            TB.quad(tuple(arc(t-d,ths[k],0.12)),tuple(arc(t+d,ths[k],0.12)),tuple(arc(t+d,ths[k+1],0.12)),tuple(arc(t-d,ths[k+1],0.12)),mr)
-        ribs+=1
-        if j<n_r:   # the glass between this rib and the next
-            t2=a+(b-a)*(j+1)/n_r
-            for k in range(NSEG): TB.quad(tuple(arc(t,ths[k])),tuple(arc(t2,ths[k])),tuple(arc(t2,ths[k+1])),tuple(arc(t,ths[k+1])),m_glass)
-            for th,mm in ((0.0,m_neonY),(-0.61,m_ribC),(0.61,m_ribC)):   # the running strips
-                dth=0.018
-                TB.quad(tuple(arc(t,th-dth,0.2)),tuple(arc(t2,th-dth,0.2)),tuple(arc(t2,th+dth,0.2)),tuple(arc(t,th+dth,0.2)),mm)
-    for t in (a,b):   # the portals
-        p,r,u,fw,_=at(t); T=local(p,r,u,fw); W2=hw_at(t)+2.2
-        for sx in (-1,1): TB.box(T,sx*W2,(TUBE_TOP+1.2)/2,0,1.4,TUBE_TOP+1.2,1.8,m_metal)
-        TB.box(T,0,TUBE_TOP+0.8,0,W2*2+1.4,1.6,1.8,m_metal); TB.box(T,0,TUBE_TOP-0.1,0,W2*2,0.25,1.9,m_neonY)
-        for sx in (-1,1): TB.box(T,sx*W2,1.2,0,1.5,2.4,1.9,m_haz)
-if TUBES: TB.build('tubes',trk); log('tubes',len(TUBES),'ribs',ribs)
+# ------------------------------------------------------------------ THE JUMP: the lip and the landing
+# The deck just stops: a hazard-striped face and a bright yellow neon bar across the lip, the same on the landing edge,
+# and a yellow chevron band on the last 30 m of the ramp so the launch reads from far off.
+JB=MB()
+for k,(a,b) in enumerate(GAPS):
+    for t,sg in ((a,1),(b,-1)):   # sg: which way the gap lies (forward from the lip, backward from the landing)
+        p,r,u,fw,_=at(t); w=hw_at(t)+0.4
+        JB.quad(tuple(p-r*w),tuple(p+r*w),tuple(p+r*w-u*SLAB),tuple(p-r*w-u*SLAB),m_haz)                       # the cut face
+        JB.quad(tuple(p-r*w+u*0.05),tuple(p+r*w+u*0.05),tuple(p+r*w+u*0.05-fw*sg*0.6),tuple(p-r*w+u*0.05-fw*sg*0.6),m_neonY)   # neon lip
+        for sd in (-1,1):   # posts at the barrier ends
+            q=p+r*sd*(w-0.2); T=local(q,r,u,fw); JB.box(T,0,1.4,0,0.7,2.8,0.7,m_neonY)
+    for j in range(6):   # chevron band on the ramp run-up
+        t=(a-(j+1)*5/L)%1.0; p,r,u,fw,_=at(t); w=hw_at(t)
+        JB.quad(tuple(p-r*w+u*0.07),tuple(p+r*w+u*0.07),tuple(p+r*w+u*0.07+fw*1.2),tuple(p-r*w+u*0.07+fw*1.2),m_neonY if j%2==0 else m_haz)
+if GAPS: JB.build('jump',trk); log('jump gaps',len(GAPS))
 
 P_=MB()
 def flat_pad(t,lat,w,l,m):
     p,r,u,fw,_=at(t); c=p+r*lat+u*0.06
     a=c-r*w/2-fw*l/2; b=c+r*w/2-fw*l/2; cc=c+r*w/2+fw*l/2; d=c-r*w/2+fw*l/2
     P_.quad(tuple(a),tuple(b),tuple(cc),tuple(d),m,((0,0),(1,0),(1,1),(0,1)))   # v runs forward: the chevrons point the way
-for t,lat in D['pads']: flat_pad(t,lat,5,9,m_pad)
-for t,lat in D['wpads']: flat_pad(t,lat,5.5,5.5,m_wpad)
+for t,lat in D['pads']:
+    if not in_gap(t,0.001): flat_pad(t,lat,5,9,m_pad)
+for t,lat in D['wpads']:
+    if not in_gap(t,0.001): flat_pad(t,lat,5.5,5.5,m_wpad)
 P_.build('pads',trk)
 
 Y_=MB(); n=int(L/42)
 for i in range(n):
     t=i/n; p,r,u,fw,g=at(t)
-    if g is None or np.isnan(g): continue
+    if in_gap(t,0.002) or g is None or np.isnan(g): continue
     top=p[1]-SLAB; hgt=top-g
     if hgt<1.2: continue
     # a vertical leg (world up, not track up) and a yoke under the slab, hazard band at the top of the leg
@@ -204,7 +187,7 @@ for A in ARCHES:
             if arch_free(tt): t=tt; break
         if t is not None: break
     if t is None: log('arch skipped (tiles at the posts)',A['n']); continue
-    if in_tube(t,0.006): log('arch skipped (inside a tube)',A['n']); continue
+    if in_gap(t,0.01): log('arch skipped (in the jump)',A['n']); continue
     p,r,u,fw,_=at(t); T=local(p,r,u,fw); M=MB(); W2=hw_at(t)+3.5; b=A['b']
     for sx in (-1,1): M.box(T,sx*W2,6,0,1.3,12,1.3,m_metal); M.box(T,sx*W2,1.6,0,1.4,1.0,1.4,m_haz)
     M.box(T,0,11.4,0,W2*2+2,3.0,1.6,m_metal); sign(M,T,W2*2+1.4,2.6,11.4,0.88,f'arch_{b}.jpg',f'arch_{(b+7)%NB}.jpg')
@@ -213,7 +196,7 @@ log('arches placed',placed,'of',len(ARCHES))
 nb=int(L/300); M=MB(); boards=0
 for i in range(nb):
     t=(i+0.5)/nb
-    if t<0.012 or t>0.988 or in_tube(t,0.004): continue
+    if t<0.012 or t>0.988 or in_gap(t,0.004): continue
     c=clear_at(t); free={-1:c[2],1:c[3]}; pref=1 if i%2 else -1; sd=None
     for s_ in (pref,-pref):
         v=free[s_]
