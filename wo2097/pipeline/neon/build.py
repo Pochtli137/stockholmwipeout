@@ -18,6 +18,13 @@ FR=np.array([[np.nan if v is None else v for v in f] for f in D['frames']],np.fl
 CLR=np.array([[np.nan if v is None else v for v in c] for c in D.get('clear',[[None]*4]*SEG)],np.float64)
 NB=len([f for f in os.listdir(TEX) if f.startswith('bill_')])
 def clear_at(t): return CLR[int(round((t%1.0)*SEG))%SEG]
+# FEEL (2026-09-30): per-frame half width (wide quiet sections) and the enclosed tubes, from the dump; the bank is already
+# in the frames' right/up vectors
+HWA=np.array(D['hw'],np.float64) if 'hw' in D else np.full(SEG,HW)
+def hw_at(t): x=(t%1.0)*SEG; i=int(x)%SEG; k=x-int(x); return HWA[i]*(1-k)+HWA[(i+1)%SEG]*k
+TUBES=D.get('tubes',[])
+def in_tube(t,margin=0.0):
+    t=t%1.0; return any(a-margin<=t<=b+margin for a,b in TUBES)
 BAR_H, SLAB = 1.7, 0.9
 def G2B(v): return (v[0],-v[2],v[1])      # game frame -> Blender (glTF export maps it back)
 
@@ -91,21 +98,58 @@ S=MB(); U=MB(); B=MB(); N=MB()
 dist=0.0; dl=L/SEG
 for i in range(SEG):
     p0,r0,u0,f0,g0=frame(i); p1,r1,u1,f1,g1=frame(i+1); v0=i*dl/32; v1=(i+1)*dl/32
-    Lp0,Rp0,Lp1,Rp1=p0-r0*HW,p0+r0*HW,p1-r1*HW,p1+r1*HW
+    HW0,HW1=HWA[i%SEG],HWA[(i+1)%SEG]
+    Lp0,Rp0,Lp1,Rp1=p0-r0*HW0,p0+r0*HW0,p1-r1*HW1,p1+r1*HW1
     S.quad(tuple(Lp0),tuple(Rp0),tuple(Rp1),tuple(Lp1),m_surf,((0,v0),(1,v0),(1,v1),(0,v1)))
     # slab: bottom and both skirts
-    e0,e1=HW+0.4,HW+0.4
+    e0,e1=HW0+0.4,HW1+0.4
     U.quad(tuple(p0+r0*e0-u0*SLAB),tuple(p0-r0*e0-u0*SLAB),tuple(p1-r1*e1-u1*SLAB),tuple(p1+r1*e1-u1*SLAB),m_under)
     for sd in (-1,1):
         a0=p0+r0*sd*e0; a1=p1+r1*sd*e1
         U.quad(tuple(a0-u0*SLAB),tuple(a1-u1*SLAB),tuple(a1),tuple(a0),m_under)
         # barrier wall (text runs forward on the left wall, backwards on the right so it reads from the track)
-        w0=p0+r0*sd*(HW+0.2); w1=p1+r1*sd*(HW+0.2); ua,ub=(i*dl/104,(i+1)*dl/104) if sd<0 else (-(i*dl/104),-((i+1)*dl/104))   # one 8192 px barrier texture per 104 m
+        w0=p0+r0*sd*(HW0+0.2); w1=p1+r1*sd*(HW1+0.2); ua,ub=(i*dl/104,(i+1)*dl/104) if sd<0 else (-(i*dl/104),-((i+1)*dl/104))   # one 8192 px barrier texture per 104 m
         B.quad(tuple(w0),tuple(w1),tuple(w1+u1*BAR_H),tuple(w0+u0*BAR_H),m_barL if sd<0 else m_barR,((ua,0),(ub,0),(ub,1),(ua,1)))
-        mn=m_neonL if sd<0 else m_neonR; n0=p0+r0*sd*(HW+0.15); n1=p1+r1*sd*(HW+0.15)
+        mn=m_neonL if sd<0 else m_neonR; n0=p0+r0*sd*(HW0+0.15); n1=p1+r1*sd*(HW1+0.15)
         for h0,h1 in ((BAR_H,BAR_H+0.22),(0.04,0.16)): N.quad(tuple(n0+u0*h0),tuple(n1+u1*h0),tuple(n1+u1*h1),tuple(n0+u0*h1),mn)
 S.build('track_surface',trk); U.build('track_under',trk); B.build('track_barriers',trk); N.build('track_neon',trk)
 log('track ribbons',SEG,'segments')
+
+# ------------------------------------------------------------------ FEEL: the tubes
+# Neon ribs every 5 m from the left wall top over the deck to the right, a smoked glass shell between them, three neon
+# strips running the length (the crown and +-35 deg, so the streaks rush past overhead) and a heavy portal at each mouth.
+TUBE_TOP, RIB_W, RIB_EVERY, NSEG = 9.5, 0.5, 5.0, 14
+m_ribC=mat('neon_tube_C',col=(0,0,0),emit_col=srgb('#00e1ff'),emit=2.4,double=True)
+m_ribM=mat('neon_tube_M',col=(0,0,0),emit_col=srgb('#ff2e9a'),emit=2.6,double=True)
+m_glass=mat('tube_glass',col=(0.02,0.03,0.06),rough=0.08,metal=0.6,double=True)
+bs=m_glass.node_tree.nodes['Principled BSDF']; bs.inputs['Alpha'].default_value=0.42
+for attr,val in (('surface_render_method','BLENDED'),('blend_method','BLEND')):
+    try: setattr(m_glass,attr,val)
+    except Exception: pass
+def arc(t,th,inset=0.0):   # a point on the tube's cross-section at angle th (-pi/2 left wall top .. +pi/2 right)
+    p,r,u,fw,_=at(t); w=hw_at(t)+0.9-inset
+    return p+r*(w*math.sin(th))+u*(BAR_H+(TUBE_TOP-BAR_H-inset)*math.cos(th))
+TB=MB(); ribs=0
+ths=[-math.pi/2+math.pi*k/NSEG for k in range(NSEG+1)]
+for a,b in TUBES:
+    n_r=max(2,int((b-a)*L/RIB_EVERY))
+    for j in range(n_r+1):
+        t=a+(b-a)*j/n_r; d=RIB_W/2/L; mr=m_ribM if j%4==0 else m_ribC
+        for k in range(NSEG):   # the rib: a band on the inside of the shell
+            TB.quad(tuple(arc(t-d,ths[k],0.12)),tuple(arc(t+d,ths[k],0.12)),tuple(arc(t+d,ths[k+1],0.12)),tuple(arc(t-d,ths[k+1],0.12)),mr)
+        ribs+=1
+        if j<n_r:   # the glass between this rib and the next
+            t2=a+(b-a)*(j+1)/n_r
+            for k in range(NSEG): TB.quad(tuple(arc(t,ths[k])),tuple(arc(t2,ths[k])),tuple(arc(t2,ths[k+1])),tuple(arc(t,ths[k+1])),m_glass)
+            for th,mm in ((0.0,m_neonY),(-0.61,m_ribC),(0.61,m_ribC)):   # the running strips
+                dth=0.018
+                TB.quad(tuple(arc(t,th-dth,0.2)),tuple(arc(t2,th-dth,0.2)),tuple(arc(t2,th+dth,0.2)),tuple(arc(t,th+dth,0.2)),mm)
+    for t in (a,b):   # the portals
+        p,r,u,fw,_=at(t); T=local(p,r,u,fw); W2=hw_at(t)+2.2
+        for sx in (-1,1): TB.box(T,sx*W2,(TUBE_TOP+1.2)/2,0,1.4,TUBE_TOP+1.2,1.8,m_metal)
+        TB.box(T,0,TUBE_TOP+0.8,0,W2*2+1.4,1.6,1.8,m_metal); TB.box(T,0,TUBE_TOP-0.1,0,W2*2,0.25,1.9,m_neonY)
+        for sx in (-1,1): TB.box(T,sx*W2,1.2,0,1.5,2.4,1.9,m_haz)
+if TUBES: TB.build('tubes',trk); log('tubes',len(TUBES),'ribs',ribs)
 
 P_=MB()
 def flat_pad(t,lat,w,l,m):
@@ -160,7 +204,8 @@ for A in ARCHES:
             if arch_free(tt): t=tt; break
         if t is not None: break
     if t is None: log('arch skipped (tiles at the posts)',A['n']); continue
-    p,r,u,fw,_=at(t); T=local(p,r,u,fw); M=MB(); W2=HW+3.5; b=A['b']
+    if in_tube(t,0.006): log('arch skipped (inside a tube)',A['n']); continue
+    p,r,u,fw,_=at(t); T=local(p,r,u,fw); M=MB(); W2=hw_at(t)+3.5; b=A['b']
     for sx in (-1,1): M.box(T,sx*W2,6,0,1.3,12,1.3,m_metal); M.box(T,sx*W2,1.6,0,1.4,1.0,1.4,m_haz)
     M.box(T,0,11.4,0,W2*2+2,3.0,1.6,m_metal); sign(M,T,W2*2+1.4,2.6,11.4,0.88,f'arch_{b}.jpg',f'arch_{(b+7)%NB}.jpg')
     M.box(T,0,9.8,0,W2*2+2,0.2,1.8,m_neonY); setobs.append(M.build('arch_'+A['n'].lower(),SET)); placed+=1
@@ -168,13 +213,13 @@ log('arches placed',placed,'of',len(ARCHES))
 nb=int(L/300); M=MB(); boards=0
 for i in range(nb):
     t=(i+0.5)/nb
-    if t<0.012 or t>0.988: continue
+    if t<0.012 or t>0.988 or in_tube(t,0.004): continue
     c=clear_at(t); free={-1:c[2],1:c[3]}; pref=1 if i%2 else -1; sd=None
     for s_ in (pref,-pref):
         v=free[s_]
         if not np.isnan(v) and v<3.5: sd=s_; break   # the board spans +6.3..+13.7 m over the deck: the tiles must stay below
     if sd is None: continue
-    p,r,u,fw,_=at(t); T=local(p,r,u,fw,rot=sd*0.42,lat=sd*(HW+10),lift=10)
+    p,r,u,fw,_=at(t); T=local(p,r,u,fw,rot=sd*0.42,lat=sd*(hw_at(t)+10),lift=10)
     leg=10-3.5-max(free[sd],-60.0)                         # mast from the board down to the roof or street under it
     M.box(T,0,-3.5-leg/2,0,0.8,leg,0.8,m_metal); M.box(T,0,0,0,14.4,7.4,0.5,m_metal)
     mm=mat(f'board_{i%NB}',tex=f'bill_{i%NB}.jpg',emit_tex=f'bill_{i%NB}.jpg',emit=0.4,rough=0.5)

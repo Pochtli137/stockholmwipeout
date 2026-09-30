@@ -38,6 +38,23 @@ upphöjd skyway över taknocken. Pylonerna står på det som finns rakt under (g
 **Set pieces:** bågar och skyltar placeras bara där surveyn säger att tilesen lämnar plats (bågpelarna ±11,5 m, skyltarna ±18 m);
 en båge glider upp till 160 m längs varvet till närmaste fria plats, en skylt byter sida eller hoppas över.
 
+## FEEL: berg-och-dalbanan (2026-09-30, `FEEL` i index.html)
+
+Fortfarande räls. Profilen ovan är golvet utanför sex **dropfönster** (Slussen·Strömmen, Nybroviken, Norrmalm, Klara sjö,
+Norr Mälarstrand, Söder). Inne i fönstren får linjen falla till stadens eget krav plus 1,5 m, med lutning upp till 19 % per sampel
+(i praktiken 16,8 %) och vertikal radie ner till ~240 m: 18–26 m fall över vatten och öppna platser. `feelProfile` i
+`designProfile`, allt räknas om med `node dump_track.cjs rebuild`.
+- **Airtime** är bara visuell: skeppet lyfter när däckets vertikalacceleration v²·y″ understiger −g, men bara vid krönen i
+  `FEEL.airAt` (Nybroviken, Klara sjö, Norr Mälarstrand). Övriga krön håller skeppet mot däcket. Landningen ger squash, skak
+  och nosdipp. `t`, `lat` och farten påverkas inte. Utför ger `gv` (gravitationsbonus, högst +10 m/s).
+- **Bank** 5–20° efter kurvans krökning (`frameAt` vrider right/up runt fwd), kameran lutar med till 75 %.
+- **Tuber** vid Nybroviken och Norr Mälarstrand (där bågpelarna är fria): neonribbor var 5:e m, glas, ljusband och portaler
+  i `neon/build.py`. Inne i tuben dämpas sol och himmelsljus och fartlinjerna tätnar. Halva bredden är 8 m där.
+- **Rytm:** tre pads i kedja före varje krön, två i utförsbacken, jämna pads bort nära kedjorna. **Breda partier** (halva bredden
+  10,5 m) där bågpelarna är fria över ±20 m: Strömmen och Klara sjö.
+- Verktyg i `feel/`: `plot.py` (profil före/efter -> `out/profile_track.png`), `shots.cjs` (racekamera vid varje feature),
+  `film.cjs <utmapp> <från m> <s>` (frame-stegad film, ett segment per mapp under `out/film/`), `stitch.py` (segmenten -> en mp4).
+
 ## Himlen (index.html, blocket SKY · GOLDEN HOUR OVER MÄLAREN)
 
 Sen kväll över Mälaren: solen i VNV (azimut 292°, 5,5° över horisonten, `SUN_AZ`/`SUN_EL`). En skydome-shader ritar
