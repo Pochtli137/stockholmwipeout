@@ -1644,6 +1644,92 @@ window.__mus=()=>{ if(!musAnalyser) return {state:actx?actx.state:'no actx'};
   return { state:actx.state, rms:+Math.sqrt(s/buf.length).toFixed(4), peak:+pk.toFixed(3),
     bar:(mstep/16|0), e:+musicEnergy().toFixed(2), filterHz:Math.round(mFilter?mFilter.frequency.value:0) }; };
 window.__setbar=(b)=>{ mstep=b*16; return {bar:b}; };
+/* ============================== UI SOUNDS ==============================
+   Kim 2026-09-30: "vi behöver ljud på titelscreenen, ljud när man klickar enter, något sorts swooshljud när man växlar racer
+   och ljud när man väljer racer". The title and the hangar play a steady slice of the big-beat loop, dark behind a ~500 Hz
+   low-pass, from the first gesture. ENTER stings on the next eighth and sweeps the filter open while the logo rushes out;
+   a switch whooshes the way the carousel slides; KÖR locks in with an impact, a rising chord and a drum fill into the
+   countdown. All synthesized, on its own bus that the countdown disconnects: from the grid on, the audio is the deployed one. */
+const UI_BARS=[26,27,28,29], UI_GAIN=0.17, UI_SFX=0.3, UI_LP=500;   // bars of the build: kick, hats, backbeat, the first acid riff, a pad every other bar
+const UI_ROOT=[110,98,123.5,130.8,146.8,164.8];          // one key per team
+let uiBus=null, uiOn=false, uiArmed=false, uiAudible=true, uiStep=0, uiNext=0, uiStop=Infinity, uiLastW=-9; const uiLog=[];
+const uiLive=()=>!selectDone&&(state==='loading'||state==='select');
+function uiTrace(k,t,x){ const e={ k, t:+t.toFixed(3), ...(x||{}) }; uiLog.push(e); console.log('[ui-audio]',k,JSON.stringify(e)); }
+function uiStart(t){ if(uiOn||!actx||!musicGain) return;
+  if(!uiBus){ uiBus=actx.createGain(); uiBus.gain.value=audioOn?UI_SFX:0; uiBus.connect(actx.destination); }
+  uiOn=true; uiAudible=audioOn; uiStep=0; uiNext=t+0.05; uiStop=Infinity;
+  mFilter.frequency.cancelScheduledValues(t); mFilter.frequency.setValueAtTime(UI_LP,t);
+  musicGain.gain.cancelScheduledValues(t); musicGain.gain.setValueAtTime(0,t); musicGain.gain.linearRampToValueAtTime(audioOn?UI_GAIN:0,t+0.6);
+  uiTrace('title-music',t); }
+function uiSchedule(until){ while(uiNext<until&&uiNext<uiStop){ const k=uiStep%64; scheduleStep(uiNext,UI_BARS[k>>4]*16+(k&15)); uiStep++; uiNext+=STEPDUR; } }
+function uiTick(){ if(!uiArmed||!actx||!uiLive()) return; const t=actx.currentTime;
+  if(!uiOn){ if(audioOn) uiStart(t); else return; }
+  if(audioOn!==uiAudible){ uiAudible=audioOn; for(const [p,v] of [[musicGain.gain,UI_GAIN],[uiBus.gain,UI_SFX]]){ p.cancelScheduledValues(t); p.setValueAtTime(p.value,t); p.linearRampToValueAtTime(audioOn?v:0,t+0.05); } }
+  if(!audioOn) return;
+  if(uiNext<t-0.4) uiNext=t+0.05;   // the tab slept: pick up the beat, do not burst the backlog
+  uiSchedule(t+0.13); }
+function uiGesture(){ ensureAudio(); uiArmed=true; if(actx&&audioOn&&uiLive()) uiStart(actx.currentTime); }
+for(const ev of ['pointerdown','keydown','touchend','click']) addEventListener(ev,uiGesture,true);   // iOS unlocks on touchend/click
+// a voice on the UI bus: osc(type, f0, f1, t0, dur, peak) and hiss(filter, f0, f1, t0, dur, peak, q, pan0, pan1)
+function uiOut(pan0,pan1,t0,dur){ let o=uiBus; if(pan0!=null&&actx.createStereoPanner){ const p=actx.createStereoPanner(); p.pan.setValueAtTime(pan0,t0); p.pan.linearRampToValueAtTime(pan1,t0+dur); p.connect(uiBus); o=p; } return o; }
+function uiOsc(type,f0,f1,t0,dur,peak,lp0,lp1){ const o=actx.createOscillator(), g=actx.createGain(); o.type=type;
+  o.frequency.setValueAtTime(f0,t0); o.frequency.exponentialRampToValueAtTime(f1,t0+dur*0.6);
+  g.gain.setValueAtTime(0.0001,t0); g.gain.linearRampToValueAtTime(peak,t0+0.006); g.gain.exponentialRampToValueAtTime(0.0001,t0+dur);
+  let n=o; if(lp0){ const f=actx.createBiquadFilter(); f.type='lowpass'; f.Q.value=3; f.frequency.setValueAtTime(lp0,t0); f.frequency.exponentialRampToValueAtTime(lp1,t0+dur*0.5); o.connect(f); n=f; }
+  n.connect(g); g.connect(uiBus); o.start(t0); o.stop(t0+dur+0.02); }
+function uiHiss(type,f0,f1,t0,dur,peak,q,atk,pan0,pan1){ const s=noiseSrc(), f=actx.createBiquadFilter(), g=actx.createGain(); f.type=type; f.Q.value=q;
+  f.frequency.setValueAtTime(f0,t0); f.frequency.exponentialRampToValueAtTime(f1,t0+dur);
+  g.gain.setValueAtTime(0.0001,t0); g.gain.linearRampToValueAtTime(peak,t0+atk); g.gain.exponentialRampToValueAtTime(0.0001,t0+dur);
+  s.connect(f); f.connect(g); g.connect(uiOut(pan0,pan1,t0,dur)); s.start(t0); s.stop(t0+dur+0.02); }
+// ENTER on the title: a rising sting on the next eighth, the filter sweeps open over a second, the loop plays on into the hangar
+function uiConfirm(now){ if(!actx||!audioOn) return; if(!uiOn) uiStart(now);
+  let t=now; if(uiStep>0){ let j=uiStep+Math.ceil((now+0.02-uiNext)/STEPDUR); if(j%2) j++; t=Math.max(now,uiNext+(j-uiStep)*STEPDUR); }
+  uiOsc('sine',160,52,t,0.28,0.7);                                   // the punch
+  for(const m of [1,1.5,2]){ uiOsc('sawtooth',110*m,220*m,t,0.52,0.075,700,7000); }
+  uiHiss('bandpass',700,9000,t,0.5,0.22,1.3,0.3);
+  mFilter.frequency.cancelScheduledValues(t); mFilter.frequency.setValueAtTime(UI_LP,t); mFilter.frequency.exponentialRampToValueAtTime(16000,t+1.0);
+  uiTrace('enter',now,{ at:+t.toFixed(3) }); }
+// a switch: an airy noise sweep panned the way the carousel slides (next: the pods move right to left), pitched per team
+function uiWhoosh(now,dir,k){ if(!uiOn||!audioOn||now-uiLastW<0.09) return; uiLastW=now; const f=UI_ROOT[k]*7;
+  uiHiss('bandpass',f*0.45,f*3.2,now,0.3,0.5,1.1,0.1,0.75*dir,-0.75*dir);
+  uiHiss('highpass',f*2,f*9,now,0.24,0.12,0.7,0.06,0.5*dir,-0.5*dir);
+  uiTrace('switch',now,{ dir, team:k }); }
+// KÖR: the loop stops, an impact and a rising chord in the team's key, then four sixteenth snares land on the countdown
+function uiLock(now,k){ if(!uiOn||!audioOn) return; const r=UI_ROOT[k]; uiStop=now;
+  musicGain.gain.cancelScheduledValues(now); musicGain.gain.setValueAtTime(musicGain.gain.value,now); musicGain.gain.linearRampToValueAtTime(0,now+0.35);
+  uiOsc('sine',120,36,now,0.7,0.85); uiHiss('lowpass',5000,160,now,0.8,0.45,0.7,0.004);
+  [1,1.26,1.5,2].forEach((m,i)=>uiOsc('sawtooth',r*m*0.75,r*m,now+0.04+i*0.05,1.05,0.06,500,5200));
+  for(let i=0;i<4;i++){ const t=now+0.54+i*STEPDUR; uiHiss('highpass',1400,1400,t,0.16,0.22+i*0.09,0.7,0.004); uiOsc('triangle',220,140,t,0.12,0.14+i*0.04); }
+  uiOsc('sine',140,45,now+0.54+4*STEPDUR,0.24,0.8);
+  uiTrace('select',now,{ team:k }); }
+// the countdown: the music bus back to exactly where the deployed race audio starts it, the UI bus off the graph
+function uiHandOff(){ if(!uiOn&&!uiBus) return; const t=actx.currentTime; uiOn=false;
+  musicGain.gain.cancelScheduledValues(t); musicGain.gain.setValueAtTime(0,t); mFilter.frequency.cancelScheduledValues(t); mFilter.frequency.setValueAtTime(520,t);
+  const b=uiBus; uiBus=null; setTimeout(()=>{ try{ b.disconnect(); }catch(e){} },1500);   // the fill's last hit rings out
+  uiTrace('countdown',t); }
+window.__ui=()=>({ log:uiLog, on:uiOn, bus:!!uiBus, filterHz:mFilter?Math.round(mFilter.frequency.value):null, music:musicGain?+musicGain.gain.value.toFixed(3):null, ctx:actx?actx.state:null });
+// offline proof: title idle, ENTER, three switches, KÖR, the countdown and the first bars of the race, as a WAV (base64)
+window.__uiRender=async(sec=15)=>{ const SR=44100, off=new OfflineAudioContext(2,SR*sec,SR);
+  const keep={ actx, musicGain, mFilter, musAnalyser, uiBus, uiOn, uiStep, uiNext, uiStop, uiLastW, mstep, audioOn }, lg=uiLog.length;
+  actx=off; audioOn=true; uiBus=null; uiOn=false; uiLastW=-9;
+  musAnalyser=actx.createAnalyser(); musAnalyser.connect(actx.destination);
+  mFilter=actx.createBiquadFilter(); mFilter.type='lowpass'; mFilter.frequency.value=520; mFilter.Q.value=0.7; mFilter.connect(musAnalyser);
+  musicGain=actx.createGain(); musicGain.gain.value=0; musicGain.connect(mFilter);
+  const at=(t,f)=>{ uiSchedule(t); f(); };
+  uiStart(0); at(3.0,()=>uiConfirm(3.0)); at(5.6,()=>uiWhoosh(5.6,1,1)); at(6.5,()=>uiWhoosh(6.5,1,2)); at(7.4,()=>uiWhoosh(7.4,-1,1));
+  at(9.0,()=>uiLock(9.0,1)); uiSchedule(sec);
+  const t0=10.0; musicGain.gain.cancelScheduledValues(t0); musicGain.gain.setValueAtTime(0,t0); musicGain.gain.setTargetAtTime(0.24,t0,0.5);   // the race, as updateAudio runs it
+  mFilter.frequency.cancelScheduledValues(t0); mFilter.frequency.setValueAtTime(520,t0); uiOn=false;
+  for(let t=t0+0.1,s=0;t<sec;t+=STEPDUR,s++) scheduleStep(t,s);
+  const buf=await off.startRendering(), log=uiLog.slice(lg);
+  ({ actx, musicGain, mFilter, musAnalyser, uiBus, uiOn, uiStep, uiNext, uiStop, uiLastW, mstep, audioOn }=keep); uiLog.length=lg;
+  const L=buf.getChannelData(0), R=buf.getChannelData(1), n=L.length, dv=new DataView(new ArrayBuffer(44+n*4));
+  const w=(o,s)=>{ for(let i=0;i<s.length;i++) dv.setUint8(o+i,s.charCodeAt(i)); };
+  w(0,'RIFF'); dv.setUint32(4,36+n*4,true); w(8,'WAVE'); w(12,'fmt '); dv.setUint32(16,16,true); dv.setUint16(20,1,true); dv.setUint16(22,2,true);
+  dv.setUint32(24,SR,true); dv.setUint32(28,SR*4,true); dv.setUint16(32,4,true); dv.setUint16(34,16,true); w(36,'data'); dv.setUint32(40,n*4,true);
+  let pk=0; for(let i=0;i<n;i++){ pk=Math.max(pk,Math.abs(L[i]),Math.abs(R[i])); dv.setInt16(44+i*4,Math.max(-1,Math.min(1,L[i]))*32767,true); dv.setInt16(46+i*4,Math.max(-1,Math.min(1,R[i]))*32767,true); }
+  const u8=new Uint8Array(dv.buffer); let bin=''; for(let i=0;i<u8.length;i+=0x8000) bin+=String.fromCharCode.apply(null,u8.subarray(i,i+0x8000));
+  return { log, peak:+pk.toFixed(3), wav:btoa(bin) }; };
 
 /* ============================== RACE STATE ============================== */
 let state='loading', countT=3.999, raceTime=0, paused=false, pauseMsg=null;
@@ -1680,15 +1766,15 @@ function selInfo(){ const T=TEAMS[selIdx], st=STATS[selIdx], col='#'+new THREE.C
   bars('stSPD',st.spd); bars('stTHR',st.thr); bars('stHAN',st.han); bars('stSHD',st.shd);
   [...document.getElementById('selDots').children].forEach((d,i)=>d.classList.toggle('on',i===selIdx));
   document.getElementById('selNbLn').textContent=TEAMS[(selIdx+5)%6].team; document.getElementById('selNbRn').textContent=TEAMS[(selIdx+1)%6].team; }
-function selGo(dir){ if(selLock) return; selFrom=selIdx; selIdx=(selIdx+dir+6)%6; selDir=dir; selT=0; selSpin=0; selInfo(); selBlip(420+selIdx*60); }
-function selPick(k){ if(k===selIdx||selLock) return; selFrom=selIdx; selDir=k>selIdx?1:-1; selIdx=k; selT=0; selSpin=0; selInfo(); selBlip(420+k*60); }
+function selGo(dir){ if(selLock) return; selFrom=selIdx; selIdx=(selIdx+dir+6)%6; selDir=dir; selT=0; selSpin=0; selInfo(); selBlip(420+selIdx*60); if(actx) uiWhoosh(actx.currentTime,dir,selIdx); }
+function selPick(k){ if(k===selIdx||selLock) return; selFrom=selIdx; selDir=k>selIdx?1:-1; selIdx=k; selT=0; selSpin=0; selInfo(); selBlip(420+k*60); if(actx) uiWhoosh(actx.currentTime,selDir,k); }
 function enterSelect(){ state='select'; selIntro=0; document.getElementById('select').classList.add('on'); document.body.classList.add('selecting');
   const dots=document.getElementById('selDots'); if(!dots.children.length) for(let i=0;i<6;i++){ const d=document.createElement('i'); d.onclick=()=>selPick(i); dots.appendChild(d); }
   selT=1; selFrom=-1; selInfo(); }
 function selConfirm(){ if(selLock||state!=='select') return; selLock=0.001; TEAM_CHOICE=selIdx;
   try{ localStorage.setItem('swTeam',String(selIdx)); }catch(e){}
   const fl=document.getElementById('selFlash'); fl.style.transition='none'; fl.style.opacity=0.85; requestAnimationFrame(()=>{ fl.style.transition='opacity .6s'; fl.style.opacity=0; });
-  ensureAudio(); selSting(); }
+  ensureAudio(); selSting(); if(actx) uiLock(actx.currentTime,selIdx); }
 // sounds of the hangar (silent until the browser lets audio start)
 function selBlip(f){ if(!SFX.hangar||!actx||!audioOn) return; const t=actx.currentTime, o=actx.createOscillator(), g=actx.createGain(); o.type='square'; o.frequency.setValueAtTime(f,t); o.frequency.exponentialRampToValueAtTime(f*1.5,t+0.06);
   g.gain.setValueAtTime(0.0001,t); g.gain.linearRampToValueAtTime(0.06,t+0.005); g.gain.exponentialRampToValueAtTime(0.0001,t+0.09); o.connect(g); g.connect(actx.destination); o.start(t); o.stop(t+0.1); }
@@ -1757,7 +1843,7 @@ let titleReady=false, titleGo=false, titleDone=false;
 const tpress=document.getElementById('tpress'), sweepEl=document.getElementById('sweep');
 if(!selectDone) document.body.classList.add('titling');   // no race HUD behind the title and the hangar
 function titlePrompt(){ tpress.textContent=MOBILE?'TAP':'PRESS ENTER'; tpress.classList.add('ready'); }
-function titleToSelect(){ if(titleDone) return; titleDone=true; ensureAudio();
+function titleToSelect(){ if(titleDone) return; titleDone=true; ensureAudio(); uiArmed=true; if(actx) uiConfirm(actx.currentTime);
   loadveil.classList.add('go'); sweepEl.classList.remove('run'); void sweepEl.offsetWidth; sweepEl.classList.add('run');
   setTimeout(()=>enterSelect(),430);
   setTimeout(()=>{ loadveil.style.display='none'; loadveil.classList.remove('go'); sweepEl.classList.remove('run'); document.body.classList.remove('titling'); },1000); }
@@ -1768,6 +1854,7 @@ loadveil.addEventListener('pointerdown',e=>{ e.preventDefault(); titleWant(); })
 function startRace(){
   if(!selectDone){ titleReady=true; titlePrompt(); if(titleGo) titleToSelect(); return; }
   loadveil.style.display='none';
+  if(actx) uiHandOff();
   if(actx){ mstep=0; nextStep=actx.currentTime+0.1; } // stegringen börjar om med loppet
   spawnShips(); camSnap=true; state='count'; countT=3.999; raceTime=0; lapTimes=[]; lapStart=0; resetKit();
 }
@@ -2124,7 +2211,7 @@ function loop(now){
   skyTick(rdt); flickTick(rdt);
   if(tiles){ camera.updateMatrixWorld();
     tiles.setResolutionFromRenderer(camera,renderer); tiles.update(); }
-  snapTick(now); updateAttrib(now);
+  snapTick(now); updateAttrib(now); uiTick();
   if(MOBILE){ const r=state==='count'||state==='race'; if(r!==document.body.classList.contains('racing')) document.body.classList.toggle('racing',r); }   // touch controls only on the grid and in the race
   if(state==='select'){ updateAudio(); selectTick(dt); return; }
   if(paused){ if(!pauseMsg) pauseMsg={t:msg.textContent,fs:msg.style.fontSize,c:msg.className};   // what the banner said before the pause
