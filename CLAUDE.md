@@ -26,7 +26,15 @@ Publikt repo `Pochtli137/stockholmwipeout`. Live https://stockholmwipeout.vercel
 - **Titelskärmen har Stockholms riktiga stadsvapen, S:t Erik** (Kim 2026-09-30: "vi kan använda riktiga st erik här").
   Filen är `wo2097/assets/stockholm_vapen.svg` från Wikimedia Commons (Koyos, CC BY-SA 2.5, märkt som skyddat insignia), krediterad
   i raden under laddningslinjen. Risken är flaggad för Kim: vapnet skyddas av lagen 1970:498 och staden kräver tillstånd för
-  användning, främst ett problem i kommersiell kontext. Kreditraden får inte tas bort (CC BY-SA).
+  användning, främst ett problem i kommersiell kontext. Kreditraden får inte tas bort (CC BY-SA).- **Banan är en berg-och-dalbana (2026-10-01):** fall på 22–37 m, tre krön med luftfärd och ett hopp över Västerbron (lucka
+  260 m, 32 m över brons krön). Tuberna provades och togs bort. **Speakern provades och togs bort** (grenen
+  `worktree-agent-a6f5d7aa01afc8d29` finns kvar i historiken; ElevenLabs-nyckeln ligger i `.env`).
+- **Skölden är ett fält runt skeppet:** svagt i vila efter energin, starkt 5 s efter upplockning (väggar biter inte, AI knuffas, missiler tas).
+- **Partiannonserna är tillbaka i neon**, åtta partier lika, utan Direktdemokraterna. Slogans och symboler i `wo2097/pipeline/README.md`.
+- **Mobil styrs bara med tilt** (tillstånd frågas vid TAP på titeln, kräver HTTPS). Styrplattan är borta.
+- **UI-ljud:** titel, ENTER, svep vid byte av skepp, lock-in vid val. Racets ljud är oförändrat.
+- **Musik: nästa steg** (ElevenLabs Music, provlyssning först; kontot behöver credits).
+
 ## Grenar
 - `main`: live, neon-2097-versionen.
 - `crafts`: gammal gren, allt ligger på `main`.
