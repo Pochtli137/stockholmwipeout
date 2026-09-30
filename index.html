@@ -662,7 +662,7 @@ function makeTextures(){ if(TEX.heat) return;
 let fxSeed=1234;
 function fxRnd(){ fxSeed=(fxSeed*1664525+1013904223)|0; return ((fxSeed>>>8)&0xffff)/0xffff; }
 // screen FX: streaks that stretch with speed (the motion-blur feel), a coloured vignette, the boost flash,
-// the red hit flash and the shield's cyan rim. Drawn on a 2D canvas over the WebGL frame.
+// the red hit flash. Drawn on a 2D canvas over the WebGL frame. (The shield is a field around the craft now.)
 function drawSpeedFX(intensity){
   const w=fxCanvas.width,h=fxCanvas.height; fxc.clearRect(0,0,w,h);
   const cx=w/2, cy=h*0.5, maxR=Math.hypot(w,h)*0.5;
@@ -676,7 +676,6 @@ function drawSpeedFX(intensity){
       fxc.lineWidth=1+intensity*2.2*fxRnd(); fxc.beginPath(); fxc.moveTo(x0,y0); fxc.lineTo(x1,y1); fxc.stroke(); } }
   if(boostFlash>0){ const g=fxc.createRadialGradient(cx,cy,maxR*0.1,cx,cy,maxR); g.addColorStop(0,`rgba(255,255,255,${boostFlash*0.25})`); g.addColorStop(1,`rgba(0,225,255,${boostFlash*0.45})`); fxc.fillStyle=g; fxc.fillRect(0,0,w,h); }
   if(hitFlash>0){ fxc.fillStyle=`rgba(255,40,40,${hitFlash*0.25})`; fxc.fillRect(0,0,w,h); }
-  if(shieldT>0){ fxc.strokeStyle=`rgba(${TH.shield},${0.35+0.2*Math.sin(performance.now()*0.02)})`; fxc.lineWidth=14; fxc.strokeRect(7,7,w-14,h-14); }
 }
 /* ============================== GOOGLE TILES ============================== */
 // origin: Medborgarplatsen — local frame: +X väst, +Z norr, +Y upp
@@ -1902,6 +1901,7 @@ function stepMissiles(dt){ for(let i=missiles.length-1;i>=0;i--){ const m=missil
     if(m.tgt){ m.lat+=(m.tgt.lat-m.lat)*Math.min(1,dt*4); }
     const f=mkFrame(); frameAt(m.t,f); m.spr.position.copy(f.p).addScaledVector(f.right,m.lat).addScaledVector(f.up,1.6);
     const hit=m.tgt && (m.t-m.tgt.t)*TRACK_LEN>-2;
+    if(hit&&m.tgt.isPlayer&&shieldT>0){ SHIELD.touch(0,1.4); scene.remove(m.spr); m.spr.material.dispose(); missiles.splice(i,1); continue; }   // the field eats it
     if(hit){ m.tgt.speed*=m.tgt.ph?m.tgt.ph.hitKeep+0.1:0.35; m.tgt.hitT=1.2; sfxAt('hit',m.tgt.mesh.position); burstAt(m.tgt.mesh.position); if(m.tgt.mesh.position.distanceTo(camera.position)<200) shake=Math.min(shake+0.5,1.4); hitFlash=0.6; }
     if(hit||m.life<=0){ scene.remove(m.spr); m.spr.material.dispose(); missiles.splice(i,1); } } }
 function shipT(s){ return ((s.t%1)+1)%1; }
@@ -1984,7 +1984,7 @@ function stepShip(s,dt){
       s.vlat=0; s.speed*=Math.pow(0.55,dt); }
     else { if(HARD&&hitNow){ s.speed*=0.86; s.boost*=0.5; s.vlat*=-0.6; } else s.vlat*=-0.35;       // the AI keep the rail's bounce
       s.speed*=Math.pow(HARD?0.3:0.4,dt*3); }
-    if(s.isPlayer){ shake=Math.min(shake+0.4,1.2); if(state==='race') wallT+=dt; } }
+    if(s.isPlayer){ shake=Math.min(shake+0.4,1.2); if(state==='race') wallT+=dt; if(hitNow) SHIELD.touch(Math.sign(s.lat),shieldT>0?1:0.5); } }
   else s.onWall=false;
   s.boost=Math.max(0,s.boost-22*dt);
   if(s.isPlayer){ const wall=Math.abs(s.lat)>=lim-0.01;
@@ -2065,14 +2065,57 @@ function advance(s,dt){
     pa.needsUpdate=true; tr.visible=sf>0.08; });
   if(state!=='loading') emitShip(s,dt,sf);
 }
+// SHIELD FIELD: an energy skin around the player's craft. Idle it is faint and follows the SHIELD ENERGY bar (strong
+// field = healthy, flickering = low); the SHIELD pickup lights it fully for 5 s. While lit it blocks the wall drain,
+// barges AI aside and eats missiles. Additive fresnel shell, a little bigger than the hull so it never z-fights.
+const SHIELD=(()=>{
+  const mat=new THREE.ShaderMaterial({ transparent:true, depthWrite:false, blending:THREE.AdditiveBlending, toneMapped:false,
+    uniforms:{ uT:{value:0}, uA:{value:0}, uCol:{value:new THREE.Color(0x00e1ff)}, uHit:{value:0}, uHitDir:{value:new THREE.Vector3()}, uLow:{value:0} },
+    vertexShader:`varying vec3 vN; varying vec3 vV; varying vec3 vP;
+      void main(){ vP=position; vec4 mv=modelViewMatrix*vec4(position,1.0); vN=normalize(normalMatrix*normal); vV=normalize(-mv.xyz); gl_Position=projectionMatrix*mv; }`,
+    fragmentShader:`uniform float uT,uA,uHit,uLow; uniform vec3 uCol,uHitDir; varying vec3 vN; varying vec3 vV; varying vec3 vP;
+      float hex(vec2 p){ p*=vec2(1.0,1.1547); p.x+=mod(floor(p.y),2.0)*0.5; vec2 f=abs(fract(p)-0.5); return smoothstep(0.43,0.49,max(f.x*1.5+f.y*0.0,f.y+f.x*0.5)); }
+      void main(){
+        float fr=pow(1.0-abs(dot(normalize(vN),normalize(vV))),2.2);
+        float h=hex(vP.xz*6.0+vec2(0.0,uT*0.6));
+        float scan=0.5+0.5*sin(vP.z*38.0-uT*9.0);
+        float flick=mix(1.0, step(0.35,fract(sin(floor(uT*14.0)*43.7)*917.3)), uLow);
+        float hit=uHit*smoothstep(0.2,1.0,dot(normalize(vP),normalize(uHitDir+vec3(0.0,0.0001,0.0))))+uHit*0.35*step(length(uHitDir),0.01);
+        float a=uA*flick*(0.35*fr+0.55*fr*h+0.12*scan*fr+0.06) + hit*(0.6+0.8*h);
+        gl_FragColor=vec4(uCol*a*(1.0+hit*1.5), a);
+      }` });
+  const mesh=new THREE.Mesh(new THREE.SphereGeometry(1,40,24), mat); mesh.renderOrder=5; mesh.frustumCulled=false; mesh.visible=false;
+  let sized=null, hit=0; const _b=new THREE.Box3(), _t=new THREE.Box3();
+  function fit(craft){ // hull size in the craft's own frame, meshes only (no glow sprites or trails)
+    const q=craft.quaternion.clone(), pos=craft.position.clone(); craft.quaternion.identity(); craft.position.set(0,0,0); craft.updateMatrixWorld(true);
+    _b.makeEmpty(); craft.traverse(o=>{ if(o.isMesh&&!o.isSprite&&o.geometry){ o.geometry.computeBoundingBox(); _t.copy(o.geometry.boundingBox).applyMatrix4(o.matrixWorld); _b.union(_t); } });
+    craft.quaternion.copy(q); craft.position.copy(pos); craft.updateMatrixWorld(true);
+    const c=_b.getCenter(new THREE.Vector3()), sz=_b.getSize(new THREE.Vector3());
+    mesh.userData.off=c; mesh.scale.set(Math.max(sz.x,1.5)*0.62,Math.max(sz.y,0.8)*0.95,Math.max(sz.z,2.5)*0.6); sized=craft; }
+  return {
+    mesh,
+    touch(dir,k=1){ hit=Math.max(hit,k); mat.uniforms.uHitDir.value.set(dir,0.15,0); },
+    step(dt,p){ if(!p||state==='loading'||state==='select'){ mesh.visible=false; return; }
+      if(!mesh.parent) scene.add(mesh);
+      if(sized!==p.mesh) fit(p.mesh);
+      mesh.visible=true; mesh.position.copy(p.mesh.position).add(mesh.userData.off.clone().applyQuaternion(p.mesh.quaternion)); mesh.quaternion.copy(p.mesh.quaternion);
+      const idle=0.34*(0.3+0.7*energy/100);   // the field you always carry, mostly rim: dims with the energy bar
+      const on=shieldT>0?Math.min(1,(5-shieldT)/0.3,shieldT/0.6):0;   // the pickup: fades in fast, out over the last 0.6 s
+      mat.uniforms.uA.value=idle+(0.62-idle)*on;
+      mat.uniforms.uLow.value=energy<30&&on<=0?1-energy/30:0;
+      hit=Math.max(0,hit-dt*3); mat.uniforms.uHit.value=hit*(on>0?1:0.45); mat.uniforms.uT.value+=dt; } };
+})();
 function separate(dt){
   for(let i=0;i<ships.length;i++) for(let j=i+1;j<ships.length;j++){
     const a=ships[i],b=ships[j];
     const d=a.mesh.position.distanceTo(b.mesh.position);
     if(d<3.0){ const push=(3.0-d)*6*dt;
+      // SHIELD: the player's field barges an AI aside and costs the player nothing
+      const pl=a.isPlayer?a:b.isPlayer?b:null, ai=pl===a?b:a, sh=pl&&shieldT>0;
+      if(sh){ const dir=ai.lat<pl.lat?-1:1; ai.vlat+=dir*push*40; ai.speed*=1-1.2*dt; SHIELD.touch(dir); shake=Math.min(shake+0.15,1); continue; }
       if(a.lat<b.lat){ a.vlat-=push*8; b.vlat+=push*8; } else { a.vlat+=push*8; b.vlat-=push*8; }
       a.speed*=1-0.4*dt; b.speed*=1-0.4*dt;
-      if(a.isPlayer||b.isPlayer) shake=Math.min(shake+0.25,1); } }
+      if(pl){ shake=Math.min(shake+0.25,1); SHIELD.touch(ai.lat<pl.lat?-1:1,0.4); } } }
 }
 let flashT=0;
 function flash(text){ msg.textContent=text; msg.style.fontSize='40px'; flashT=1.6; }
@@ -2229,7 +2272,7 @@ function loop(now){
   if(state==='race') raceTime+=dt;
   if(state!=='loading'){
     for(const s of ships) stepShip(s,dt);
-    separate(dt); updateCamera(dt);
+    separate(dt); updateCamera(dt); SHIELD.step(dt,player());
     for(const m of padMats) for(const k of ['map','emissiveMap']) if(m[k]) m[k].offset.y=(m[k].offset.y-dt*1.6)%1;
     for(const m of wpadMats) for(const k of ['map','emissiveMap']) if(m[k]) m[k].rotation+=dt*1.4;
     stepMissiles(dt); if(FX.particles){ GLOW.tick(dt); DUST.tick(dt); } boostFlash=Math.max(0,boostFlash-dt*1.8); hitFlash=Math.max(0,hitFlash-dt*2);
@@ -2261,6 +2304,7 @@ if(location.search.includes('check')) window.__SUN=SUN_DIR;
 window.__theme=THEME;
 if(location.search.includes('check')) window.__sw={
   frameAt, mkFrame, hitsAt:(x,z)=>tiles?hitsAt(x,z):[], tilesIdle:()=>tiles?tilesIdle():true, player, ships:()=>ships, keys,
+  setShield:v=>{ shieldT=v; }, setEnergy:v=>{ energy=v; }, shieldTouch:(d,k)=>SHIELD.touch(d,k),
   stats:()=>({ hard:HARD, energy, wallT, wallHits, raceTime, state, airtime:airtimeCount }), grip:()=>GRIP_K(),
   passes:()=>composer.passes, bloomPass:bloom, flickN:()=>flickMats.length, state:()=>state, len:()=>TRACK_LEN, HALF_W, MAXV, curvAhead, camera, setPaused:v=>{ paused=v; },
   placeAt(t,lat=0){ const p=player(); p.t=t; p.lat=lat; p.speed=0; p.vlat=0; advance(p,0); camSnap=true; updateCamera(1/60); camera.updateMatrixWorld(); },
