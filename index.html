@@ -197,17 +197,13 @@
   #loadveil.title { background:radial-gradient(ellipse at 50% 42%,rgba(5,7,11,.15),rgba(5,7,11,.72) 70%),linear-gradient(180deg,rgba(5,7,11,.55),transparent 30%,transparent 70%,rgba(5,7,11,.8)) !important;
     flex-direction:column; gap:4vh; touch-action:none; cursor:pointer; }
   .tlogo { text-align:center; transform:skewX(-8deg); transition:transform .8s cubic-bezier(.6,0,.2,1), opacity .8s, filter .8s; }
-  .tlogo .terik { display:block; margin:0 auto 1.2vh; width:min(clamp(84px,11vw,170px),17vh); height:auto; overflow:visible; transform:skewX(8deg);
-    filter:drop-shadow(0 0 4px rgba(0,225,255,.9)) drop-shadow(0 0 14px rgba(0,225,255,.45)); animation:erik-in 1.4s cubic-bezier(.2,.7,.2,1) both; }
-  .terik * { fill:none; stroke-linecap:round; stroke-linejoin:round; vector-effect:non-scaling-stroke; }
-  .terik .er-disc { fill:rgba(4,6,12,.72); stroke:none; }
-  .terik .er-ring { stroke:#ff2e9a; stroke-width:2; stroke-dasharray:14 6; opacity:.85; }
-  .terik .er-crown { stroke:#ffe600; stroke-width:3.6; }
-  .terik .er-head { stroke:#e9fbff; stroke-width:4.2; }
-  .terik .er-line { stroke:#7ff0ff; stroke-width:2.6; }
-  @keyframes erik-in { from { opacity:0; transform:skewX(8deg) translateY(-18px) scale(.85); } to { opacity:1; transform:skewX(8deg); } }
-  body.mobile.portrait .tlogo .terik { width:clamp(64px,22vw,110px); }
-  @media (max-height:500px){ .tlogo .trune, .tlogo .tsub { display:none; } .tlogo .terik { width:15vh; margin-bottom:.6vh; } }   /* phone landscape: TAP must clear the load line */
+  /* S:t Erik: Stockholms stadsvapen as it is (Kim 2026-09-30), from Wikimedia Commons (Koyos, CC BY-SA 2.5, credited on the title) */
+  .tlogo .terik { display:block; margin:0 auto 1.2vh; width:auto; height:min(clamp(96px,13vw,190px),19vh);
+    filter:drop-shadow(0 0 6px rgba(255,214,90,.55)) drop-shadow(0 0 22px rgba(0,190,255,.35)); animation:erik-in 1.4s cubic-bezier(.2,.7,.2,1) both; }
+  @keyframes erik-in { from { opacity:0; transform:translateY(-18px) scale(.85); } to { opacity:1; transform:none; } }
+  body.mobile.portrait .tlogo .terik { height:clamp(76px,16vh,130px); }
+  @media (max-height:500px){ .tlogo .trune, .tlogo .tsub { display:none; } .tlogo .terik { height:13vh; margin-bottom:.4vh; } .tcred { margin-top:3px; }
+    .tlogo { transform:scale(.8); transform-origin:50% 0; margin-top:-2vh; } #tpress { position:relative; top:-12px; } }   /* phone landscape: TAP must clear the load line */
   .tlogo .t1 { font:900 clamp(22px,3.4vw,52px) "Orbitron",sans-serif; letter-spacing:.42em; color:var(--w); text-shadow:0 0 18px rgba(0,225,255,.55); padding-left:.42em; }
   .tlogo .t2 { font:900 clamp(56px,11vw,176px)/.92 "Orbitron",sans-serif; letter-spacing:.04em; color:#fff;
     text-shadow:0 0 24px rgba(0,225,255,.9),0 0 60px rgba(0,225,255,.45),6px 6px 0 rgba(255,46,154,.85); }
@@ -220,6 +216,7 @@
   .tload { position:absolute; left:50%; bottom:clamp(18px,4vh,40px); transform:translateX(-50%); width:min(360px,60vw); text-align:center; opacity:.7; }
   #loadveil.title #loadbar { height:3px; margin:0 0 8px; }
   #loadveil.title #loadtxt { font-size:10px; letter-spacing:.25em; }
+  .tcred { margin-top:6px; font:500 9px "Rajdhani",sans-serif; letter-spacing:.12em; color:rgba(200,220,240,.55); }   /* CC BY-SA credit for the arms */
   /* the hand-over: the logo rushes at the camera and a neon wipe crosses into the hangar */
   #loadveil.title.go .tlogo { transform:skewX(-8deg) scale(2.4); opacity:0; filter:blur(8px); }
   #loadveil.title.go #tpress, #loadveil.title.go .tload { opacity:0; animation:none; transition:opacity .2s; }
@@ -312,18 +309,10 @@
 </div></div>
 
 <div id="loadveil" class="title" style="display:flex">
-  <div class="tlogo"><svg class="terik" viewBox="0 0 200 200" aria-label="S:t Erik" role="img">
-    <!-- An original neon mark for the game: a crowned king's head in profile, facing left. Not Stockholm's registered arms. -->
-    <circle class="er-disc" cx="100" cy="102" r="92"/><circle class="er-ring" cx="100" cy="102" r="92"/>
-    <path class="er-crown" d="M76 66 L79 38 L92 52 L104 25 L116 52 L129 36 L134 62 Z"/>
-    <circle class="er-crown" cx="79" cy="33" r="3.2"/><circle class="er-crown" cx="104" cy="19" r="3.6"/><circle class="er-crown" cx="129" cy="31" r="3.2"/>
-    <path class="er-head" d="M78 68 C74 75 72 81 72 87 L66 94 L56 104 L66 108 C65 112 65 115 67 117 L63 121 L68 125 C61 141 66 159 81 171 C88 176 95 180 101 184 C104 174 111 164 114 154 C117 148 117 144 116 140"/>
-    <path class="er-head" d="M134 64 C145 78 147 93 141 107 C147 119 143 131 133 139 C126 145 121 151 119 161"/>
-    <path class="er-line" d="M79 91 L87 90 M111 100 C119 95 124 108 116 114 M74 137 C80 142 76 150 82 156 C87 161 84 167 90 172 M88 132 C94 138 90 146 96 152 C101 157 99 164 102 170 M114 158 L121 186"/>
-  </svg><div class="t1">STOCKHOLM</div><div class="t2">WIPEOUT</div><div class="t3">2097</div>
+  <div class="tlogo"><img class="terik" src="wo2097/assets/stockholm_vapen.svg" alt="S:t Erik, Stockholms stadsvapen"><div class="t1">STOCKHOLM</div><div class="t2">WIPEOUT</div><div class="t3">2097</div>
     <div class="trune">ᛋᛏᚢᚴᚼᚢᛚᛘ᛫ᚢᛁᛒᛁᚢᛏ</div><div class="tsub">SAGL · STOCKHOLM ANTI-GRAVITY LEAGUE</div></div>
   <div id="tpress">LADDAR STOCKHOLM</div>
-  <div class="tload"><div id="loadbar"><div id="loadfill"></div></div><div id="loadtxt">väntar på tiles ...</div></div>
+  <div class="tload"><div id="loadbar"><div id="loadfill"></div></div><div id="loadtxt">väntar på tiles ...</div><div class="tcred">S:t Erik: Stockholms stadsvapen · Koyos, Wikimedia Commons, CC BY-SA 2.5</div></div>
 </div>
 <div id="sweep"></div>
 

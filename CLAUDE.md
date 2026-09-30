@@ -23,10 +23,10 @@ Publikt repo `Pochtli137/stockholmwipeout`. Live https://stockholmwipeout.vercel
 - **Rälsen är spelet (Kim 2026-09-30):** "ett spel som handlar mer om upplevelse och samhällskritik". Fri styrning finns bara
   bakom den dolda utvecklarflaggan `?grepp=hart` (ingen G-växel, inget sparat val). `AI_EASE` (motståndarnas fart, 0,5) gäller
   alltid; `HARD_EASE` bara under flaggan. Rattarna står överst i fysikdelen av index.html.
-- **Titelskärmen** har ett eget S:t Erik-märke i neonrör (krönt, skäggigt huvud i profil i en ring). Det är ett nytt märke, **inte**
-  Stockholms registrerade vapen (skyddat enligt lagen 1970:498), så rita aldrig av det officiella vapnet.
-  Detaljer i `wo2097/pipeline/README.md`.
-
+- **Titelskärmen har Stockholms riktiga stadsvapen, S:t Erik** (Kim 2026-09-30: "vi kan använda riktiga st erik här").
+  Filen är `wo2097/assets/stockholm_vapen.svg` från Wikimedia Commons (Koyos, CC BY-SA 2.5, märkt som skyddat insignia), krediterad
+  i raden under laddningslinjen. Risken är flaggad för Kim: vapnet skyddas av lagen 1970:498 och staden kräver tillstånd för
+  användning, främst ett problem i kommersiell kontext. Kreditraden får inte tas bort (CC BY-SA).
 ## Grenar
 - `main`: live, neon-2097-versionen.
 - `crafts`: gammal gren, allt ligger på `main`.
