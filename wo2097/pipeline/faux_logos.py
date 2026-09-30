@@ -14,40 +14,45 @@ def _drone(d,c,s,col):   # a tiny quadcopter: an X and four rotor discs
     for a in (math.pi/4,3*math.pi/4): _line(d,[_pt(c,s,a),_pt(c,s,a+math.pi)],s*0.35,col)
     for k in range(4): _disc(d,_pt(c,s,math.pi/4+k*math.pi/2),s*0.42,col)
 
-def s_rose(d,S,fg,ac):      # S: a rose seen through a surveillance camera's iris, the stem is barbed wire
-    c=(S*0.5,S*0.42); R=S*0.36
-    _ring(d,c,R,S*0.05,fg)
-    for k in range(7):      # aperture blades
-        a=k*2*math.pi/7; _line(d,[_pt(c,R*0.97,a),_pt(c,R*0.42,a+1.05)],S*0.028,fg)
-    for k,rr in enumerate((0.26,0.19,0.12)):   # the rose: three spiralling petal arcs
-        r=R*rr/0.36*0.95; d.arc([c[0]-r,c[1]-r,c[0]+r,c[1]+r],start=k*110,end=k*110+290,fill=ac,width=int(S*0.045))
-    _disc(d,c,S*0.025,ac)
-    x=S*0.5; _line(d,[(x,c[1]+R),(x,S*0.96)],S*0.03,fg)          # stem: barbed wire
-    for y in (S*0.85,S*0.93):
-        _line(d,[(x-S*0.05,y-S*0.03),(x+S*0.05,y+S*0.03)],S*0.02,fg); _line(d,[(x-S*0.05,y+S*0.03),(x+S*0.05,y-S*0.03)],S*0.02,fg)
+CUT=(0,0,0,0)   # ImageDraw writes RGBA straight through, so drawing with this punches a hole to the board behind
+def s_rose(d,S,fg,ac):      # S: one bold rose, its stem a rising stock chart (the folkhem, now with dividends)
+    _line(d,[(S*0.22,S*0.96),(S*0.36,S*0.8),(S*0.44,S*0.88),(S*0.5,S*0.62)],S*0.06,fg)   # the chart, up and to the right into the bloom
+    d.polygon([(S*0.47,S*0.78),(S*0.7,S*0.64),(S*0.82,S*0.66),(S*0.62,S*0.82)],fill=fg)   # one leaf
+    c=(S*0.5,S*0.36); R=S*0.25
+    d.pieslice([c[0]-R,c[1]-R,c[0]+R,c[1]+R],0,180,fill=ac)                               # the cup
+    for (u,v,r) in ((-0.5,-0.05,0.52),(0.5,-0.05,0.52),(0,-0.35,0.58)): _disc(d,(c[0]+R*u,c[1]+R*v),R*r,ac)   # three petals on top
+    w=int(S*0.03)
+    sc=(c[0],c[1]-R*0.08)                                                                 # the bloom's spiral, cut out: the rose sign
+    _line(d,[_pt(sc,R*(0.06+0.62*k/60),-math.pi/2+k*2.6*math.pi/60) for k in range(61)],w,CUT)
+    d.polygon([(c[0]-R*0.45,c[1]+R*0.9),(c[0]+R*0.45,c[1]+R*0.9),(c[0],c[1]+R*1.25)],fill=fg)   # sepal where the chart meets the bloom
 def m_lock(d,S,fg,ac):      # M: a padlock whose shackle is the letter-shape of an M
     bx0,by0,bx1,by1=S*0.2,S*0.46,S*0.8,S*0.92
     d.rounded_rectangle([bx0,by0,bx1,by1],radius=S*0.06,fill=fg)
     _line(d,[(S*0.3,by0),(S*0.3,S*0.12),(S*0.5,S*0.34),(S*0.7,S*0.12),(S*0.7,by0)],S*0.075,fg)
     kc=(S*0.5,S*0.64); _disc(d,kc,S*0.055,ac); d.polygon([(S*0.47,S*0.66),(S*0.53,S*0.66),(S*0.55,S*0.82),(S*0.45,S*0.82)],fill=ac)
-def sd_globe(d,S,fg,ac):    # SD: a flower sealed in a snow globe, forever 1952 (nostalgia rhetoric, never people)
-    c=(S*0.5,S*0.42); R=S*0.34
-    _ring(d,c,R,S*0.04,fg)
-    d.polygon([(S*0.22,S*0.8),(S*0.78,S*0.8),(S*0.7,S*0.95),(S*0.3,S*0.95)],fill=fg)   # the base
-    fc=(S*0.5,S*0.38)
-    for k in range(6): _disc(d,_pt(fc,S*0.085,k*math.pi/3),S*0.06,ac)                 # a generic six-petal flower
-    _disc(d,fc,S*0.045,fg); _line(d,[(fc[0],fc[1]+S*0.07),(fc[0],S*0.7)],S*0.025,fg)
-    for (u,v) in ((0.3,0.3),(0.66,0.24),(0.72,0.5),(0.3,0.56),(0.58,0.62),(0.4,0.18)): _disc(d,(S*u,S*v),S*0.016,fg)   # snow
-def c_clover(d,S,fg,ac):    # C: a four-leaf clover with a barcode across it and a smokestack for a stem
-    c=(S*0.5,S*0.38)
-    for k in range(4):          # four separate heart-shaped leaves, a clear gap between them
-        a=k*math.pi/2+math.pi/4; lc=_pt(c,S*0.165,a); r=S*0.06
-        for side in (-1,1): _disc(d,_pt(lc,r*0.55,a+side*math.pi/2),r,fg)
-        d.polygon([_pt(lc,r*1.25,a+math.pi*0.72),_pt(lc,r*1.25,a-math.pi*0.72),_pt(c,S*0.02,a)],fill=fg)
-    for k in range(11):         # barcode over the clover
-        x=S*0.29+k*S*0.038; w=S*(0.011 if k%3 else 0.02); d.rectangle([x,S*0.35,x+w,S*0.43],fill=ac)
-    d.polygon([(S*0.47,S*0.56),(S*0.53,S*0.56),(S*0.56,S*0.94),(S*0.44,S*0.94)],fill=fg)   # the stack
-    for k,(u,v) in enumerate(((0.62,0.62),(0.72,0.53),(0.81,0.42))): _disc(d,(S*u,S*v),S*(0.028+k*0.012),ac)   # its smoke
+def sd_gate(d,S,fg,ac):     # SD: a flower on the far side of a shut, padlocked gate (Sverige tillbaka, för vissa); no people
+    fc=(S*0.5,S*0.24)
+    _line(d,[fc,(S*0.5,S*0.5)],S*0.035,ac)
+    for k in range(6): _disc(d,_pt(fc,S*0.1,-math.pi/2+k*math.pi/3),S*0.075,ac)                   # a generic six-petal flower
+    _disc(d,fc,S*0.06,CUT); _disc(d,fc,S*0.035,ac)
+    y0,y1=S*0.44,S*0.95
+    for k in range(7):                                                                               # pickets, each with a clear gap
+        x=S*(0.1+k*0.8/6); d.rectangle([x-S*0.05,y0-S*0.06,x+S*0.05,y1],fill=CUT)
+        d.polygon([(x-S*0.03,y0),(x,y0-S*0.06),(x+S*0.03,y0)],fill=fg); d.rectangle([x-S*0.03,y0,x+S*0.03,y1],fill=fg)
+    for y in (0.56,0.86): d.rectangle([S*0.04,S*y,S*0.96,S*y+S*0.05],fill=fg)                          # the rails
+    lc=(S*0.5,S*0.72); d.rectangle([lc[0]-S*0.1,lc[1]-S*0.01,lc[0]+S*0.1,lc[1]+S*0.13],fill=CUT)       # the padlock, where the gate halves meet
+    _ring(d,(lc[0],lc[1]),S*0.055,S*0.025,fg); d.rounded_rectangle([lc[0]-S*0.08,lc[1],lc[0]+S*0.08,lc[1]+S*0.12],radius=S*0.02,fill=fg)
+def c_vane(d,S,fg,ac):      # C: a compass whose needle points both ways at once, spinning (mitten, åt vilket håll som helst)
+    c=(S*0.5,S*0.5); R=S*0.4
+    _ring(d,c,R,S*0.045,ac)
+    for k in range(4): d.polygon([_pt(c,R*1.18,k*math.pi/2),_pt(c,R*0.9,k*math.pi/2+0.13),_pt(c,R*0.9,k*math.pi/2-0.13)],fill=ac)   # N E S W
+    a=-math.pi/4
+    for sgn in (1,-1):                                                                               # two arrowheads, both ends
+        tip=_pt(c,R*0.78,a+(0 if sgn>0 else math.pi)); aa=a+(0 if sgn>0 else math.pi)
+        d.polygon([tip,_pt(tip,R*0.36,aa+math.pi-0.45),_pt(tip,R*0.36,aa+math.pi+0.45)],fill=fg)
+    _line(d,[_pt(c,R*0.5,a),_pt(c,R*0.5,a+math.pi)],S*0.07,fg); _disc(d,c,S*0.06,ac)
+    for a0 in (200,20):                                                                              # the spin, drawn as two swooshes
+        r=R*0.62; d.arc([c[0]-r,c[1]-r,c[0]+r,c[1]+r],start=a0,end=a0+70,fill=fg,width=int(S*0.03))
 def v_fist(d,S,fg,ac):      # V: a raised fist, and what it grips is the remote control (held across, never pointing up)
     d.rectangle([S*0.4,S*0.6,S*0.6,S*0.96],fill=fg)                                       # forearm
     d.rounded_rectangle([S*0.14,S*0.32,S*0.86,S*0.44],radius=S*0.03,fill=ac)              # the remote, across the grip
@@ -78,7 +83,7 @@ def mp_dandelion(d,S,fg,ac):# MP: a dandelion clock whose seeds are drones, some
         a=-math.pi*0.95+k*math.pi*1.9/10; tip=_pt(c,S*0.26,a); _line(d,[c,tip],S*0.012,fg); _drone(d,tip,S*0.03,ac)
     _disc(d,c,S*0.04,fg)
     for (u,v) in ((0.78,0.2),(0.88,0.36),(0.74,0.06)): _drone(d,(S*u,S*v),S*0.035,ac)
-MARKS=[s_rose,m_lock,sd_globe,c_clover,v_fist,kd_cam,l_torch,mp_dandelion]
+MARKS=[s_rose,m_lock,sd_gate,c_vane,v_fist,kd_cam,l_torch,mp_dandelion]
 def logo(i,px,fg,ac):
     S=px*SS; im=Image.new('RGBA',(S,S),(0,0,0,0)); d=ImageDraw.Draw(im); MARKS[i](d,S,fg+(255,) if len(fg)==3 else fg, ac+(255,) if len(ac)==3 else ac)
     return im.resize((px,px),Image.LANCZOS)

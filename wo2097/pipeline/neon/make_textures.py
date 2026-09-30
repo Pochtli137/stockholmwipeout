@@ -88,6 +88,22 @@ SLOGAN={ 'IKÖA':('MONTERA DITT','MEDBORGARSKAP'), 'VOLVÖ':('SÄKERHET.','FÖR 
   'SECURITAZ':('WE ARE ALWAYS','WATCHING'), 'ELECTROLUXX':('WE CLEAN UP','AFTER PROTESTS'), 'PRESSBYRÅ-N':('KORV OCH','ÖVERVAKNING'),
   'FÖRSÄKRINGSKASSÅN':('DU ÄR FRISK.','VI BESTÄMDE DET.'), 'SKATTEVERK-X':('VI VET VAD DU','TÄNKER TJÄNA'), 'BANK-ID+':('UTAN OSS','FINNS DU INTE.') }
 for B in BRANDS: B['s']=SLOGAN[B['n']]
+# ============================================================ POLITICS, 2097 · the eight Riksdag parties
+# Back in NEON (Kim 2026-09-30: "vi har missat dom politiska partierna"), as they were in USED (730a8f7).
+# Satire of power only, treated alike: two lit election boards and the same barrier share each, the same bite for all.
+# Parody names close to the real ones, party colours, faux logos (faux_logos.py: new marks, never the real symbols),
+# NO politicians, never a word about any group of people. Direktdemokraterna and parties outside the Riksdag: not included.
+from faux_logos import logo as faux_logo
+PARTIES=[
+  dict(n='SOCIÅLDEMOKRATERNA', s=('FOLKHEMMET.','NU MED VINSTUTTAG.'), bg=(200,16,46),  fg=W, ac=(255,255,255)),
+  dict(n='MODERÅTERNA',        s=('SÄNKT SKATT.','HÖJD KONTROLL.'),        bg=(20,70,170),  fg=W, ac=(120,200,255)),
+  dict(n='SVERIGEDEMOKRÄTERNA',s=('SVERIGE TILLBAKA.','FÖR VISSA.'),       bg=(250,210,0),  fg=(0,50,130), ac=(0,50,130)),
+  dict(n='CENTERPÅRTIET',      s=('MITTEN. ÅT VILKET','HÅLL SOM HELST.'),bg=(0,120,60),   fg=W, ac=(160,230,120)),
+  dict(n='VÄNSTERPÅRTIET',     s=('MAKTEN ÅT FOLKET.','FOLKET ÅT PARTIET.'),bg=(160,0,20),  fg=W, ac=(255,120,120)),
+  dict(n='KRISTDEMOKRÄTERNA',  s=('TRYGGA FAMILJER.','ÖVERVAKADE FAMILJER.'),bg=(10,30,110),fg=W, ac=(120,170,255)),
+  dict(n='LIBERÅLERNA',        s=('FRIHET.','MED PRENUMERATION.'),         bg=(0,100,180),  fg=W, ac=(255,210,0)),
+  dict(n='MILJÖPÅRTIET',       s=('KLIMATNEUTRALT.','ENLIGT OSS.'),        bg=(90,160,40),  fg=W, ac=(220,255,160)) ]
+for i,P in enumerate(PARTIES): P['k']=runes(P['n']); P['f']='din'; P['logo']=i
 def cond(z): return sysf('DIN Condensed Bold.ttf',z)
 def big(d,lines,maxw,start,minsz,what):
     """the biggest condensed size that fits every line in maxw, or a hard stop: shorten the slogan, never shrink it"""
@@ -128,15 +144,17 @@ for k in range(3):
 save(em,'track_e.jpg')
 
 # ---- barrier panels, one per side: colour blocks, brand words, arrows, hazard slabs
-def barrier(acc,name,order):
+def barrier(acc,name,order,pool=None):
     # 8192 x 128 px over 104 m of wall (build.py): 1.27 cm a pixel, the wall is 1.7 m high. Brand cell, then its slogan
     # as one line almost a metre tall in white on black, then chevrons; cells never cross the texture's wrap
     w,h=8192,128; im=Image.new('RGB',(w,h),(13,17,25)); d=ImageDraw.Draw(im); x=24; k=0
     while True:
-        B=BRANDS[order[k%len(order)]]; nf=fit(d,B['n'],FONTS[B['f']],84,1100,minsz=60); nw=int(d.textlength(B['n'],font=nf))+60
+        B=(pool or BRANDS)[order[k%len(order)]]; nf=fit(d,B['n'],FONTS[B['f']],84,1100,minsz=60); nw=int(d.textlength(B['n'],font=nf))+60+(118 if 'logo' in B else 0)
         line=' '.join(B['s']); sf=big(d,[line],2600,100,84,'barrier'); sw=int(d.textlength(line,font=sf))+70
         if x+nw+sw+300>w-24: break
-        d.rectangle([x,14,x+nw,h-14],fill=B['bg']); d.text((x+30,h//2+2),B['n'],font=nf,fill=B['fg'],anchor='lm'); x+=nw+10
+        d.rectangle([x,14,x+nw,h-14],fill=B['bg']); d.text((x+30,h//2+2),B['n'],font=nf,fill=B['fg'],anchor='lm')
+        if 'logo' in B: lg=faux_logo(B['logo'],96,B['fg'],B['ac']); im.paste(lg,(x+nw-110,16),lg)   # the faux logo, same size for all
+        x+=nw+10
         d.rectangle([x,14,x+sw,h-14],fill=K); d.text((x+35,h//2+6),line,font=sf,fill=W,anchor='lm'); x+=sw+10
         for j in range(3): ax=x+30+j*60; d.polygon([(ax,h*.3),(ax+36,h*.5),(ax,h*.7)],fill=acc)
         x+=220; k+=1
@@ -146,6 +164,12 @@ def barrier(acc,name,order):
 nL=barrier(M,'barrier_L.jpg',list(range(0,len(BRANDS),2))+list(range(1,len(BRANDS),2)))
 nR=barrier(C,'barrier_R.jpg',list(range(1,len(BRANDS),2))+list(range(0,len(BRANDS),2)))
 print('barrier brands per 104 m:',nL,nR)
+# party barrier sections: four textures a side, two parties each, so every party gets the same share of wall
+for j in range(4):
+    for side,acc in (('L',M),('R',C)):
+        nP=barrier(acc,f'barrier_P{j}{side}.jpg',[2*j,2*j+1] if side=='L' else [2*j+1,2*j],pool=PARTIES)
+        assert nP>=2, f'party barrier {j}{side} fits only {nP} parties'
+print('party barrier textures: 4 a side, 2 parties each')
 
 
 # ---- speed pad (three chevrons) and weapon pad (a three-blade glyph), black = transparent under additive blending
@@ -183,6 +207,16 @@ for i,B in enumerate(BRANDS):
     af=big(d,B['s'],w-90-1010,124,104,'arch '+B['n'])
     for ln,y in zip(B['s'],(int(h*.30),int(h*.76))): d.text((1000,y),ln,font=af,fill=W,anchor='lm')
     save(im,f'arch_{i}.jpg')
+for i,P in enumerate(PARTIES):
+    w,h=1024,512; im=Image.new('RGB',(w,h),P['bg']); d=ImageDraw.Draw(im)
+    d.rectangle([0,int(h*.42),w,h],fill=K); d.rectangle([0,int(h*.42)-8,w,int(h*.42)],fill=P['ac'])
+    d.text((w-30,int(h*.365)),P['k'],font=rn(26),fill=P['fg'],anchor='rm')
+    d.text((36,int(h*.21)),P['n'],font=fit(d,P['n'],FONTS[P['f']],150,w*.7,minsz=60),fill=P['fg'],anchor='lm')
+    lg=faux_logo(i,158,P['fg'],P['ac']); im.paste(lg,(w-214,12),lg)   # the faux logo in the band, right, same size for all eight
+    sf=big(d,P['s'],w-72,140,112,'party board '+P['n'])
+    for ln,y in zip(P['s'],(int(h*.585),int(h*.84))): d.text((36,y),ln,font=sf,fill=W,anchor='lm')
+    d.rectangle([4,4,w-5,h-5],outline=P['ac'] if P['bg']!=(250,210,0) else (0,50,130),width=8)
+    save(im,f'pbill_{i}.jpg')
 im=Image.new('RGB',(256,256),K); hazard(ImageDraw.Draw(im),0,0,256,256,s=32); save(im,'hazard.jpg')
 
 # ---- team liveries: the wing top (number, glyph, name) and the hull decal band

@@ -73,6 +73,11 @@ Skärmdumpar: `node sky_shots.cjs <utmapp>` (mot solen, bort från solen, över 
   OATLÖ, ABSOLUTT, SECURITAZ, ELECTROLUXX, PRESSBYRÅ-N, FÖRSÄKRINGSKASSÅN, SKATTEVERK-X, BANK-ID+ (`BRANDS` i make_textures.py),
   lagen VOLVÖ SECURITY, SAAPH DEFENCE, SPOTIFAI NEURAL, IKÖA FLATPACK, KLARNÅ DEBT, ERIXON SIGNAL (samma färger i
   make_textures.py, build.py och index.html). Satir över företag och myndigheter, aldrig verkliga personer.
+- **De åtta riksdagspartierna (tillbaka i NEON 2026-09-30, Kim: "vi har missat dom politiska partierna"):** tabellen under
+  *Politics, 2097* (`PARTIES` i neon/make_textures.py). Två tända valaffischer var med neonram i partifärgen, utdelade jämnt
+  runt varvet av neon/build.py (loggen skriver `party boards 16 of …`), och lika mycket barriär: fyra texturer per sida med två
+  partier i varje, var sjunde 104 m-block. Parodiloggor från `faux_logos.py`, inga riktiga loggor, inga politiker,
+  Direktdemokraterna ingår inte. Satiren gäller makten, aldrig grupper av människor.
 - Materialnamnen i Blender styr beteendet i spelet: `pad_speed`/`pad_weapon` blir additiva (farten rullar, glyfen snurrar),
   `neon_*`/`light_*`/`core_*` får gå över 1.0 för bloomen, `light_0..4` är nedräkningsljusen på portalen.
 - Skeppens noder: `flap_L`/`flap_R` (luftbromsarnas gångjärn), `eng_L`/`eng_R` (munstyckena).
@@ -174,16 +179,17 @@ and parties outside the Riksdag are not included (Kim's call).
 
 | Parody | Party | Slogan |
 |---|---|---|
-| SOCIÅLDEMOKRATERNA | S | ALLA SKA MED. / FRIVILLIGT ELLER EJ. |
+| SOCIÅLDEMOKRATERNA | S | FOLKHEMMET. / NU MED VINSTUTTAG. |
 | MODERÅTERNA | M | SÄNKT SKATT. / HÖJD KONTROLL. |
-| SVERIGEDEMOKRÄTERNA | SD | SVERIGE TILLBAKA. / TILL 1952. |
-| CENTERPÅRTIET | C | GRÖN TILLVÄXT. / BARA TILLVÄXT. |
+| SVERIGEDEMOKRÄTERNA | SD | SVERIGE TILLBAKA. / FÖR VISSA. |
+| CENTERPÅRTIET | C | MITTEN. ÅT VILKET / HÅLL SOM HELST. |
 | VÄNSTERPÅRTIET | V | MAKTEN ÅT FOLKET. / FOLKET ÅT PARTIET. |
 | KRISTDEMOKRÄTERNA | KD | TRYGGA FAMILJER. / ÖVERVAKADE FAMILJER. |
 | LIBERÅLERNA | L | FRIHET. / MED PRENUMERATION. |
 | MILJÖPÅRTIET | MP | KLIMATNEUTRALT. / ENLIGT OSS. |
 
-(`PARTIES` in make_textures.py.)
+(`PARTIES` in neon/make_textures.py; S, SD and C slogans rewritten by Kim 2026-09-30. The USED-era text above is history:
+in NEON the parties carry the faux logos and neon-framed lit boards, see Regler.)
 
 ## Two themes in one build (Kim, 2026-09-29): TITLE → THEME → CRAFT → go
 "i början av spelet får man välja theme (neon eller used) och sen får man välja skepp och sen är det go time."
@@ -227,11 +233,12 @@ Ads also mark themselves in the scene target's alpha (0.25, `markAd` in index.ht
 colour split skip the letters (`MotionPass` reads `tMark`).
 
 ## Faux party logos (faux_logos.py)
-Every party board and poster (USED; the NEON theme is the b08a156 snapshot and carries no party ads) has a new mark
-that evokes the party with a 2097 twist, never the real logo, no text, no real people, the same size for all eight:
-S a rose in a camera iris with a barbed-wire stem · M a padlock whose shackle is an M · SD a flower sealed in a snow
-globe · C a four-leaf clover with a barcode and a smokestack stem · V a fist gripping a remote control ·
-KD a faceless family inside a CCTV housing · L a torch with a price tag (¤) · MP a dandelion whose seeds are drones.
+Every party board and barrier section in NEON (back 2026-09-30) has a new mark that evokes the party with a 2097 twist,
+never the real logo, no text, no real people, the same size for all eight:
+S a bold rose whose stem is a rising stock chart · M a padlock whose shackle is an M · SD a generic flower on the far
+side of a shut, padlocked gate · C a compass whose needle points both ways at once, spinning · V a fist gripping a
+remote control · KD a faceless family inside a CCTV housing · L a torch with a price tag (¤) · MP a dandelion whose
+seeds are drones. S, SD and C were redrawn 2026-09-30 to match Kim's new slogans.
 
 ## Mobile landscape (2026-09-29)
 A touch-first phone (`pointer:coarse` and a short side ≤ 1000 px, or `?mobile`) gets `body.mobile`: everything else is

@@ -89,6 +89,10 @@ m_surf=mat('track_surface',tex='track.jpg',emit_tex='track_e.jpg',emit=0.7,rough
 m_under=mat('track_under',col=(0.05,0.06,0.08),rough=0.55,metal=0.7,double=True)
 m_barL=mat('barrier_L',tex='barrier_L.jpg',emit_tex='barrier_L.jpg',emit=0.35,rough=0.4,metal=0.3,double=True)
 m_barR=mat('barrier_R',tex='barrier_R.jpg',emit_tex='barrier_R.jpg',emit=0.35,rough=0.4,metal=0.3,double=True)
+# the parties' wall sections (make_textures: four textures a side, two parties each): every PARTY_EVERY-th 104 m block,
+# cycling the four textures, so each party gets the same share of barrier around the lap
+m_barP={(j,sd):mat(f'barrier_P{j}{"L" if sd<0 else "R"}',tex=f'barrier_P{j}{"L" if sd<0 else "R"}.jpg',emit_tex=f'barrier_P{j}{"L" if sd<0 else "R"}.jpg',emit=0.35,rough=0.4,metal=0.3,double=True) for j in range(4) for sd in (-1,1)}
+PARTY_EVERY=7
 m_neonL=mat('neon_L',col=(0,0,0),emit_col=srgb('#ff2e9a'),emit=2.6,double=True); m_neonR=mat('neon_R',col=(0,0,0),emit_col=srgb('#00e1ff'),emit=2.6,double=True)
 m_neonY=mat('neon_Y',col=(0,0,0),emit_col=srgb('#ffe600'),emit=1.8)
 m_pad=mat('pad_speed',col=(0,0,0),emit_tex='pad_speed.png',emit=1.6,double=True); m_wpad=mat('pad_weapon',col=(0,0,0),emit_tex='pad_weapon.png',emit=1.6,double=True)
@@ -110,7 +114,8 @@ for i in range(SEG):
         U.quad(tuple(a0-u0*SLAB),tuple(a1-u1*SLAB),tuple(a1),tuple(a0),m_under)
         # barrier wall (text runs forward on the left wall, backwards on the right so it reads from the track)
         w0=p0+r0*sd*(HW0+0.2); w1=p1+r1*sd*(HW1+0.2); ua,ub=(i*dl/104,(i+1)*dl/104) if sd<0 else (-(i*dl/104),-((i+1)*dl/104))   # one 8192 px barrier texture per 104 m
-        B.quad(tuple(w0),tuple(w1),tuple(w1+u1*BAR_H),tuple(w0+u0*BAR_H),m_barL if sd<0 else m_barR,((ua,0),(ub,0),(ub,1),(ua,1)))
+        blk=int((i+0.5)*dl/104); pj=(blk//PARTY_EVERY)%4 if blk%PARTY_EVERY==(3 if sd<0 else 6) else None   # L and R party blocks never face each other
+        B.quad(tuple(w0),tuple(w1),tuple(w1+u1*BAR_H),tuple(w0+u0*BAR_H),(m_barP[(pj,sd)] if pj is not None else (m_barL if sd<0 else m_barR)),((ua,0),(ub,0),(ub,1),(ua,1)))
         mn=m_neonL if sd<0 else m_neonR; n0=p0+r0*sd*(HW0+0.15); n1=p1+r1*sd*(HW1+0.15)
         for h0,h1 in ((BAR_H,BAR_H+0.22),(0.04,0.16)): N.quad(tuple(n0+u0*h0),tuple(n1+u1*h0),tuple(n1+u1*h1),tuple(n0+u0*h1),mn)
 S.build('track_surface',trk); U.build('track_under',trk); B.build('track_barriers',trk); N.build('track_neon',trk)
@@ -193,8 +198,9 @@ for A in ARCHES:
     M.box(T,0,11.4,0,W2*2+2,3.0,1.6,m_metal); sign(M,T,W2*2+1.4,2.6,11.4,0.88,f'arch_{b}.jpg',f'arch_{(b+7)%NB}.jpg')
     M.box(T,0,9.8,0,W2*2+2,0.2,1.8,m_neonY); setobs.append(M.build('arch_'+A['n'].lower(),SET)); placed+=1
 log('arches placed',placed,'of',len(ARCHES))
+PARTY_NEON=[(1,0.08,0.18),(0.3,0.6,1),(1,0.85,0.1),(0.4,1,0.4),(1,0.25,0.3),(0.4,0.55,1),(1,0.85,0.1),(0.6,1,0.3)]   # rim colours, S..MP
 BOARD_AIM_M=200   # how far up the track each billboard looks for the racer (m)
-nb=int(L/300); M=MB(); boards=0
+nb=int(L/300); M=MB(); boards=0; slots=[]
 for i in range(nb):
     t=(i+0.5)/nb
     if t<0.012 or t>0.988 or in_gap(t,0.004): continue
@@ -202,9 +208,14 @@ for i in range(nb):
     for s_ in (pref,-pref):
         v=free[s_]
         if not np.isnan(v) and v<3.5: sd=s_; break   # the board spans +6.3..+13.7 m over the deck: the tiles must stay below
-    if sd is None: continue
+    if sd is not None: slots.append((i,t,sd,free[sd]))
+NP=8; npb=2*NP; PARTIES_SHORT=['S','M','SD','C','V','KD','L','MP']                                     # the eight parties, two boards each, spread evenly: 0..7 then 0..7 again
+pslot={round(k*len(slots)/npb+len(slots)/(2*npb))%len(slots):k%NP for k in range(npb)}
+assert len(pslot)==npb, 'party boards collide'
+bi=0
+for si,(i,t,sd,fr) in enumerate(slots):
     p,r,u,fw,_=at(t); T=local(p,r,u,fw,rot=sd*0.42,lat=sd*(hw_at(t)+10),lift=10)
-    leg=10-3.5-max(free[sd],-60.0)                         # mast from the board down to the roof or street under it
+    leg=10-3.5-max(fr,-60.0)                               # mast from the board down to the roof or street under it
     M.box(T,0,-3.5-leg/2,0,0.8,leg,0.8,m_metal)            # the mast stays plumb
     # the board itself turns to face the racer coming at it: aimed at the racing line BOARD_AIM_M before it, which
     # also tips it a little down toward the deck, so the slogan reads square-on in the chase camera
@@ -216,8 +227,14 @@ for i in range(nb):
     assert np.dot(Yb,u)>0.5, 'billboard frame flipped'
     TB=lambda q,B=B,Xb=Xb,Yb=Yb,Zb=Zb: tuple(B+Xb*q[0]+Yb*q[1]+Zb*q[2])
     M.box(TB,0,0,0,14.4,7.4,0.5,m_metal)
-    mm=mat(f'board_{i%NB}',tex=f'bill_{i%NB}.jpg',emit_tex=f'bill_{i%NB}.jpg',emit=0.4,rough=0.5)
+    if si in pslot:   # a party's lit election board, with a neon rim in the party colour
+        k=pslot[si]; mm=mat(f'pboard_{k}',tex=f'pbill_{k}.jpg',emit_tex=f'pbill_{k}.jpg',emit=0.5,rough=0.5)
+        rim=mat(f'prim_{k}',col=(0,0,0),emit_col=PARTY_NEON[k],emit=6.0)
+        for (cx,cy,ww,hh) in ((0,3.72,14.6,0.16),(0,-3.72,14.6,0.16),(-7.22,0,0.16,7.6),(7.22,0,0.16,7.6)): M.box(TB,cx,cy,0.36,ww,hh,0.12,rim)
+    else:
+        mm=mat(f'board_{bi%NB}',tex=f'bill_{bi%NB}.jpg',emit_tex=f'bill_{bi%NB}.jpg',emit=0.4,rough=0.5); bi+=1
     M.quad(TB((-7,-3.5,0.33)),TB((7,-3.5,0.33)),TB((7,3.5,0.33)),TB((-7,3.5,0.33)),mm); boards+=1   # 8 cm proud of the frame
+log('party boards',len(pslot),'of',len(slots),'placed boards, at t:',' '.join(f'{PARTIES_SHORT[k]}={slots[j][1]:.4f}' for j,k in sorted(pslot.items())))
 log('billboards',boards,'of',nb)
 setobs.append(M.build('billboards',SET)); log('set pieces',len(setobs))
 
