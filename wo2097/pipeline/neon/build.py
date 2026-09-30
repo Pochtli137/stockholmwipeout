@@ -193,6 +193,7 @@ for A in ARCHES:
     M.box(T,0,11.4,0,W2*2+2,3.0,1.6,m_metal); sign(M,T,W2*2+1.4,2.6,11.4,0.88,f'arch_{b}.jpg',f'arch_{(b+7)%NB}.jpg')
     M.box(T,0,9.8,0,W2*2+2,0.2,1.8,m_neonY); setobs.append(M.build('arch_'+A['n'].lower(),SET)); placed+=1
 log('arches placed',placed,'of',len(ARCHES))
+BOARD_AIM_M=200   # how far up the track each billboard looks for the racer (m)
 nb=int(L/300); M=MB(); boards=0
 for i in range(nb):
     t=(i+0.5)/nb
@@ -204,9 +205,19 @@ for i in range(nb):
     if sd is None: continue
     p,r,u,fw,_=at(t); T=local(p,r,u,fw,rot=sd*0.42,lat=sd*(hw_at(t)+10),lift=10)
     leg=10-3.5-max(free[sd],-60.0)                         # mast from the board down to the roof or street under it
-    M.box(T,0,-3.5-leg/2,0,0.8,leg,0.8,m_metal); M.box(T,0,0,0,14.4,7.4,0.5,m_metal)
+    M.box(T,0,-3.5-leg/2,0,0.8,leg,0.8,m_metal)            # the mast stays plumb
+    # the board itself turns to face the racer coming at it: aimed at the racing line BOARD_AIM_M before it, which
+    # also tips it a little down toward the deck, so the slogan reads square-on in the chase camera
+    B=p+r*(sd*(hw_at(t)+10))+u*10; qp,_,qu,_,_=at((t-BOARD_AIM_M/L)%1.0); Q=qp+qu*1.5
+    Zb=Q-B; Zb=Zb/np.linalg.norm(Zb); Xb=np.cross(u,Zb); Xb=Xb/np.linalg.norm(Xb)
+    if np.dot(Xb,r)<0: Xb=-Xb
+    hand=np.dot(np.cross(r,u),-fw)                        # keep the original frame's handedness: no mirrored print, no culled face
+    Yb=np.cross(Zb,Xb) if hand>0 else np.cross(Xb,Zb); Yb=Yb/np.linalg.norm(Yb)
+    assert np.dot(Yb,u)>0.5, 'billboard frame flipped'
+    TB=lambda q,B=B,Xb=Xb,Yb=Yb,Zb=Zb: tuple(B+Xb*q[0]+Yb*q[1]+Zb*q[2])
+    M.box(TB,0,0,0,14.4,7.4,0.5,m_metal)
     mm=mat(f'board_{i%NB}',tex=f'bill_{i%NB}.jpg',emit_tex=f'bill_{i%NB}.jpg',emit=0.4,rough=0.5)
-    M.quad(T((-7,-3.5,0.33)),T((7,-3.5,0.33)),T((7,3.5,0.33)),T((-7,3.5,0.33)),mm); boards+=1   # 8 cm proud of the frame
+    M.quad(TB((-7,-3.5,0.33)),TB((7,-3.5,0.33)),TB((7,3.5,0.33)),TB((-7,3.5,0.33)),mm); boards+=1   # 8 cm proud of the frame
 log('billboards',boards,'of',nb)
 setobs.append(M.build('billboards',SET)); log('set pieces',len(setobs))
 
