@@ -2,3 +2,4 @@
 blender/
 .env*
 !.env.example
+.claude/
