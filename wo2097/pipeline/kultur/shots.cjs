@@ -37,7 +37,9 @@ const settle=async(p,ms=6000)=>{ const t0=Date.now(); while(Date.now()-t0<ms){ i
     log.landmarks={ shots:sp, errs:p.errs.slice(0,4) }; await p.close(); }
   if(run('powerups')){ const p=await page(b,'?bana=kultur&check');
     await until(p,()=>window.__sw&&__sw.state()==='race',180000); await sleep(4500);
-    await p.evaluate(()=>{ __sw.keys.ArrowUp=true; });
+    await p.evaluate(()=>{ const pl=__sw.player(), L=__sw.len(); pl.t=Math.floor(pl.t)+1250/L; pl.lat=0; __sw.keys.ArrowUp=true;   // Stadsgårdskajen: away from the pit lanes
+      const tick=()=>{ const q=__sw.player(); __sw.keys.ArrowLeft=q.lat>0.8; __sw.keys.ArrowRight=q.lat<-0.8; requestAnimationFrame(tick); }; requestAnimationFrame(tick); });
+    await settle(p,5000);
     for(const w of ['TURBO','SHIELD','MISSILE']){
       if(w==='MISSILE') await p.evaluate(()=>{ const pl=__sw.player(), o=__sw.ships()[1]; o.t=pl.t+90/__sw.len(); o.lat=pl.lat; });
       await p.evaluate(w=>{ __give(w); },w); await sleep(900); await p.screenshot({path:path.join(OUT,`powerup_${w.toLowerCase()}_pickup.png`)});

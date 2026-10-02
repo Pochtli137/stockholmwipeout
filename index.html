@@ -731,8 +731,8 @@ const KPASS=KULTUR?(()=>{ const m=new THREE.ShaderMaterial({ uniforms:{ tDiffuse
           float sp=step(0.95,h21(cell+floor(uT*4.0+ph*9.0)))*smoothstep(0.0,0.25,tw)*smoothstep(1.0,0.55,tw)*(1.0-smoothstep(60.0,700.0,dist));
           c+=vec3(1.0,0.96,0.86)*onWater*blu*(sp*(0.06+1.1*path)+0.12*path); } }   // sparse, and bright only on the sun's path
       float l=dot(c,vec3(0.2126,0.7152,0.0722));
-      c=mix(vec3(l),c,1.10);                                         // a little more colour
-      c=c*c*(3.0-2.0*c)*0.35+c*0.65;                                 // a gentle S-curve
+      c=max(mix(vec3(l),c,1.10),0.0);                                // a little more colour
+      vec3 cs=clamp(c,0.0,1.0); c=cs*cs*(3.0-2.0*cs)*0.35+c*0.65;          // a gentle S-curve (on the clamped value: the buffer is HDR, a cubic on 4.0 goes negative)
       c*=mix(vec3(1.0),vec3(1.04,1.01,0.95),smoothstep(0.45,0.9,l)); // warm highlights
       vec2 q=vUv-0.5; c*=1.0-0.22*dot(q,q)*1.6;                      // a soft vignette, the ads at the edges stay readable
       gl_FragColor=vec4(c,1.0); }` });
@@ -1275,7 +1275,7 @@ function publishTrack(S){
     frames.push([...f.p.toArray(),...f.right.toArray(),...f.up.toArray(),...f.fwd.toArray(), groundAt(u)]);
     clear.push([rel(S.postL,u,f.p.y),rel(S.postR,u,f.p.y),rel(S.outL,u,f.p.y),rel(S.outR,u,f.p.y)]); }
   window.__dump={ cp:CP.map(v=>[+v.x.toFixed(3),+v.y.toFixed(3),+v.z.toFixed(3)]), frames, clear, trackLen:TRACK_LEN, halfW:HALF_W,
-    pads:PADS.map(p=>[p.t,p.lat]), wpads:WPADS.map(p=>[offGap(p.t,typeof FL!=='undefined'&&FL?FL.gaps:GAPS),p.lat]),
+    pads:PADS.map(p=>[p.t,p.lat]), wpads:WPADS.map(p=>[offPit(offGap(p.t,typeof FL!=='undefined'&&FL?FL.gaps:GAPS),PITL),p.lat]),
     arches:ARCH_AT.map(a=>({...a, ...nearestT(a.lat,a.lon)})), snapped:S.top.filter(v=>v!=null).length, n:N,
     profile:R.stats, survey:S, start:{ m:FEEL.startM }, ...(PITL.length?{ pits:PITL }:{}),
     ...(FL?{ bank:FL.bank.map(v=>+v.toFixed(4)), hw:[...FL.hw].map(v=>+v.toFixed(2)), gaps:FL.gaps, drops:FL.drops, jump:FEEL.jumpStats||null }:{}) };
@@ -1336,7 +1336,8 @@ let trackGroup=null;
 const PADS=Array.from({length:135},(_,i)=>({ t:(i+0.55)/135, lat:[-3.5,0,3.5][i%3] }));
 const NWP=FEEL.wpads||16, WPADS=Array.from({length:NWP},(_,i)=>({ t:(i+0.27)/NWP, lat:[-3.5,3.5,0][i%3] }));
 function offGap(t,gaps){ for(const [a,b] of gaps||GAPS) if(t>=a-0.002&&t<=b+0.004) return b+0.006; return t; }   // no weapon pad in the air over Västerbron
-for(const w of WPADS) w.t=offGap(w.t);
+function offPit(t,pits){ for(const P of pits||[]){ if(P.t0<=P.t1?(t>=P.t0-0.003&&t<=P.t1):(t>=P.t0-0.003||t<=P.t1)) return (P.t1+0.004)%1; } return t; }
+for(const w of WPADS) w.t=offPit(offGap(w.t),TRACK_JSON&&TRACK_JSON.pits);
 // FEEL: the pads the dump laid out (chains into the drops, none in the quiet wide sections) replace the even rhythm
 if(TRACK_JSON&&TRACK_JSON.pads&&TRACK_JSON.drops){ PADS.length=0; for(const [t,lat] of TRACK_JSON.pads) PADS.push({t,lat}); }
 // sponsor arches over the real places: nearest point on the lap to each landmark
@@ -2152,7 +2153,9 @@ function shipT(s){ return ((s.t%1)+1)%1; }
 // name#n = the n-th entry into that district. The lap never enters Vasastan: its stand-in is the second entry into
 // Norrmalm (Birger Jarlsgatan, 4367 m). Kungsholmen's second entry sits on the jump's lip, so its first one is used.
 // Never in the first 3 s after GO, at least 5 s apart (a title that comes too soon waits its turn).
-const ENTERING=KULTUR?((TRACK_JSON&&TRACK_JSON.districts)||[]).filter(d=>d.t>0.01).filter((d,i,a)=>COPY.entering[d.name]&&a.findIndex(x=>x.name===d.name)===i).map(d=>d.name):['Östermalm','Norrmalm#2','Kungsholmen#1','Södermalm#2'];
+const ENTERING=KULTUR?(()=>{ const out=[], seen={};   // KULTURSTOCKHOLM: every district once, at its first entry after the start (Gamla stan is #2)
+    for(const d of (TRACK_JSON&&TRACK_JSON.districts)||[]){ seen[d.name]=(seen[d.name]||0)+1;
+      if(d.t>0.01&&COPY.entering[d.name]&&!out.some(k=>k.startsWith(d.name+'#'))) out.push(d.name+'#'+seen[d.name]); } return out; })():['Östermalm','Norrmalm#2','Kungsholmen#1','Södermalm#2'];
 const DISTRICTS=(()=>{ const all=(TRACK_JSON&&TRACK_JSON.districts)||[], seen={};
   const tagged=all.map(d=>{ seen[d.name]=(seen[d.name]||0)+1; return {...d, tag:d.name+'#'+seen[d.name]}; });
   return ENTERING.map(k=>tagged.find(d=>d.tag===(k.includes('#')?k:k+'#1'))).filter(Boolean); })();

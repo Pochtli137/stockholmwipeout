@@ -202,7 +202,7 @@ for k in range(8):   # sponsor arches around the lap, away from the landmarks an
 # a billboard moves along the lap or changes side. Re-run the probe after any change to the track or the layout.
 NA=len(COPY['arches'])
 ARCH_FIX={}     # Kulturstockholm: filled from setpieces_probe.cjs
-BOARD_FIX={2:dict(dm=40), 7:dict(dm=-40), 11:dict(dm=40)}   # setpieces_probe.cjs 2026-10-02: masts through facades
+BOARD_FIX={2:dict(side=1,dm=40), 7:dict(dm=-40), 11:dict(dm=40), 14:dict(dm=60)}   # setpieces_probe.cjs 2026-10-02: masts through facades
 placed=0
 for A in ARCHES:
     if A['d']>260: log('arch skipped (landmark too far from the lap)',A['n'],round(A['d'])); continue

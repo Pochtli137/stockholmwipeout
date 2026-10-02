@@ -47,11 +47,22 @@ Publikt repo `Pochtli137/stockholmwipeout`. Live https://stockholmwipeout.vercel
 - **UI-ljud:** titel, ENTER, svep vid byte av skepp, lock-in vid val. Racets ljud är oförändrat.
 - **Musik: nästa steg** (ElevenLabs Music, provlyssning först; kontot behöver credits).
 
+## WIPEOUT KULTURSTOCKHOLM (grenen `kultur`, 2026-10-02, inte deployad)
+- **Andra banan** bakom `?bana=kultur` (Kim: "kör kulturstockholm, nya racers som passar scenariot ... jag vill ha en racer som heter
+  'De aderton'"). Samma Google-Stockholm, 8,2 km, start vid Börshuset. Koncept i `kultur/KONCEPT.md`, **all text i
+  `wo2097/assets/kultur/copy.json`**, pipeline i `wo2097/pipeline/kultur/` (README: Kulturstockholm).
+- **Stockholm är standard och ska bete sig exakt som förut**: varje banväxel i index.html är `KULTUR ? … : <det gamla>`.
+  Enda tillägget på Stockholm: raden *DU HAR LÅST UPP WIPEOUT KULTURSTOCKHOLM · KLICKA HÄR* (K) på resultatet.
+- Sex egna farkoster (DE ADERTON är bossen), förmånerna STIPENDIUM, LIVSTIDSSTOL, SÅGNING, depåer vid **Riche** (alla) och
+  **Den Gyldene Freden** (bara DE ADERTON), krogskyltar riktade mot gästerna, aldrig verksamheten. Inga partiannonser.
+- Österlen är lagt på hyllan: Googles tiles där är 2.5D (fas 0 och utseendetestet, TODO.md).
+
 ## Grenar
 - `main`: live, neon-2097-versionen.
 - `crafts`: gammal gren, allt ligger på `main`.
 - `blender`: den avvisade OSM-staden. Lokal.
 - `vasterbron`: inslagen i `main` 2026-10-02. `stump`: de avvisade brostumparna. Lokal.
+- `osterlen`: fas 0 och utseendetestet för Österlen (hyllat). `kultur`: Wipeout Kulturstockholm, ovanpå `osterlen`. Lokala, ej pushade.
 
 ## Öppet
 - **Cesium ion-token i `config.js` i det publika repot. Kim roterar den i Cesium ion.**

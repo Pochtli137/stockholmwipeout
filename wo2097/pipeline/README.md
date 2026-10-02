@@ -12,6 +12,36 @@ och laddas som glb i spelets egen koordinatram: banan, barriärerna, neonkantern
 pylonerna ner till gatan, startportalen vid Slussen, sponsorbågarna, skyltarna och de sex skeppen.
 Bara HUD:en, skärmeffekterna (fartstreck, blixtar, sköldkant), motorglöd, spår och bloom är three.js/DOM.
 
+## WIPEOUT KULTURSTOCKHOLM (2026-10-02, `?bana=kultur`)
+
+Andra banan i samma spel, över samma Google-Stockholm och i samma koordinatram. Konceptet står i `kultur/KONCEPT.md`
+(repots rot), all text i `wo2097/assets/kultur/copy.json` (spelet läser den direkt; skyltar, vepor, väggar och plattor bakas ur
+den). Stockholm är standard och läser sina gamla värden: varje banväxel i index.html är `KULTUR ? … : <det gamla>`.
+
+    cd wo2097/pipeline/kultur
+    python3 route.py && python3 ../design_track.py kultur && python3 plot_route.py   # linjen (handlagd, 120 m) -> assets/kultur/route_smooth.json
+    cd .. && BANA=kultur node dump_track.cjs                                         # surveyn (cirka 1 min) och profilen -> assets/kultur/track.json
+    BANA=kultur node dump_track.cjs rebuild && python3 districts.py kultur            # ny profil ur sparad survey; ENTERING-gränserna
+    kultur/build.sh [--nobake]                                                        # texturer, banan, skyltarna, depåerna och de sex farkosterna
+    BANA=kultur node setpieces_probe.cjs <probe.json>                                 # (build.py -- --nobake --probe <probe.json> först)
+    BANA=kultur node check_lap.cjs <utmapp>; python3 merge_sweep.py <utmapp> kultur   # som Stockholm: svep, race, finare toppar tillbaka
+    node kultur/shots.cjs <utmapp> all                                                # titel, hangar, landmärken, förmåner, depåer, upplåsning, mobil
+    BANA=kultur node feel/film.cjs <utmapp> <från m> <s>                              # frame-stegad film
+
+- **Linjen** går Börshuset, Gamla stan (väster om Tyska kyrkans torn), Slussen, Stadsgårdskajen, Fotografiska, över Saltsjön till
+  af Chapman och Moderna museet, över vattnet till Gröna Lund, Skansen, Nordiska museet, Strandvägen, Nybroplan, Nationalmuseum,
+  Operan, Kulturhuset, öster om Klara kyrkas torn, Tegelbacken, Stadshuset, över Riddarfjärden till Riddarholmen. Fall över vattnet
+  (`FEEL` i index.html, `if(KULTUR) Object.assign(FEEL,…)`), luftfärd över krönen vid Slussen, Skansen och Sergels torg. Inget hopp.
+- **Depåerna** (`FEEL.pits`, publiceras som `track.json pits`): den yttre remsan av däcket (|lat| ≥ 4,3 m) på krogens sida.
+  Där fylls skölden (ANSEENDE) med 38/s och farten hålls under 40 m/s (`PIT` i index.html), inget annat ändras. Den Gyldene Freden har
+  `only:0`: bara DE ADERTON fylls. AI:n med `pitPlan` styr in (bossen bara i Freden). build.py ritar remsan, markisen och skylten.
+- **Krogarna** står som skyltar på sin sida där linjen passerar närmast (`RPOS`, `REST_FIX` i kultur/build.py).
+- **Ljuset:** `TH` får sommareftermiddagens fält (`sunAz/sunEl`, `fog`, `cloudLit`, `sunGlow`, egen bloom och hangar); KulturPass
+  efter bloomen ger en mjuk S-kurva, värme och mättnad, och glitter där djupbuffertens världsposition ligger på vattenytan.
+- **Farkosterna** (kultur/build_craft.py) döper om sina noder per farkost före export. *Upptäckt på vägen:* Stockholms
+  `assets/neon/craft_1..5.glb` exporterar `eng_L.001`, `flap_L.002` osv., så spelet hittar inte dysorna och luftbromsarna på de
+  farkosterna (glöden faller tillbaka till en fast punkt). Inte rört, Stockholm ska vara orört.
+
 ## Bygga om
 
     cd ~/Projects/stockholmwipeout && python3 -m http.server 8820 &      # repots rot, med config.js (ion-token)

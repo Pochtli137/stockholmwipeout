@@ -1,5 +1,13 @@
 # TODO
 
+## Wipeout Kulturstockholm (2026-10-02, grenen `kultur`, inte pushad, inte deployad)
+**Byggt:** andra banan bakom `?bana=kultur`, se CLAUDE.md och `kultur/KONCEPT.md`. Lokalt: `python3 -m http.server 8830` i repots
+rot, sedan `http://localhost:8830/?bana=kultur` (eller kör ett Stockholmslopp till slut och klicka på upplåsningsraden).
+**Kim gör:** provkör, skriv om text i `wo2097/assets/kultur/copy.json` (bakade skyltar: `wo2097/pipeline/kultur/build.sh`).
+**Upptäckt, ej rört:** Stockholms farkoster 1 till 5 (`assets/neon/craft_1..5.glb`) har noderna `eng_L.001`, `flap_L.002` osv.,
+så spelet hittar inte deras dysor och luftbromsar (glöden faller tillbaka till en fast punkt, bromsklaffarna rör sig inte).
+Rättas genom att döpa om noderna per farkost i `neon/build_craft.py` före export, som `kultur/build_craft.py` gör.
+
 ## Wipeout Österlen, stoppad i fas 0 (2026-10-02, grenen `osterlen`)
 **Grinden föll:** Google har ingen fotogrammetri i Österlen. Alla 15 platser (Simrishamn hamn och centrum, Kivik hamn,
 Kiviks musteri, Kungagraven, Kivik Art Centre, Stenshuvud, Vitemölla, Baskemölla, Brantevik, Skillinge, Glimmingehus,
