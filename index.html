@@ -1415,7 +1415,7 @@ function spawnShips(){ makeTextures(); for(const s of ships){ scene.remove(s.mes
   const nShips=CHECK&&location.search.includes('solo')?1:6;   // ?check&solo: the player alone, to compare craft without traffic
   ships=[]; for(let i=0;i<nShips;i++){ const s=makeShip(i); ships.push(s); scene.add(s.mesh); for(const tr of s.trails) scene.add(tr); } }
 window.__dbg=()=>({ state, ships:ships.map(s=>({n:s.name,v:+s.speed.toFixed(1),t:+s.t.toFixed(4),
-  lat:+s.lat.toFixed(1), curv:curvAhead(shipT(s),90).m })) });
+  lat:+s.lat.toFixed(1), curv:curvAhead(shipT(s),90).m, b:+(s.bnc||0).toFixed(3) })) });
 const player=()=>ships[0];
 
 window.__state=()=>({ state, countT:+countT.toFixed(2), raceTime:+raceTime.toFixed(2), paused });
@@ -1541,12 +1541,12 @@ function windTick(a){ if(!actx||!sharedNoise) return;
   for(const [bp,hz] of wind.f) bp.frequency.setTargetAtTime(hz*(0.75+0.35*Math.sin(t*0.9+hz)+0.2*Math.sin(t*2.3)), t, 0.2);
   if(wind.pan) wind.pan.pan.setTargetAtTime(0.35*Math.sin(t*0.7), t, 0.2); }
 // the touchdown: a low sine drop and a short filtered thump of noise, once, under everything else
-function jumpThud(){ if(!actx||!audioOn||paused||!sharedNoise) return; const t=actx.currentTime;
+function jumpThud(k=1){ if(!actx||!audioOn||paused||!sharedNoise) return; const t=actx.currentTime;
   const o=actx.createOscillator(), g=actx.createGain(); o.type='sine'; o.frequency.setValueAtTime(78,t); o.frequency.exponentialRampToValueAtTime(34,t+0.32);
-  g.gain.setValueAtTime(0.0001,t); g.gain.linearRampToValueAtTime(0.55,t+0.008); g.gain.exponentialRampToValueAtTime(0.0001,t+0.45);
+  g.gain.setValueAtTime(0.0001,t); g.gain.linearRampToValueAtTime(0.55*k,t+0.008); g.gain.exponentialRampToValueAtTime(0.0001,t+0.45);
   o.connect(g); g.connect(actx.destination); o.start(t); o.stop(t+0.5);
   const n=noiseSrc(), lp=actx.createBiquadFilter(), ng=actx.createGain(); lp.type='lowpass'; lp.frequency.value=220;
-  ng.gain.setValueAtTime(0.0001,t); ng.gain.linearRampToValueAtTime(0.35,t+0.005); ng.gain.exponentialRampToValueAtTime(0.0001,t+0.18);
+  ng.gain.setValueAtTime(0.0001,t); ng.gain.linearRampToValueAtTime(0.35*k,t+0.005); ng.gain.exponentialRampToValueAtTime(0.0001,t+0.18);
   n.connect(lp); lp.connect(ng); ng.connect(actx.destination); n.start(t); n.stop(t+0.2); }
 function mKick(t){ const o=actx.createOscillator(),g=actx.createGain();
   o.frequency.setValueAtTime(140,t); o.frequency.exponentialRampToValueAtTime(45,t+0.11);
@@ -1934,7 +1934,7 @@ function testPlace(){ const L=TRACK_LEN, t0=((TEST.at()/L)%1+1)%1, v=TEST.speed+
   document.getElementById('results').style.display='none'; paused=false; pauseMsg=null;
   ships.forEach((s,i)=>{ const [d,lat,k]=i===0?[0,0,1]:TEST_FIELD[(i-1)%TEST_FIELD.length];
     s.t=1+t0+d/L; s.lat=lat; s.vlat=0; s.speed=i===0?TEST.speed:v*k; s.boost=i===0?TEST.boost:0; s.gv=TEST.gv;
-    s.air=0; s.airV=0; s.inGap=false; s.squash=0; s.yaw=0; s.roll=0; s.psi=0; s.hitT=0; s.done=false; s.finishTime=0; s.crossedStart=true; s.lap=1;
+    s.air=0; s.airV=0; s.inGap=false; s.squash=0; s.bnc=0; s.bncV=0; s.bncN=0; s.yaw=0; s.roll=0; s.psi=0; s.hitT=0; s.done=false; s.finishTime=0; s.crossedStart=true; s.lap=1;
     advance(s,0); if(i===0&&HARD) initPlayerFree(s); });
   resetKit(); state='race'; raceTime=0; lapStart=0; lapTimes=[]; timeScale=1; jumpCam=0; bulletAmt=0; jumpAudio=0; shake=0; flashT=0;
   distLastT=null; distPending=null; TEST.inGap=false; TEST.landAt=null; camSnap=true; msg.textContent=''; sub.innerHTML='';
@@ -2109,7 +2109,11 @@ function stepShip(s,dt){
 // fastest moments come on the way down. FEEL · AIR: over a crest the track falls away faster than gravity can follow,
 // and the craft goes light. Its height over the deck (s.air) follows a ballistic arc; t, lat and speed never see it,
 // so the race is unchanged. It lands with a thud: a camera jolt and a short suspension squash.
+// BOUNCE (Kim 2026-10-02: "studsar lite när man landar från västerbron"): the touchdown after the jump throws the craft back up
+// at v0 m/s (~1 m), and each contact returns `rest` of the speed, so it settles in two hops. s.bnc is its own height over the
+// hover, apart from s.air, and the chase camera follows only (1-cam) of it, so the craft visibly bounces in the frame.
 const AIR={ g:9.81, probe:4, lift:0.5, squashK:0.06, squashMax:0.55, shakeK:0.12 }, GRAV={ k:1.6, decay:0.5, min:-6, max:10 };
+const BOUNCE={ v0:4.5, rest:0.42, n:2, cam:0.75 };
 const _fa=mkFrame(), _fb=mkFrame();
 let jumpCam=0, timeScale=1, bulletAmt=0, jumpAudio=0;   // THE JUMP: the camera pulls out and time slows (FEEL.bullet); jumpAudio 0..1 ducks the sound
 const JUMPLOG={ real:0, sim:0 };   // ?check: real and simulated seconds spent over the gap
@@ -2119,8 +2123,12 @@ function airStep(s,dt,t,f){
   if(!(dt>0)) return;
   const g=gapAt(t);   // THE JUMP: the rail itself is the arc, so no extra lift; the landing is the event
   if(g>=0){ s.inGap=true; s.air=0; s.airV=0; s.squash=(s.squash||0)*Math.exp(-dt*7); return; }
-  if(s.inGap){ s.inGap=false; s.squash=AIR.squashMax; s.airT=(s.airT||0)+1;
+  if(s.inGap){ s.inGap=false; s.squash=AIR.squashMax; s.airT=(s.airT||0)+1; s.bnc=0.001; s.bncV=BOUNCE.v0; s.bncN=BOUNCE.n;
     if(s.isPlayer){ shake=Math.min(shake+1.1,1.6); airtimeCount++; boostFlash=Math.max(boostFlash,0.35); jumpThud(); } }
+  if(s.bnc>0){ s.bncV-=AIR.g*dt; s.bnc+=s.bncV*dt;
+    if(s.bnc<=0){ const hit=-s.bncV; s.bnc=0; s.bncV=0; s.squash=Math.max(s.squash||0,Math.min(AIR.squashMax,hit*AIR.squashK*1.4));
+      if(s.isPlayer){ shake=Math.min(shake+hit*0.08,1.6); jumpThud(0.5*Math.min(1,hit/BOUNCE.v0)); }
+      if(s.bncN>0&&hit>1){ s.bncN--; s.bnc=0.001; s.bncV=hit*BOUNCE.rest; } } }
   const v=s.speed+s.boost+(s.gv||0), d=AIR.probe/TRACK_LEN;
   const aT=v*v*(frameAt(t-d,_fa).p.y-2*f.p.y+frameAt(t+d,_fb).p.y)/(AIR.probe*AIR.probe);   // the deck's vertical acceleration under the craft
   if((s.air||0)>0||(aT<-AIR.g-AIR.lift&&airZone(t))){ s.airV=(s.airV||0)+(-AIR.g-aT)*dt; s.air=(s.air||0)+s.airV*dt;
@@ -2148,12 +2156,12 @@ function advance(s,dt){
   frameAt(now,s.frame); const f=s.frame;
   airStep(s,dt,now,f);
   s.mesh.position.copy(f.p).addScaledVector(f.right,s.lat)
-    .addScaledVector(f.up,1.5+Math.sin(performance.now()*0.004+s.aiPhase*7)*0.15-(s.squash||0)*0.9).addScaledVector(UP,s.air||0);
+    .addScaledVector(f.up,1.5+Math.sin(performance.now()*0.004+s.aiPhase*7)*0.15-(s.squash||0)*0.9).addScaledVector(UP,(s.air||0)+(s.bnc||0));
   const basis=new THREE.Matrix4().makeBasis(f.right,f.up,f.fwd.clone().negate());
   s.mesh.quaternion.setFromRotationMatrix(basis);
   s.mesh.rotateY(s.yaw); s.mesh.rotateZ(s.roll);
   if(s.isPlayer){ const g=gapAt(now), B=FEEL.bullet; if(g>=0) s.mesh.rotateZ(Math.PI*2*THREE.MathUtils.smootherstep(g,B.rollFrom,B.rollTo)); }   // the barrel roll, level again before the landing
-  if(s.air>0||s.squash>0.01) s.mesh.rotateX(THREE.MathUtils.clamp((s.airV||0)*0.02,-0.2,0.2)-(s.squash||0)*0.25);   // nose up on the way up, down on the way down, dips as it lands
+  if(s.air>0||s.squash>0.01||s.bnc>0) s.mesh.rotateX(THREE.MathUtils.clamp(((s.airV||0)+(s.bncV||0)*0.5)*0.02,-0.2,0.2)-(s.squash||0)*0.25);   // nose up on the way up, down on the way down, dips as it lands
   const sf=Math.min(1.4,(s.speed+s.boost)/MAXV), glow=0.9+Math.min(1,sf)*0.8+(s.boost>1?0.4:0), ud=s.mesh.userData;
   ud.engL.scale.set(glow,glow,1); ud.engR.scale.set(glow,glow,1);
   // airbrakes: the player's Q/E, the AI when it scrubs speed for a corner
@@ -2329,8 +2337,8 @@ function updateCamera(dt){
   const MC=MOBILE?mobCam():null;
   const JB=FEEL.bullet, je=jumpCam*jumpCam*(3-2*jumpCam);
   const target=p.mesh.position.clone().addScaledVector(backLevel,(MC?MC.back:12)+je*JB.back).addScaledVector(UP,(MC?MC.up:4.6)+je*JB.up)
-    .addScaledVector(f.right,p.lat*0.08+je*JB.orbit);
-  const lookT=p.mesh.position.clone().addScaledVector(fwdLevel,MC?MC.look:12).addScaledVector(UP,MC?MC.lookUp:1.4);
+    .addScaledVector(f.right,p.lat*0.08+je*JB.orbit).addScaledVector(UP,-(p.bnc||0)*BOUNCE.cam);   // the camera stays put while the craft bounces
+  const lookT=p.mesh.position.clone().addScaledVector(fwdLevel,MC?MC.look:12).addScaledVector(UP,(MC?MC.lookUp:1.4)-(p.bnc||0)*BOUNCE.cam);
   if(camSnap){ camPos.copy(target); camLook.copy(lookT); camSnap=false; }
   if(MC) camPos.copy(target); else camPos.lerp(target,1-Math.pow(0.0008,dt));   // phones: rigid, so the distance never grows with speed
   if(shake>0){ shake-=dt*2.4;
