@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="sv"><head><meta charset="utf-8"><title>Österlen look test</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Rajdhani:wght@600;700&display=swap" rel="stylesheet">
+<style>html,body{margin:0;height:100%;overflow:hidden;background:#000}#c{display:block;width:100%;height:100%}
+#lbl{position:fixed;left:14px;bottom:10px;font:700 13px Arial;color:#fff;text-shadow:0 1px 3px #000;opacity:.8}
+#attr{position:fixed;right:8px;bottom:4px;font:10px Arial;color:#fff;text-shadow:0 1px 2px #000;opacity:.85}</style></head>
+<body><canvas id="c"></canvas><div id="lbl"></div><div id="attr">Google</div>
+<!-- WIPEOUT ÖSTERLEN · LOOK TEST (2026-10-02). Phase 0 found Google's Österlen flat (imagery on terrain). The question here:
+     does flat imagery plus a few Blender hero landmarks hold up from the race camera, at race speed, in summer sun?
+     ?seg=kivik | kaseberga | glimminge | stockholm. The page surveys the path against the tiles (or reads the saved
+     survey_<seg>.json), lays a neon deck 20-34 m over the ground (14 m over the sea), with barriers, pylons, speed pads and
+     two billboards, stands the landmarks on the terrain, and parks the chase camera where window.__lt.place(s) says.
+     Summer midday: the sun high in the south, a blue sky and white cumulus. Nothing here touches the game's index.html. -->
+<script src="../../../config.js"></script>
+<script type="importmap">
+{ "imports": {
+  "three": "https://unpkg.com/three@0.170.0/build/three.module.js",
+  "three/addons/": "https://unpkg.com/three@0.170.0/examples/jsm/",
+  "3d-tiles-renderer": "https://unpkg.com/3d-tiles-renderer@0.4.28/build/index.js",
+  "3d-tiles-renderer/plugins": "https://unpkg.com/3d-tiles-renderer@0.4.28/build/index.plugins.js"
+} }
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { TilesRenderer } from '3d-tiles-renderer';
+import { CesiumIonAuthPlugin, TileCompressionPlugin, UnloadTilesPlugin, GLTFExtensionsPlugin, ReorientationPlugin } from '3d-tiles-renderer/plugins';
+import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+const Q=new URLSearchParams(location.search), SEGN=Q.get('seg')||'kivik', D2R=Math.PI/180;
+// ------------------------------------------------------------------ the segments (lat, lon from OSM, 2026-10-02)
+const SEGS={
+  kivik:{ name:'KIVIK → KIVIKS MUSTERI → STENSHUVUD', sea:true,
+    wp:[[55.6930,14.2300],[55.6888,14.2312],[55.6856,14.2365],[55.6822,14.2450],[55.6790,14.2525],[55.6764,14.2600],[55.6738,14.2655],
+        [55.6712,14.2700],[55.6684,14.2742],[55.6656,14.2775],[55.6625,14.2793],[55.6595,14.2790]],
+    boards:[ {at:[55.6858,14.2378],side:1,lead:180,b:0}, {at:[55.6738,14.2655],side:-1,lead:160,b:1} ] },
+  kaseberga:{ name:'KÅSEBERGA → ALES STENAR', sea:true,
+    wp:[[55.3838,14.0990],[55.3830,14.0900],[55.3822,14.0810],[55.3816,14.0720],[55.3812,14.0650],[55.3810,14.0600],[55.38118,14.05617],[55.381805,14.055029],
+        [55.383053,14.052746],[55.383678,14.051604],[55.3846,14.0495]],
+    boards:[ {at:[55.3822,14.0810],side:1,lead:150,b:2}, {at:[55.3814,14.0612],side:-1,lead:150,b:3} ], ales:true },
+  glimminge:{ name:'GLIMMINGEHUS', sea:false,
+    wp:[[55.5072,14.2205],[55.5050,14.2245],[55.5025,14.2290],[55.5000,14.2345],[55.4978,14.2395]],
+    boards:[ {at:[55.5050,14.2245],side:-1,lead:150,b:4} ], glim:true },
+  stockholm:{ name:'STOCKHOLM · SKEPPSBRON (jämförelse)', sea:true,
+    wp:[[59.3196,18.0760],[59.3214,18.0762],[59.3232,18.0760],[59.3250,18.0765],[59.3268,18.0770],[59.3285,18.0778]],
+    boards:[ {at:[59.3232,18.0760],side:1,lead:150,b:0} ] } };
+const SEG=SEGS[SEGN];
+const ORIGIN={ lat:SEG.wp[0][0], lon:SEG.wp[0][1] }, M_LAT=111320, M_LON=111320*Math.cos(ORIGIN.lat*D2R);
+const toXZ=(la,lo)=>new THREE.Vector2(-(lo-ORIGIN.lon)*M_LON,(la-ORIGIN.lat)*M_LAT);   // game frame: +X west, +Z north
+document.getElementById('lbl').textContent='WIPEOUT ÖSTERLEN · LOOK TEST · '+SEG.name;
+// ------------------------------------------------------------------ renderer, summer midday sky, light
+const renderer=new THREE.WebGLRenderer({canvas:document.getElementById('c'),antialias:true}); renderer.setPixelRatio(1);
+const scene=new THREE.Scene(), camera=new THREE.PerspectiveCamera(86,1,0.3,60000);
+function resize(){ renderer.setSize(innerWidth,innerHeight,false); camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix(); composer&&composer.setSize(innerWidth,innerHeight); }
+// the sun of a June noon at 55.5 N: south, 56 deg up (east is -X in this frame, so south is -Z)
+const SUN_AZ=180*D2R, SUN_EL=56*D2R;
+const SUN_DIR=new THREE.Vector3(-Math.sin(SUN_AZ)*Math.cos(SUN_EL),Math.sin(SUN_EL),Math.cos(SUN_AZ)*Math.cos(SUN_EL)).normalize();
+const SKY={ zenith:new THREE.Color(0x2f6fd0), upper:new THREE.Color(0x5b95e0), horiz:new THREE.Color(0xc6dcef), haze:new THREE.Color(0xd4e3ee) };
+scene.fog=new THREE.Fog(SKY.haze,3500,26000);
+const skyMat=new THREE.ShaderMaterial({ depthWrite:false, depthTest:false, side:THREE.BackSide, fog:false, toneMapped:false,
+  uniforms:{ uZ:{value:SKY.zenith}, uU:{value:SKY.upper}, uH:{value:SKY.horiz}, uSun:{value:SUN_DIR} },
+  vertexShader:`varying vec3 vDir; void main(){ vDir=(modelMatrix*vec4(position,1.0)).xyz-cameraPosition; vec4 p=projectionMatrix*viewMatrix*vec4((modelMatrix*vec4(position,1.0)).xyz,1.0); gl_Position=p.xyww; }`,
+  fragmentShader:`precision highp float; varying vec3 vDir; uniform vec3 uZ,uU,uH,uSun;
+    float h21(vec2 p){ p=fract(p*vec2(123.34,456.21)); p+=dot(p,p+45.32); return fract(p.x*p.y); }
+    float vn(vec2 p){ vec2 i=floor(p), f=fract(p); f=f*f*(3.0-2.0*f); return mix(mix(h21(i),h21(i+vec2(1,0)),f.x),mix(h21(i+vec2(0,1)),h21(i+vec2(1,1)),f.x),f.y); }
+    float fbm(vec2 p){ float a=0.5,s=0.0; mat2 R=mat2(1.6,1.2,-1.2,1.6); for(int i=0;i<6;i++){ s+=a*vn(p); p=R*p; a*=0.5; } return s; }
+    void main(){ vec3 d=normalize(vDir); float h=d.y, e=max(h,0.0), mu=dot(d,uSun);
+      vec3 col=mix(uH,uU,smoothstep(0.0,0.22,e)); col=mix(col,uZ,smoothstep(0.2,0.9,e));
+      col=mix(col,uH*0.92,smoothstep(0.0,-0.2,h));
+      col+=vec3(1.0,0.96,0.86)*(0.18*pow(max(mu,0.0),8.0)+0.5*pow(max(mu,0.0),200.0));
+      // fair-weather cumulus at ~1.5 km: white tops, soft blue-grey bases
+      if(h>0.01){ vec2 p=d.xz/h*1500.0*0.0009; float c=fbm(p+vec2(3.1,1.7)); float dens=smoothstep(0.56,0.74,c);
+        float lit=smoothstep(0.56,0.9,fbm(p+vec2(3.1,1.7)+uSun.xz*0.06));
+        vec3 cc=mix(vec3(0.70,0.75,0.84),vec3(1.02,1.02,1.0),clamp(0.55+0.6*(c-lit),0.0,1.0));
+        col=mix(col,cc,dens*0.92*smoothstep(0.01,0.12,h)); }
+      gl_FragColor=vec4(col,1.0); }` });
+const skyDome=new THREE.Mesh(new THREE.SphereGeometry(40000,48,24),skyMat); skyDome.frustumCulled=false; skyDome.renderOrder=-1000; scene.add(skyDome);
+const sun=new THREE.DirectionalLight(0xfff4e2,3.2); sun.position.copy(SUN_DIR).multiplyScalar(1000); scene.add(sun);
+scene.add(new THREE.HemisphereLight(0xbcd6ff,0x6b6650,1.1));
+{ const es=new THREE.Scene(); es.add(new THREE.Mesh(new THREE.SphereGeometry(100,32,16),skyMat)); scene.environment=new THREE.PMREMGenerator(renderer).fromScene(es,0.02).texture; }
+// ------------------------------------------------------------------ post: scene -> RT (depth for the blur), speed blur, bloom
+const sceneRT=new THREE.WebGLRenderTarget(1,1,{ type:THREE.HalfFloatType, samples:4 }); sceneRT.depthTexture=new THREE.DepthTexture(1,1); sceneRT.depthTexture.type=THREE.UnsignedIntType;
+const quadCam=new THREE.OrthographicCamera(-1,1,1,-1,0,1);
+const copyMat=new THREE.ShaderMaterial({ uniforms:{ t:{value:null} }, depthTest:false, depthWrite:false,
+  vertexShader:`varying vec2 vUv; void main(){ vUv=uv; gl_Position=vec4(position.xy,0.0,1.0); }`, fragmentShader:`uniform sampler2D t; varying vec2 vUv; void main(){ gl_FragColor=vec4(texture2D(t,vUv).rgb,1.0); }` });
+const copyScene=new THREE.Scene(); copyScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2,2),copyMat));
+class ScenePass{ constructor(){ this.enabled=true; this.needsSwap=true; this.clear=true; this.renderToScreen=false; }
+  setSize(w,h){ sceneRT.setSize(w,h); }
+  render(r,wb){ skyDome.position.copy(camera.position); r.setRenderTarget(sceneRT); r.clear(); r.render(scene,camera); copyMat.uniforms.t.value=sceneRT.texture; r.setRenderTarget(wb); r.render(copyScene,quadCam); } }
+// the game's speed blur (index.html MotionPass), driven by the virtual velocity of the frame-stepped camera
+const MB={ vel:new THREE.Vector3(), ship:new THREE.Vector3(), amt:0 };
+const mbMat=new THREE.ShaderMaterial({ uniforms:{ tColor:{value:null}, tDepth:{value:null}, tMark:{value:null}, uFoe:{value:new THREE.Vector2(0.5,0.5)}, uShip:{value:new THREE.Vector2(0.5,0.3)}, uAmt:{value:0}, uAspect:{value:1}, uNear:{value:0.3}, uFar:{value:60000} },
+  vertexShader:`varying vec2 vUv; void main(){ vUv=uv; gl_Position=vec4(position.xy,0.0,1.0); }`,
+  fragmentShader:`precision highp float; varying vec2 vUv; uniform sampler2D tColor,tDepth,tMark; uniform vec2 uFoe,uShip; uniform float uAmt,uAspect,uNear,uFar;
+    float dist(vec2 uv){ float d=texture2D(tDepth,uv).x; float z=d*2.0-1.0; return (2.0*uNear*uFar)/(uFar+uNear-z*(uFar-uNear)); }
+    void main(){ vec3 base=texture2D(tColor,vUv).rgb; vec2 dir=vUv-uFoe; float r=length(dir*vec2(uAspect,1.0));
+      float win=smoothstep(0.16,0.42,length(dir*vec2(uAspect*0.85,1.25))); float ship=smoothstep(0.10,0.20,length((vUv-uShip)*vec2(uAspect,1.0)));
+      float ad=1.0-smoothstep(0.35,0.6,texture2D(tMark,vUv).a); float k=uAmt*win*ship*(1.0-ad);
+      if(k>0.002) k*=1.0-smoothstep(25.0,420.0,dist(vUv)); vec3 col=base;
+      if(k>0.002){ vec2 st=dir*k*0.044/8.0; vec3 acc=base; float w=1.0; for(int i=1;i<=8;i++){ float wi=1.0-float(i)/9.0; acc+=texture2D(tColor,clamp(vUv-st*float(i),0.0,1.0)).rgb*wi; w+=wi; } col=acc/w; }
+      float vig=smoothstep(0.55,1.15,length((vUv-0.5)*vec2(uAspect,1.0))); col*=1.0-vig*(0.18+0.28*uAmt);
+      gl_FragColor=vec4(col,1.0); }`, depthTest:false, depthWrite:false });
+const mbScene=new THREE.Scene(); mbScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2,2),mbMat));
+const _t=new THREE.Vector3();
+class MotionPass{ constructor(){ this.enabled=true; this.needsSwap=true; this.clear=false; this.renderToScreen=false; } setSize(){}
+  render(r,wb,rb){ const U=mbMat.uniforms, spd=MB.vel.length();
+    if(spd>1){ _t.copy(camera.position).addScaledVector(MB.vel,50/spd).project(camera); if(_t.z<1) U.uFoe.value.set(THREE.MathUtils.clamp(_t.x*0.5+0.5,0.2,0.8),THREE.MathUtils.clamp(_t.y*0.5+0.5,0.25,0.8)); }
+    _t.copy(MB.ship).project(camera); U.uShip.value.set(_t.x*0.5+0.5,_t.y*0.5+0.5); U.uAmt.value=MB.amt; U.uAspect.value=camera.aspect;
+    U.tColor.value=rb.texture; U.tDepth.value=sceneRT.depthTexture; U.tMark.value=sceneRT.texture; r.setRenderTarget(wb); r.render(mbScene,quadCam); } }
+const composer=new EffectComposer(renderer); composer.setPixelRatio(1);
+composer.addPass(new ScenePass()); composer.addPass(new MotionPass());
+const bloom=new UnrealBloomPass(new THREE.Vector2(innerWidth/2,innerHeight/2),0.6,0.3,1.4); composer.addPass(bloom); composer.addPass(new OutputPass());
+addEventListener('resize',resize); resize();
+// ------------------------------------------------------------------ Google tiles
+const tiles=new TilesRenderer();
+tiles.registerPlugin(new CesiumIonAuthPlugin({ apiToken:window.ION_TOKEN, assetId:'2275207', autoRefreshToken:true }));
+tiles.registerPlugin(new TileCompressionPlugin()); tiles.registerPlugin(new UnloadTilesPlugin());
+tiles.registerPlugin(new GLTFExtensionsPlugin({ dracoLoader:new DRACOLoader().setDecoderPath('https://unpkg.com/three@0.170.0/examples/jsm/libs/draco/gltf/') }));
+tiles.registerPlugin(new ReorientationPlugin({ lat:ORIGIN.lat*D2R, lon:ORIGIN.lon*D2R, height:0 }));
+tiles.setCamera(camera); tiles.setResolutionFromRenderer(camera,renderer); tiles.errorTarget=10; scene.add(tiles.group);
+const ray=new THREE.Raycaster(), DOWN=new THREE.Vector3(0,-1,0);
+function hits(x,z){ ray.set(new THREE.Vector3(x,1500,z),DOWN); const ys=[]; for(const h of ray.intersectObject(tiles.group,true)) ys.push(h.point.y); return ys.sort((a,b)=>b-a); }
+const idle=()=>{ const s=tiles.stats||{}; return (s.downloading||0)===0&&(s.parsing||0)===0; };
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+// ------------------------------------------------------------------ the path: centripetal Catmull-Rom through the waypoints
+const curve=new THREE.CatmullRomCurve3(SEG.wp.map(([la,lo])=>{ const v=toXZ(la,lo); return new THREE.Vector3(v.x,0,v.y); }),false,'centripetal');
+curve.arcLengthDivisions=4000; const LEN=curve.getLength(), DS=4, NS=Math.floor(LEN/DS)+1;
+const P2=s=>{ const p=curve.getPointAt(Math.min(1,Math.max(0,s/LEN))); return p; };
+const T2=s=>curve.getTangentAt(Math.min(1,Math.max(0,s/LEN))).setY(0).normalize();
+const sAt=(la,lo)=>{ const v=toXZ(la,lo); let best=0,bd=1e18; for(let i=0;i<NS;i++){ const p=P2(i*DS), d=(p.x-v.x)**2+(p.z-v.y)**2; if(d<bd){ bd=d; best=i*DS; } } return best; };
+// minimum radius along the line (the game's rule is 120 m)
+let minR=1e9; for(let i=1;i<NS-1;i++){ const a=T2((i-1)*DS), b=T2((i+1)*DS); const ang=Math.acos(Math.min(1,a.dot(b))); if(ang>1e-4) minR=Math.min(minR,2*DS/ang); }
+// ------------------------------------------------------------------ survey against the tiles (or the saved one)
+async function survey(){
+  const S={ n:NS, ds:DS, len:LEN, top:[], ground:[], outL:[], outR:[] };
+  const CH=24; let gy=60;
+  for(let i0=0;i0<NS;i0+=CH){ const mid=P2((i0+CH/2)*DS);
+    camera.position.set(mid.x,gy+220,mid.z+60); camera.lookAt(mid.x,gy,mid.z);
+    await sleep(300); for(let w=0;w<60;w++){ if(idle()){ await sleep(400); if(idle()) break; } await sleep(150); }
+    for(let i=i0;i<Math.min(NS,i0+CH);i++){ const p=P2(i*DS), t=T2(i*DS), r=new THREE.Vector3(-t.z,0,t.x);   // right = fwd x up
+      let top=null, g=null; for(const lat of [-9,-6,-3,0,3,6,9]){ const h=hits(p.x+r.x*lat,p.z+r.z*lat); if(!h.length) continue; if(top===null||h[0]>top) top=h[0]; if(lat===0) g=h[h.length-1]; }
+      S.top[i]=top; S.ground[i]=g; const hl=hits(p.x-r.x*18,p.z-r.z*18), hr=hits(p.x+r.x*18,p.z+r.z*18); S.outL[i]=hl.length?hl[0]:null; S.outR[i]=hr.length?hr[0]:null;
+      if(g!=null) gy=g; }
+    document.getElementById('lbl').textContent=`survey ${i0}/${NS}`; }
+  return S; }
+function fill(a){ const n=a.length, o=a.slice(); for(let i=0;i<n;i++){ if(o[i]!=null) continue; let p=i,q=i; while(p>0&&a[p]==null) p--; while(q<n-1&&a[q]==null) q++;
+  o[i]=a[p]!=null&&a[q]!=null?(a[p]*(q-i)+a[q]*(i-p))/Math.max(1,q-p):(a[p]??a[q]??0); } return o; }
+const winMax=(a,w)=>a.map((_,i)=>{ let m=-1e9; for(let k=-w;k<=w;k++){ const j=Math.min(a.length-1,Math.max(0,i+k)); m=Math.max(m,a[j]); } return m; });
+const gauss=(a,sig)=>{ const r=Math.ceil(sig*3), k=[]; let sum=0; for(let j=-r;j<=r;j++){ const v=Math.exp(-0.5*(j/sig)**2); k.push(v); sum+=v; }
+  return a.map((_,i)=>{ let acc=0; for(let j=-r;j<=r;j++) acc+=k[j+r]*a[Math.min(a.length-1,Math.max(0,i+j))]; return acc/sum; }); };
+// the deck: 20-34 m over whatever is under it (a slow swell of crests and dips), down to 14 m over the open sea, 4 m over
+// anything inside the track's width, grades under 12 %
+// a coarse tile caught mid-swap can return a hit hundreds of metres off: anything 25 m from its 800 m running median goes
+const despike=a=>{ const w=100; return a.map((v,i)=>{ const win=[]; for(let k=-w;k<=w;k++){ const j=i+k; if(j>=0&&j<a.length) win.push(a[j]); } win.sort((x,y)=>x-y); const m=win[win.length>>1]; return Math.abs(v-m)>25?m:v; }); };
+// ?dip=1: the deck comes down to 5 m over the cliff top for 460 m around Ales stenar (does the ship read when you are low?)
+const DIP=Q.get("dip")&&SEG.ales?sAt(55.382688,14.054328):0;
+function profile(S){ const top=despike(fill(S.top)), ground=despike(fill(S.ground)), sea=Math.min(...ground);
+  const req=top.map((v,i)=>{ const water=SEG.sea&&ground[i]<sea+2.5; const swell=DIP&&Math.abs(i*DS-DIP)<230?5:27+7*Math.sin(2*Math.PI*i*DS/640+0.6); return Math.max(v+4,(water?ground[i]+14:ground[i]+swell)); });
+  let h=winMax(req,Math.round(30/DS)); const SL=0.12*DS;
+  for(let pass=0;pass<3;pass++){ for(let i=1;i<NS;i++) h[i]=Math.max(h[i],h[i-1]-SL); for(let i=NS-2;i>=0;i--) h[i]=Math.max(h[i],h[i+1]-SL); }
+  for(let it=0;it<40;it++){ h=gauss(h,10/DS); for(let i=0;i<NS;i++) h[i]=Math.max(h[i],req[i]-1); }
+  return { h, ground, top, sea }; }
+// ------------------------------------------------------------------ the neon set, built along the line
+const TEXL=new THREE.TextureLoader();
+function canvasTex(w,h,draw,rep){ const cv=document.createElement('canvas'); cv.width=w; cv.height=h; draw(cv.getContext('2d'),w,h);
+  const t=new THREE.CanvasTexture(cv); t.colorSpace=THREE.SRGBColorSpace; t.anisotropy=renderer.capabilities.getMaxAnisotropy(); if(rep){ t.wrapS=t.wrapT=THREE.RepeatWrapping; } return t; }
+const BOARDS=[   // the game's billboard layout (neon/make_textures.py): brand on its colour, accent bar, two white slogan lines on black
+  { n:'KIVIX MUSTERI', s:['ÄPPLEN MED','KURATOR'], bg:'#1f6b2c', fg:'#ffe600', ac:'#ff2e9a' },
+  { n:'NATURVIN 2097', s:['OFILTRERAT.','OFÖRSÄKRAT.'], bg:'#5a1030', fg:'#ffd0e4', ac:'#00e1ff' },
+  { n:'ÖSTERLEN™', s:['ÄKTA','SEDAN 2031'], bg:'#004aad', fg:'#ffcd00', ac:'#ffcd00' },
+  { n:'ALES STENAR+', s:['NU MED','VIP-LOUNGE'], bg:'#1b1b1b', fg:'#f2f6ff', ac:'#00e1ff' },
+  { n:'SURDEGSBORGEN', s:['LIMPA 400 KR.','KÖ FRÅN 05:00'], bg:'#8a4a12', fg:'#fff1d6', ac:'#ffe600' } ];
+function boardTex(B){ return canvasTex(1024,512,(g,w,h)=>{ g.fillStyle=B.bg; g.fillRect(0,0,w,h); g.fillStyle='#05070b'; g.fillRect(0,h*0.42,w,h); g.fillStyle=B.ac; g.fillRect(0,h*0.42-8,w,8);
+  g.textBaseline='middle'; g.fillStyle=B.fg; let fs=150; do{ g.font=`900 ${fs}px Orbitron`; fs-=4; } while(g.measureText(B.n).width>w*0.9); g.fillText(B.n,36,h*0.21);
+  g.fillStyle='#ffffff'; let ss=140; do{ g.font=`700 ${ss}px Rajdhani`; ss-=4; } while(Math.max(...B.s.map(l=>g.measureText(l).width))>w-72); B.s.forEach((l,k)=>g.fillText(l,36,h*(k?0.84:0.585))); }); }
+function markAd(m){ m.polygonOffset=true; m.polygonOffsetFactor=-1; m.polygonOffsetUnits=-4;
+  m.onBeforeCompile=sh=>{ sh.fragmentShader=sh.fragmentShader.replace('#include <opaque_fragment>','#include <opaque_fragment>\n\tgl_FragColor.a=0.25;'); }; m.customProgramCacheKey=()=>'ad-mark'; }
+const NEON=(hex,k)=>new THREE.Color(hex).multiplyScalar(k);
+function build(R){
+  const HW=8, F=[]; for(let i=0;i<NS;i++){ const s=i*DS, p=P2(s), t=T2(s); p.y=R.h[i]; F.push({ p, t, r:new THREE.Vector3(-t.z,0,t.x) }); }
+  const strip=(name,mat,fn,uvLen)=>{ const pos=[], uv=[], idx=[]; let acc=0;
+    F.forEach((f,i)=>{ if(i) acc+=f.p.distanceTo(F[i-1].p); const [a,b]=fn(f); pos.push(...a.toArray(),...b.toArray()); uv.push(0,acc/uvLen,1,acc/uvLen); if(i){ const k=i*2; idx.push(k-2,k-1,k,k-1,k+1,k); } });
+    const g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3)); g.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2)); g.setIndex(idx); g.computeVertexNormals();
+    const m=new THREE.Mesh(g,mat); m.name=name; scene.add(m); return m; };
+  const at=(f,lat,up)=>f.p.clone().addScaledVector(f.r,lat).add(new THREE.Vector3(0,up,0));
+  const deckTex=canvasTex(512,512,(g,w,h)=>{ g.fillStyle='#0c0f15'; g.fillRect(0,0,w,h); for(let k=0;k<900;k++){ g.fillStyle=`rgba(255,255,255,${Math.random()*0.04})`; g.fillRect(Math.random()*w,Math.random()*h,2,2); }
+    g.fillStyle='rgba(255,255,255,0.10)'; g.fillRect(0,0,w,3); g.fillStyle='rgba(0,225,255,0.55)'; g.fillRect(w/2-4,0,8,h*0.45); g.fillStyle='rgba(255,255,255,0.22)'; g.fillRect(w*0.25-2,0,4,h*0.3); g.fillRect(w*0.75-2,0,4,h*0.3); },true);
+  strip('deck',new THREE.MeshStandardMaterial({ map:deckTex, roughness:0.78, metalness:0.1, side:THREE.DoubleSide }),f=>[at(f,HW,0),at(f,-HW,0)],16);
+  strip('under',new THREE.MeshStandardMaterial({ color:0x3a3f47, roughness:0.9, side:THREE.DoubleSide }),f=>[at(f,HW,-1.1),at(f,-HW,-1.1)],16);
+  for(const sd of [-1,1]){ strip('edge',new THREE.MeshStandardMaterial({ color:0x2a2f38, roughness:0.8, side:THREE.DoubleSide }),f=>[at(f,sd*HW,0),at(f,sd*HW,-1.1)],16);
+    const wallTex=canvasTex(64,1024,(g,w,h)=>{ g.fillStyle='#0b1018'; g.fillRect(0,0,w,h); g.fillStyle=sd<0?'#ff2e9a':'#00e1ff'; g.fillRect(0,0,5,h); g.fillStyle='rgba(255,255,255,0.08)'; for(let y=0;y<h;y+=128) g.fillRect(0,y,w,3); },true);   // x = up the wall (top band), y = along it
+    strip('barrier',new THREE.MeshStandardMaterial({ map:wallTex, roughness:0.45, metalness:0.3, side:THREE.DoubleSide, emissive:0xffffff, emissiveMap:wallTex, emissiveIntensity:0.35 }),f=>[at(f,sd*(HW+0.2),1.4),at(f,sd*(HW+0.2),0)],32);
+    strip('neon',new THREE.MeshBasicMaterial({ color:NEON(sd<0?0xff2e9a:0x00e1ff,2.6), toneMapped:false, side:THREE.DoubleSide }),f=>[at(f,sd*(HW+0.2),1.55),at(f,sd*(HW+0.2),1.4)],32);
+    strip('neonlow',new THREE.MeshBasicMaterial({ color:NEON(sd<0?0xff2e9a:0x00e1ff,1.6), toneMapped:false, side:THREE.DoubleSide }),f=>[at(f,sd*(HW-0.1),0.03),at(f,sd*(HW-0.45),0.03)],32); }
+  // pylons every 42 m down to whatever is straight under the deck
+  const pyl=new THREE.MeshStandardMaterial({ color:0x4a505a, roughness:0.7, metalness:0.4 }), pylN=new THREE.MeshBasicMaterial({ color:NEON(0x00e1ff,1.3), toneMapped:false });
+  for(let i=4;i<NS;i+=Math.round(42/DS)){ const f=F[i], g=R.ground[i]; const hgt=f.p.y-1.1-g+0.5; if(hgt<2) continue;
+    const m=new THREE.Mesh(new THREE.BoxGeometry(1.8,hgt,1.8),pyl); m.position.set(f.p.x,g-0.5+hgt/2,f.p.z); m.rotation.y=Math.atan2(f.t.x,f.t.z); scene.add(m);
+    const n=new THREE.Mesh(new THREE.BoxGeometry(1.84,0.25,1.84),pylN); n.position.set(f.p.x,f.p.y-3,f.p.z); n.rotation.y=m.rotation.y; scene.add(n); }
+  // speed pads: yellow chevrons every ~190 m
+  const padTex=canvasTex(256,256,(g,w,h)=>{ g.clearRect(0,0,w,h); g.fillStyle='#ffe600'; for(let k=0;k<3;k++){ const y=40+k*70; g.beginPath(); g.moveTo(28,y+50); g.lineTo(w/2,y); g.lineTo(w-28,y+50); g.lineTo(w-28,y+72); g.lineTo(w/2,y+22); g.lineTo(28,y+72); g.fill(); } });
+  const padM=new THREE.MeshBasicMaterial({ map:padTex, transparent:true, blending:THREE.AdditiveBlending, depthWrite:false, toneMapped:false, color:NEON(0xffffff,1.6) });
+  for(let s=120,k=0;s<LEN-40;s+=190,k++){ const i=Math.round(s/DS), f=F[i]; const m=new THREE.Mesh(new THREE.PlaneGeometry(5,6),padM); m.position.copy(at(f,[-3.5,0,3.5][k%3],0.06));
+    m.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(f.r,f.t,new THREE.Vector3(0,1,0))); scene.add(m); }   // chevrons (texture up) point along the line
+  // billboards: 14 x 7 m faces on a frame and mast, centre 10 m over the deck, 18 m out, turned toward the racer 200 m before
+  const metal=new THREE.MeshStandardMaterial({ color:0x2b2f36, roughness:0.5, metalness:0.6 });
+  for(const B of SEG.boards){ const s0=Math.max(0,sAt(...B.at)+B.lead), i=Math.min(NS-1,Math.round(s0/DS)), f=F[i];
+    const c=at(f,B.side*18,10), aim=F[Math.max(0,i-Math.round(200/DS))].p.clone().add(new THREE.Vector3(0,3,0));
+    const grp=new THREE.Group(); grp.position.copy(c); grp.lookAt(aim); scene.add(grp);
+    grp.add(new THREE.Mesh(new THREE.BoxGeometry(14.4,7.4,0.5),metal));
+    const tex=boardTex(BOARDS[B.b]); const fm=new THREE.MeshStandardMaterial({ map:tex, emissive:0xffffff, emissiveMap:tex, emissiveIntensity:0.5, roughness:0.5 }); markAd(fm);
+    const face=new THREE.Mesh(new THREE.PlaneGeometry(14,7),fm); face.position.z=0.33; grp.add(face);
+    const rim=new THREE.Mesh(new THREE.BoxGeometry(14.8,7.8,0.2),new THREE.MeshBasicMaterial({ color:NEON(BOARDS[B.b].ac,3.0), toneMapped:false })); rim.position.z=0.05; grp.add(rim);
+    const g0=R.ground[i]??(c.y-30); const mast=new THREE.Mesh(new THREE.BoxGeometry(0.8,c.y-3.7-g0,0.8),metal); mast.position.set(c.x,(c.y-3.7+g0)/2,c.z); scene.add(mast); }
+  return F; }
+// ------------------------------------------------------------------ landmarks (Blender) and the craft
+const gltf=new GLTFLoader(); gltf.setDRACOLoader(new DRACOLoader().setDecoderPath('https://unpkg.com/three@0.170.0/examples/jsm/libs/draco/gltf/'));
+let LM=null, craft=null;
+async function landmarks(){ LM=await fetch('landmarks.json').then(r=>r.json());
+  const groundAt=(x,z)=>{ const h=hits(x,z); return h.length?h[0]:null; };
+  const out={};
+  if(SEG.ales){ const g=await gltf.loadAsync('test_assets/ales_stenar.glb'), c=toXZ(LM.ales.lat,LM.ales.lon);
+    g.scene.position.set(c.x,0,c.y); scene.add(g.scene); g.scene.updateMatrixWorld(true);
+    const wait=async(x,z)=>{ camera.position.set(x,120,z+40); camera.lookAt(x,60,z); for(let w=0;w<40&&!idle();w++) await sleep(150); };
+    await wait(c.x,c.y); let n=0;
+    g.scene.traverse(o=>{ if(/^stone_/.test(o.name)){ const wp=new THREE.Vector3(); o.getWorldPosition(wp); const y=groundAt(wp.x,wp.z); if(y!=null){ o.position.y+=y-0.35; n++; } } });
+    out.ales={ stones:n, at:[+c.x.toFixed(1),+c.y.toFixed(1)] }; }
+  if(SEG.glim){ const g=await gltf.loadAsync('test_assets/glimmingehus.glb'), c=toXZ(LM.glimmingehus.lat,LM.glimmingehus.lon);
+    camera.position.set(c.x,200,c.y+60); camera.lookAt(c.x,70,c.y); for(let w=0;w<40&&!idle();w++) await sleep(150);
+    let y=1e9; for(const [dx,dz] of [[0,0],[10,4],[-10,-4],[4,-6],[-4,6]]){ const v=groundAt(c.x+dx,c.y+dz); if(v!=null) y=Math.min(y,v); }
+    g.scene.position.set(c.x,y-0.3,c.y); scene.add(g.scene); out.glim={ y:+y.toFixed(1) }; }
+  return out; }
+// ------------------------------------------------------------------ the chase camera at arc length s (the game's, with the desktop lag at speed)
+let F=null, R=null; const CAM={ back:21, up:4.6, look:12, lookUp:1.4, fov:86 };
+const UP=new THREE.Vector3(0,1,0);
+function place(s,v=70,lat=0){ s=Math.max(0,Math.min(LEN-1,s)); const x=s/DS, i=Math.min(NS-2,Math.floor(x)), k=x-i, a=F[i], b=F[i+1];
+  const p=a.p.clone().lerp(b.p,k), t=a.t.clone().lerp(b.t,k).normalize(), r=new THREE.Vector3(-t.z,0,t.x);
+  const fd=b.p.clone().sub(a.p).normalize();   // with the grade
+  if(craft){ craft.position.copy(p).addScaledVector(r,lat).add(new THREE.Vector3(0,1.5,0)); const up=new THREE.Vector3().crossVectors(r,fd).normalize();
+    craft.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(r,up,fd.clone().negate())); }
+  const back=new THREE.Vector3(-t.x,-fd.y*0.3,-t.z).normalize(), fwd=new THREE.Vector3(t.x,fd.y*0.3,t.z).normalize(), cp=craft?craft.position:p.clone().add(new THREE.Vector3(0,1.5,0));
+  camera.position.copy(cp).addScaledVector(back,CAM.back).addScaledVector(UP,CAM.up); camera.up.set(0,1,0); camera.lookAt(cp.clone().addScaledVector(fwd,CAM.look).addScaledVector(UP,CAM.lookUp));
+  camera.fov=CAM.fov; camera.updateProjectionMatrix(); camera.updateMatrixWorld();
+  MB.vel.copy(fd).multiplyScalar(v); MB.ship.copy(cp); MB.amt=THREE.MathUtils.smoothstep(v/66,0.35,1.1);
+  const gi=Math.round(s/DS); return { s:Math.round(s), deck:+(p.y-R.ground[gi]).toFixed(1), cam:+(camera.position.y-R.ground[gi]).toFixed(1) }; }
+// ------------------------------------------------------------------ boot
+const LT=window.__lt={ ready:false, seg:SEGN, len:LEN, minR:Math.round(minR), place, idle, sAt:(la,lo)=>sAt(la,lo) };
+function frame(){ requestAnimationFrame(frame); camera.updateMatrixWorld(); tiles.setResolutionFromRenderer(camera,renderer); tiles.update(); composer.render(); }
+(async()=>{ await document.fonts.load('900 100px Orbitron'); await document.fonts.load('700 100px Rajdhani');
+  camera.position.set(0,1500,1); camera.lookAt(0,0,0); requestAnimationFrame(frame);
+  for(let i=0;i<120;i++){ await sleep(150); if(tiles.root&&idle()&&hits(0,0).length) break; }
+  let S=await fetch(`test_assets/survey_${SEGN}.json`).then(r=>r.ok?r.json():null).catch(()=>null);
+  if(!S||S.n!==NS){ S=await survey(); LT.survey=S; }
+  R=profile(S); F=build(R); LT.profile={ sea:+R.sea.toFixed(1), minDeckOverGround:+Math.min(...R.h.map((h,i)=>h-R.ground[i])).toFixed(1), maxDeckOverGround:+Math.max(...R.h.map((h,i)=>h-R.ground[i])).toFixed(1) };
+  LT.landmarks=await landmarks();
+  const cg=await gltf.loadAsync('../../assets/neon/craft_3.glb'); craft=cg.scene; scene.add(craft);
+  place(0); document.getElementById('lbl').textContent='WIPEOUT ÖSTERLEN · LOOK TEST · '+SEG.name; LT.ready=true; })();
+</script></body></html>

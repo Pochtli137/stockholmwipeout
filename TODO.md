@@ -10,6 +10,14 @@ Lund 52 % och 50 m. Ystad och Tomelilla är också platta. Verktyget: `wo2097/pi
 Skärmdumpar och översikt: `~/Projects/_process/2026-10-02/stockholmwipeout-osterlen-phase0/` (privat, utanför repot).
 **Inget byggt:** inget koncept, ingen bana, ingen upplåsning. Kim väljer väg.
 
+**Utseendetest (samma kväll):** platt Google plus Blender-landmärken från racekameran, i middagssol. Fristående sida
+`wo2097/pipeline/osterlen/looktest.html?seg=kivik|kaseberga|glimminge|stockholm` (+`&dip=1` för lågt pass vid Ales stenar),
+`looktest.cjs` tar stillbilder och frame-stegade klipp, `build_landmarks.py` bygger Ales stenar (59 stenar efter OSM) och
+Glimmingehus (OSM-fotavtryck, 26 m). Resultat i `~/Projects/_process/2026-10-02/stockholmwipeout-osterlen-test/`.
+**Utfall:** havet och fälten håller, byarna läses som en karta och landmärkena som modeller på ett fotografi. Ales stenar syns
+inte från 30 m (stenarna är 1 till 3 m höga), bara när banan går ner till cirka 8 m. Stenshuvud är en slät kulle utan klippor.
+Stockholm från samma höjd har fasader och djup. Inget av detta rör `index.html`.
+
 ## Läge 2026-10-02
 **Deployat:** grenen `vasterbron` inslagen i `main`: start mitt på Guldbron, ENTERING-titlar, ingen sköld i vila, nedräkningsbandet
 borta, bullet time över Västerbron, bron bortklippt med vatten på Mälarens riktiga nivå, porten "DU HAR MYCKET ATT LEVA FÖR",
