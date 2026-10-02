@@ -2074,9 +2074,8 @@ function advance(s,dt){
     pa.needsUpdate=true; tr.visible=sf>0.08; });
   if(state!=='loading') emitShip(s,dt,sf);
 }
-// SHIELD FIELD: an energy skin around the player's craft. Idle it is faint and follows the SHIELD ENERGY bar (strong
-// field = healthy, flickering = low); the SHIELD pickup lights it fully for 5 s. While lit it blocks the wall drain,
-// barges AI aside and eats missiles. Additive fresnel shell, a little bigger than the hull so it never z-fights.
+// SHIELD FIELD: an energy skin around the player's craft, there only for the 5 s after a SHIELD pickup (Kim 2026-10-02:
+// no default shield, the idle field is gone). While lit it blocks the wall drain, barges AI aside and eats missiles. Additive fresnel shell, a little bigger than the hull so it never z-fights.
 const SHIELD=(()=>{
   const mat=new THREE.ShaderMaterial({ transparent:true, depthWrite:false, blending:THREE.AdditiveBlending, toneMapped:false,
     uniforms:{ uT:{value:0}, uA:{value:0}, uCol:{value:new THREE.Color(0x00e1ff)}, uHit:{value:0}, uHitDir:{value:new THREE.Vector3()}, uLow:{value:0} },
@@ -2107,12 +2106,11 @@ const SHIELD=(()=>{
     step(dt,p){ if(!p||state==='loading'||state==='select'){ mesh.visible=false; return; }
       if(!mesh.parent) scene.add(mesh);
       if(sized!==p.mesh) fit(p.mesh);
-      mesh.visible=true; mesh.position.copy(p.mesh.position).add(mesh.userData.off.clone().applyQuaternion(p.mesh.quaternion)); mesh.quaternion.copy(p.mesh.quaternion);
-      const idle=0.34*(0.3+0.7*energy/100);   // the field you always carry, mostly rim: dims with the energy bar
       const on=shieldT>0?Math.min(1,(5-shieldT)/0.3,shieldT/0.6):0;   // the pickup: fades in fast, out over the last 0.6 s
-      mat.uniforms.uA.value=idle+(0.62-idle)*on;
-      mat.uniforms.uLow.value=energy<30&&on<=0?1-energy/30:0;
-      hit=Math.max(0,hit-dt*3); mat.uniforms.uHit.value=hit*(on>0?1:0.45); mat.uniforms.uT.value+=dt; } };
+      hit=Math.max(0,hit-dt*3); mat.uniforms.uT.value+=dt;
+      mesh.visible=on>0; if(!mesh.visible) return;
+      mesh.position.copy(p.mesh.position).add(mesh.userData.off.clone().applyQuaternion(p.mesh.quaternion)); mesh.quaternion.copy(p.mesh.quaternion);
+      mat.uniforms.uA.value=0.62*on; mat.uniforms.uLow.value=0; mat.uniforms.uHit.value=hit; } };
 })();
 function separate(dt){
   for(let i=0;i<ships.length;i++) for(let j=i+1;j<ships.length;j++){
@@ -2313,7 +2311,7 @@ if(location.search.includes('check')) window.__SUN=SUN_DIR;
 window.__theme=THEME;
 if(location.search.includes('check')) window.__sw={
   frameAt, mkFrame, hitsAt:(x,z)=>tiles?hitsAt(x,z):[], tilesIdle:()=>tiles?tilesIdle():true, player, ships:()=>ships, keys,
-  setShield:v=>{ shieldT=v; }, setEnergy:v=>{ energy=v; }, shieldTouch:(d,k)=>SHIELD.touch(d,k),
+  setShield:v=>{ shieldT=v; }, setEnergy:v=>{ energy=v; }, shieldTouch:(d,k)=>SHIELD.touch(d,k), shieldVis:()=>SHIELD.mesh.visible,
   stats:()=>({ hard:HARD, energy, wallT, wallHits, raceTime, state, airtime:airtimeCount }), grip:()=>GRIP_K(),
   passes:()=>composer.passes, bloomPass:bloom, flickN:()=>flickMats.length, state:()=>state, len:()=>TRACK_LEN, HALF_W, MAXV, curvAhead, camera, setPaused:v=>{ paused=v; },
   placeAt(t,lat=0){ const p=player(); p.t=t; p.lat=lat; p.speed=0; p.vlat=0; advance(p,0); camSnap=true; updateCamera(1/60); camera.updateMatrixWorld(); },
