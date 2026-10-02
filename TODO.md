@@ -1,5 +1,15 @@
 # TODO
 
+## Wipeout Österlen, stoppad i fas 0 (2026-10-02, grenen `osterlen`)
+**Grinden föll:** Google har ingen fotogrammetri i Österlen. Alla 15 platser (Simrishamn hamn och centrum, Kivik hamn,
+Kiviks musteri, Kungagraven, Kivik Art Centre, Stenshuvud, Vitemölla, Baskemölla, Brantevik, Skillinge, Glimmingehus,
+Sandhammaren, Kåseberga, Ales stenar) är 2.5D: satellitbild draperad på terräng, inga hus, träd eller klippor med volym.
+Mått (5 m-rutnät av strålar över 200 × 200 m): 0 % står upp i alla orter, högsta resning 0,9–1,5 m (Glimmingehus, 26 m hög
+borg: 0,9 m). Stenshuvuds 38 % är bergets lutning i höjdmodellen. Referens: Slussen 54 % och 43 m, Malmö 26 % och 190 m,
+Lund 52 % och 50 m. Ystad och Tomelilla är också platta. Verktyget: `wo2097/pipeline/osterlen/probe_tiles.cjs`.
+Skärmdumpar och översikt: `~/Projects/_process/2026-10-02/stockholmwipeout-osterlen-phase0/` (privat, utanför repot).
+**Inget byggt:** inget koncept, ingen bana, ingen upplåsning. Kim väljer väg.
+
 ## Läge 2026-10-02
 **Deployat:** grenen `vasterbron` inslagen i `main`: start mitt på Guldbron, ENTERING-titlar, ingen sköld i vila, nedräkningsbandet
 borta, bullet time över Västerbron, bron bortklippt med vatten på Mälarens riktiga nivå, porten "DU HAR MYCKET ATT LEVA FÖR",

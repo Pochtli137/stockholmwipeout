@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="sv"><head><meta charset="utf-8"><title>Tile probe</title>
+<style>html,body{margin:0;height:100%;overflow:hidden;background:#000}#c{display:block;width:100%;height:100%}
+#lbl{position:fixed;left:12px;top:10px;font:700 14px Arial;color:#fff;text-shadow:0 1px 3px #000}</style></head>
+<body><canvas id="c"></canvas><div id="lbl"></div>
+<!-- PHASE 0 (Österlen): how real is Google's photogrammetry at a place? ?lat&lon&name&az(deg, where the camera stands
+     seen from the target)&dist(m horizontal)&alt(m over the ground). The page loads the tiles around the place, finds the
+     ground with a ray, parks an oblique camera, and publishes window.__probe: settled, and a roughness survey of the ground
+     (a 5 m grid of downward rays over 200 x 200 m: how much stands up off a smooth surface). -->
+<script src="../../../config.js"></script>
+<script type="importmap">
+{ "imports": {
+  "three": "https://unpkg.com/three@0.170.0/build/three.module.js",
+  "three/addons/": "https://unpkg.com/three@0.170.0/examples/jsm/",
+  "3d-tiles-renderer": "https://unpkg.com/3d-tiles-renderer@0.4.28/build/index.js",
+  "3d-tiles-renderer/plugins": "https://unpkg.com/3d-tiles-renderer@0.4.28/build/index.plugins.js"
+} }
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { TilesRenderer } from '3d-tiles-renderer';
+import { CesiumIonAuthPlugin, TileCompressionPlugin, TilesFadePlugin, UnloadTilesPlugin, GLTFExtensionsPlugin, ReorientationPlugin } from '3d-tiles-renderer/plugins';
+import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
+const Q=new URLSearchParams(location.search), D2R=Math.PI/180;
+const lat=+Q.get('lat'), lon=+Q.get('lon'), az=+(Q.get('az')||200), dist=+(Q.get('dist')||320), alt=+(Q.get('alt')||200);
+document.getElementById('lbl').textContent=(Q.get('name')||'')+`  ${lat.toFixed(4)}, ${lon.toFixed(4)}  az ${az}° · ${dist} m · +${alt} m`;
+const renderer=new THREE.WebGLRenderer({canvas:document.getElementById('c'),antialias:true}); renderer.setPixelRatio(1);
+const scene=new THREE.Scene(); scene.background=new THREE.Color(0x9ec8e8);
+const camera=new THREE.PerspectiveCamera(60,1,1,40000);
+function resize(){ renderer.setSize(innerWidth,innerHeight,false); camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix(); } addEventListener('resize',resize); resize();
+const tiles=new TilesRenderer();
+tiles.registerPlugin(new CesiumIonAuthPlugin({ apiToken:window.ION_TOKEN, assetId:'2275207', autoRefreshToken:true }));
+tiles.registerPlugin(new TileCompressionPlugin()); tiles.registerPlugin(new UnloadTilesPlugin());
+tiles.registerPlugin(new GLTFExtensionsPlugin({ dracoLoader:new DRACOLoader().setDecoderPath('https://unpkg.com/three@0.170.0/examples/jsm/libs/draco/gltf/') }));
+tiles.registerPlugin(new ReorientationPlugin({ lat:lat*D2R, lon:lon*D2R, height:0 }));
+tiles.setCamera(camera); tiles.setResolutionFromRenderer(camera,renderer); tiles.errorTarget=+(Q.get('err')||8);
+scene.add(tiles.group);
+const ray=new THREE.Raycaster(), DOWN=new THREE.Vector3(0,-1,0);
+function hits(x,z){ ray.set(new THREE.Vector3(x,1500,z),DOWN); return ray.intersectObject(tiles.group,true).map(h=>h.point.y); }
+const idle=()=>{ const s=tiles.stats||{}; return (s.downloading||0)===0&&(s.parsing||0)===0; };
+const P=window.__probe={ phase:'boot', ground:null, settled:false };
+// boot: look straight down from 1.2 km so the root and the coarse LODs come in, then find the ground
+camera.position.set(0,1200,1); camera.lookAt(0,0,0);
+let tBoot=performance.now();
+function frame(){ requestAnimationFrame(frame); camera.updateMatrixWorld(); tiles.setResolutionFromRenderer(camera,renderer); tiles.update(); renderer.render(scene,camera); }
+requestAnimationFrame(frame);
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+(async()=>{
+  for(let i=0;i<200;i++){ await sleep(150); const h=hits(0,0); if(h.length&&performance.now()-tBoot>2500&&idle()){ P.ground=h[0]; break; } }
+  if(P.ground==null){ P.phase='no-ground'; return; }
+  // low over the target first so the finest tiles under it stream, then the oblique view
+  const g=P.ground; camera.position.set(0,g+120,40); camera.lookAt(0,g,0);
+  for(let w=0;w<80&&!idle();w++) await sleep(150); await sleep(500);
+  P.ground=hits(0,0)[0]??g;
+  const a=az*D2R; // azimuth from north, clockwise; the game frame: +X west, +Z north => east = -X
+  camera.position.set(-Math.sin(a)*dist, P.ground+alt, Math.cos(a)*dist); camera.lookAt(0,P.ground,0);
+  P.phase='oblique';
+  await sleep(800); for(let w=0;w<200;w++){ if(idle()){ await sleep(600); if(idle()) break; } await sleep(150); }
+  // roughness: 5 m grid over 200 x 200 m around the target. 'Standing' = more than 4 m above the lowest hit within 15 m.
+  const N=41, S=5, grid=[];
+  for(let i=0;i<N;i++){ grid.push([]); for(let j=0;j<N;j++){ const h=hits((i-20)*S,(j-20)*S); grid[i].push(h.length?h[0]:null); } }
+  let n=0, stand=0, maxRise=0, steps=0;
+  for(let i=0;i<N;i++) for(let j=0;j<N;j++){ const v=grid[i][j]; if(v==null) continue; n++;
+    let lo=v; for(let di=-3;di<=3;di++) for(let dj=-3;dj<=3;dj++){ const q=grid[i+di]?.[j+dj]; if(q!=null) lo=Math.min(lo,q); }
+    const rise=v-lo; if(rise>4) stand++; maxRise=Math.max(maxRise,rise);
+    const r=grid[i]?.[j+1]; if(r!=null&&Math.abs(r-v)>2.5) steps++; }
+  P.rough={ samples:n, standingPct:+(stand/Math.max(n,1)*100).toFixed(1), maxRiseM:+maxRise.toFixed(1), stepEdgesPct:+(steps/Math.max(n,1)*100).toFixed(1) };
+  P.settled=true; P.phase='done';
+})();
+</script></body></html>
