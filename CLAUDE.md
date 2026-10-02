@@ -40,6 +40,7 @@ Publikt repo `Pochtli137/stockholmwipeout`. Live https://stockholmwipeout.vercel
   nollan ligger 45 m över ellipsoiden vid Medborgarplatsen). Pylonerna går ner i vattnet med skumringar. Porten över avstampet
   säger bara **"DU HAR MYCKET ATT LEVA FÖR"**, utan stödlinjens nummer (Kim: "det här är en dystopi"). Brostumpar i betong provades
   och togs bort (grenen `stump`): de drog mer blick än skarven. Kilen under brons ände vid Långholmen syns svagt, accepterad.
+- **Studs vid landningen efter Västerbron** (Kim 2026-10-02): cirka 1 m, sedan 0,17 m, stilla efter 1,4 s. Ratten är `BOUNCE` vid `AIR`.
 - **Utvecklarläge:** `?test=vasterbron` startar 500 m före hoppet och startar om 3 s efter landning (R direkt). `?test=<meter>` valfri plats.
 - **Partiannonserna är tillbaka i neon**, åtta partier lika, utan Direktdemokraterna. Slogans och symboler i `wo2097/pipeline/README.md`.
 - **Mobil styrs bara med tilt** (tillstånd frågas vid TAP på titeln, kräver HTTPS). Styrplattan är borta.

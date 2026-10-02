@@ -3,7 +3,7 @@
 ## Läge 2026-10-02
 **Deployat:** grenen `vasterbron` inslagen i `main`: start mitt på Guldbron, ENTERING-titlar, ingen sköld i vila, nedräkningsbandet
 borta, bullet time över Västerbron, bron bortklippt med vatten på Mälarens riktiga nivå, porten "DU HAR MYCKET ATT LEVA FÖR",
-`?test=vasterbron`. Detaljer i CLAUDE.md.
+`?test=vasterbron`, studs vid landningen (1 m, två hopp, `BOUNCE`). Detaljer i CLAUDE.md.
 **Kvar:** kilen under brons ände vid Långholmen (svag, accepterad tills vidare). Ion-tokenen. Musiken och skarpare stad nedan.
 **Overifierat:** bullet time och vattnet på riktig iPhone.
 
