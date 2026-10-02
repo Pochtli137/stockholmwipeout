@@ -2160,6 +2160,48 @@ function advance(s,dt){
 }
 // SHIELD FIELD: an energy skin around the player's craft, there only for the 5 s after a SHIELD pickup (Kim 2026-10-02:
 // no default shield, the idle field is gone). While lit it blocks the wall drain, barges AI aside and eats missiles. Additive fresnel shell, a little bigger than the hull so it never z-fights.
+// GLITTER OVER VÄSTERBRON (Kim 2026-10-02: "googlebron syns där under så lägg glittrande vatten där så att vi döljer den i
+// hoppet"): a sheet of moving water over Google's bridge along the jump, measured by pipeline/water_profile.cjs into
+// track.json `water` (extent along and across the line, height every stepM: just over the deck, parapets and lamp posts).
+// Small-wave normals, a dim sky fresnel, the sun's path and a glitter of sparkles that slows with the bullet time; soft
+// edges into the real water. The bridge's pylons stand on it (neon/build.py).
+const WATER=(()=>{ const W=TRACK_JSON&&TRACK_JSON.water; if(!W||!W.h) return { tick(){} };
+  const L=TRACK_LEN, gAt=m=>{ const x=Math.max(0,Math.min(W.h.length-1,(m-W.fromM)/W.stepM)), i=Math.min(W.h.length-2,Math.floor(x)); return W.h[i]+(W.h[i+1]-W.h[i])*(x-i); };
+  const STEP=4, nA=Math.ceil((W.toM-W.fromM)/STEP)+1, nX=14, pos=[], uv=[], idx=[], f=mkFrame(), r=new THREE.Vector3();
+  for(let i=0;i<nA;i++){ const m=Math.min(W.toM,W.fromM+i*STEP); frameAt(m/L,f); r.set(f.right.x,0,f.right.z).normalize(); const y=gAt(m);
+    for(let j=0;j<nX;j++){ const lat=W.latL+(W.latR-W.latL)*j/(nX-1); pos.push(f.p.x+r.x*lat,y,f.p.z+r.z*lat); uv.push(m-W.fromM,lat-W.latL); } }
+  for(let i=0;i<nA-1;i++) for(let j=0;j<nX-1;j++){ const a=i*nX+j, b=a+nX; idx.push(a,a+1,b,a+1,b+1,b); }   // wound to face up
+  const geo=new THREE.BufferGeometry(); geo.setAttribute('position',new THREE.Float32BufferAttribute(pos,3)); geo.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2)); geo.setIndex(idx);
+  const mat=new THREE.ShaderMaterial({ transparent:true, depthWrite:false, toneMapped:false,
+    uniforms:{ uT:{value:0}, uSun:{value:SUN_DIR.clone()}, uLen:{value:W.toM-W.fromM}, uWid:{value:W.latR-W.latL}, uEdge:{value:W.edgeM}, uFade:{value:W.fadeM} },
+    vertexShader:`varying vec2 vUv; varying vec3 vW; void main(){ vUv=uv; vec4 w=modelMatrix*vec4(position,1.0); vW=w.xyz; gl_Position=projectionMatrix*viewMatrix*w; }`,
+    fragmentShader:`uniform float uT,uLen,uWid,uEdge,uFade; uniform vec3 uSun; varying vec2 vUv; varying vec3 vW;
+      float h21(vec2 p){ return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453); }
+      float vn(vec2 p){ vec2 i=floor(p), f=fract(p); f=f*f*(3.0-2.0*f);
+        return mix(mix(h21(i),h21(i+vec2(1,0)),f.x),mix(h21(i+vec2(0,1)),h21(i+vec2(1,1)),f.x),f.y); }
+      void main(){
+        vec2 p=vW.xz;
+        // small waves: two drifting noise octaves as a slope field
+        float e=0.6, a=vn(p*0.09+vec2(uT*0.05,uT*0.03)), b=vn(p*0.23-vec2(uT*0.08,-uT*0.06));
+        vec2 sl=vec2(vn(p*0.09+vec2(e,0)+vec2(uT*0.05,uT*0.03))-a, vn(p*0.09+vec2(0,e)+vec2(uT*0.05,uT*0.03))-a)*1.6
+               +vec2(vn(p*0.23+vec2(e,0)-vec2(uT*0.08,-uT*0.06))-b, vn(p*0.23+vec2(0,e)-vec2(uT*0.08,-uT*0.06))-b)*0.9;
+        vec3 n=normalize(vec3(-sl.x,1.0,-sl.y));
+        vec3 v=normalize(cameraPosition-vW), rf=reflect(-v,n);
+        float fres=0.04+0.96*pow(1.0-max(dot(n,v),0.0),5.0);
+        vec3 deep=vec3(0.021,0.043,0.074), sky=mix(vec3(0.05,0.08,0.15),vec3(0.15,0.11,0.19),clamp(1.0-rf.y*2.0,0.0,1.0));   // linear: ~rgb 41,60,78 like the lake
+        vec3 col=mix(deep,sky,clamp(fres*0.45,0.0,0.28));
+        float sun=pow(max(dot(rf,uSun),0.0),180.0)*6.0;
+        // the glitter: sparse cells that flash on and off, brightest along the sun's path
+        vec2 c=p*1.7; vec2 ci=floor(c); float ph=h21(ci), tw=fract(ph*7.13+uT*(0.6+ph*1.4));
+        float sp=step(0.92,h21(ci+floor(uT*3.0+ph*9.0)))*smoothstep(0.42,0.0,length(fract(c)-0.5))*smoothstep(0.0,0.2,tw)*smoothstep(1.0,0.6,tw);
+        float path=pow(max(dot(rf,uSun),0.0),8.0);
+        col+=vec3(1.0,0.93,0.8)*(sun+sp*(0.5+3.5*path));
+        float edge=smoothstep(0.0,uEdge,vUv.y)*smoothstep(uWid,uWid-uEdge,vUv.y)*smoothstep(0.0,uFade,vUv.x)*smoothstep(uLen,uLen-uFade,vUv.x);
+        gl_FragColor=vec4(col,edge);
+      }` });
+  const mesh=new THREE.Mesh(geo,mat); mesh.renderOrder=2; mesh.frustumCulled=true; geo.computeBoundingSphere(); scene.add(mesh);
+  return { mesh, tick(dt){ mat.uniforms.uT.value+=dt; } };
+})();
 const SHIELD=(()=>{
   const mat=new THREE.ShaderMaterial({ transparent:true, depthWrite:false, blending:THREE.AdditiveBlending, toneMapped:false,
     uniforms:{ uT:{value:0}, uA:{value:0}, uCol:{value:new THREE.Color(0x00e1ff)}, uHit:{value:0}, uHitDir:{value:new THREE.Vector3()}, uLow:{value:0} },
@@ -2369,7 +2411,7 @@ function loop(now){
   if(state==='race') raceTime+=dt;
   if(state!=='loading'){
     for(const s of ships) stepShip(s,dt);
-    separate(dt); updateCamera(dt); SHIELD.step(dt,player());
+    separate(dt); updateCamera(dt); SHIELD.step(dt,player()); WATER.tick(dt);
     for(const m of padMats) for(const k of ['map','emissiveMap']) if(m[k]) m[k].offset.y=(m[k].offset.y-dt*1.6)%1;
     for(const m of wpadMats) for(const k of ['map','emissiveMap']) if(m[k]) m[k].rotation+=dt*1.4;
     stepMissiles(dt); if(FX.particles){ GLOW.tick(dt); DUST.tick(dt); } boostFlash=Math.max(0,boostFlash-dt*1.8); hitFlash=Math.max(0,hitFlash-dt*2);
@@ -2401,7 +2443,7 @@ if(location.search.includes('check')) window.__SUN=SUN_DIR;
 window.__theme=THEME;
 if(location.search.includes('check')) window.__sw={
   frameAt, mkFrame, hitsAt:(x,z)=>tiles?hitsAt(x,z):[], tilesIdle:()=>tiles?tilesIdle():true, player, ships:()=>ships, keys,
-  setShield:v=>{ shieldT=v; }, setEnergy:v=>{ energy=v; }, shieldTouch:(d,k)=>SHIELD.touch(d,k), shieldVis:()=>SHIELD.mesh.visible, jump:()=>({ ...JUMPLOG, timeScale, jumpCam, bulletAmt, jumpAudio, audio:actx?{ ctx:actx.state, wind:wind?+wind.g.gain.value.toFixed(3):0, music:musicGain?+musicGain.gain.value.toFixed(3):null, lpHz:mFilter?Math.round(mFilter.frequency.value):null, eng:engGain?+engGain.gain.value.toFixed(4):null }:null }), jumpReset:()=>{ JUMPLOG.real=0; JUMPLOG.sim=0; }, setBullet:o=>Object.assign(FEEL.bullet,o), districts:()=>({ list:DISTRICTS.map(d=>({name:d.name,m:Math.round(d.t*TRACK_LEN)})), log:DIST_LOG }),
+  setShield:v=>{ shieldT=v; }, setEnergy:v=>{ energy=v; }, shieldTouch:(d,k)=>SHIELD.touch(d,k), shieldVis:()=>SHIELD.mesh.visible, waterVis:v=>{ if(WATER.mesh) WATER.mesh.visible=v; }, water:()=>{ const m=WATER.mesh; if(!m) return null; m.geometry.computeBoundingBox(); const b=m.geometry.boundingBox; return { n:m.geometry.attributes.position.count, min:b.min.toArray().map(Math.round), max:b.max.toArray().map(Math.round), inScene:!!m.parent, vis:m.visible }; }, jump:()=>({ ...JUMPLOG, timeScale, jumpCam, bulletAmt, jumpAudio, audio:actx?{ ctx:actx.state, wind:wind?+wind.g.gain.value.toFixed(3):0, music:musicGain?+musicGain.gain.value.toFixed(3):null, lpHz:mFilter?Math.round(mFilter.frequency.value):null, eng:engGain?+engGain.gain.value.toFixed(4):null }:null }), jumpReset:()=>{ JUMPLOG.real=0; JUMPLOG.sim=0; }, setBullet:o=>Object.assign(FEEL.bullet,o), districts:()=>({ list:DISTRICTS.map(d=>({name:d.name,m:Math.round(d.t*TRACK_LEN)})), log:DIST_LOG }),
   stats:()=>({ hard:HARD, energy, wallT, wallHits, raceTime, state, airtime:airtimeCount }), grip:()=>GRIP_K(),
   passes:()=>composer.passes, bloomPass:bloom, flickN:()=>flickMats.length, state:()=>state, len:()=>TRACK_LEN, HALF_W, MAXV, curvAhead, camera, setPaused:v=>{ paused=v; },
   placeAt(t,lat=0){ const p=player(); p.t=t; p.lat=lat; p.speed=0; p.vlat=0; advance(p,0); camSnap=true; updateCamera(1/60); camera.updateMatrixWorld(); },

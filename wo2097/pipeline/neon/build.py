@@ -154,10 +154,16 @@ for t,lat in D['wpads']:
     if not in_gap(t,0.001): flat_pad(t,lat,5.5,5.5,m_wpad)
 P_.build('pads',trk)
 
+WAT=D.get('water')   # the glitter sheet over Västerbron (FEEL.water in index.html): a pylon on the bridge stands on it
+def water_at(m):   # the sheet's height at m along the lap (water_profile.cjs), None off it
+    if not WAT or not WAT['fromM']<=m<=WAT['toM']: return None
+    return float(np.interp(m,[WAT['fromM']+k*WAT['stepM'] for k in range(len(WAT['h']))],WAT['h']))
 Y_=MB(); n=int(L/42)
 for i in range(n):
     t=i/n; p,r,u,fw,g=at(t)
     if in_gap(t,0.002) or g is None or np.isnan(g): continue
+    wy=water_at(t*L)
+    if wy is not None and wy>g: log('pylon on the water',round(t*L),round(g,1),'->',round(wy,1)); g=wy
     top=p[1]-SLAB; hgt=top-g
     if hgt<1.2: continue
     # a vertical leg (world up, not track up) and a yoke under the slab, hazard band at the top of the leg
