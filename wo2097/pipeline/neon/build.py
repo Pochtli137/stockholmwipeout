@@ -221,6 +221,20 @@ for A in ARCHES:
     M.box(T,0,9.8,0,W2*2+2,0.2,1.8,m_neonY); setobs.append(M.build('arch_'+A['n'].lower(),SET)); placed+=1
     META['arch_'+A['n'].lower()]=dict(t=t,brand=b)
 log('arches placed',placed,'of',len(ARCHES))
+# THE GATE AT VÄSTERBRON (Kim 2026-10-02: "lägg också en gate vid hoppet vid västerbron där det står 'Du har mycket att
+# leva för'"). Over the take-off, 15 m before the lip. Not an ad: gate_texture.py's warm white on a deep dark, a soft
+# steady glow (no flicker, no stripes, no brand), a thin warm light under it. sign_: the motion blur leaves its letters. The posts stand right outside the
+# barriers, as the ramp runs 25 m over the water; the banner's foot is 10 m over the deck, clear of craft and camera.
+if GAPS:
+    t=(GAPS[0][0]-15/L)%1.0; p,r,u,fw,_=at(t); T=local(p,r,u,fw); M=MB(); W2=hw_at(t)+0.9; GW=W2*2+1.2
+    m_gate=mat('sign_gate_vb',tex='gate_vb.jpg',emit_tex='gate_vb.jpg',emit=0.55,rough=0.8); m_warm=mat('gate_warm',col=(0,0,0),emit_col=(1.0,0.78,0.55),emit=1.4)
+    PART='post'
+    for sx in (-1,1): M.box(T,sx*W2,9.25,0,1.1,18.5,1.1,m_metal)
+    PART='banner'; M.box(T,0,13.75,0,GW+0.4,6.9,1.2,m_metal)
+    for zz,(a,b) in ((0.62,(-GW/2,GW/2)),(-0.62,(GW/2,-GW/2))):   # the face toward the racer, and the same words on the back
+        M.quad(T((a,10.5,zz)),T((b,10.5,zz)),T((b,17.0,zz)),T((a,17.0,zz)),m_gate)
+    M.box(T,0,10.18,0,GW+0.4,0.12,1.3,m_warm); setobs.append(M.build('gate_vasterbron',SET)); META['gate_vasterbron']=dict(t=t)
+    log('gate at Västerbron',round(t*L),'m,',round(GW,1),'x 6.5 m')
 PARTY_NEON=[(1,0.08,0.18),(0.3,0.6,1),(1,0.85,0.1),(0.4,1,0.4),(1,0.25,0.3),(0.4,0.55,1),(1,0.85,0.1),(0.6,1,0.3)]   # rim colours, S..MP
 BOARD_AIM_M=200   # how far up the track each billboard looks for the racer (m)
 nb=int(L/300); M=MB(); boards=0; slots=[]
