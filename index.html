@@ -168,6 +168,23 @@
   #band.out { background:none; } #band.out::before { animation:bandOutL .22s ease-in forwards; } #band.out::after { animation:bandOutR .22s ease-in forwards; }
   @keyframes bandInL { from { transform:translateX(-100%); } } @keyframes bandInR { from { transform:translateX(100%); } }
   @keyframes bandOutL { to { transform:translateX(100%); } } @keyframes bandOutR { to { transform:translateX(-100%); } }
+  /* ===== ENTERING <STADSDEL>: a title card high over the track when the racing line crosses into a district. A light
+     streak with scanlines and a glitch, in and out in 1.8 s. Titles only (the gates, moves and music layers stay gone). ===== */
+  #district { position:fixed; left:0; right:0; top:19vh; z-index:12; text-align:center; pointer-events:none; opacity:0; }
+  #district .en { font:700 14px "Rajdhani",sans-serif; letter-spacing:.6em; color:var(--c); }
+  #district .nm { font:900 clamp(34px,5.4vw,78px)/1 "Orbitron",sans-serif; letter-spacing:.08em; color:var(--w); text-transform:uppercase;
+    text-shadow:-3px 0 0 rgba(255,46,154,.85),3px 0 0 rgba(0,225,255,.85),0 0 28px rgba(0,225,255,.6);
+    background:repeating-linear-gradient(0deg,rgba(255,255,255,1) 0 2px,rgba(255,255,255,.72) 2px 4px); -webkit-background-clip:text; background-clip:text; }
+  #district .rn { font:400 16px 'Runic',sans-serif; letter-spacing:.3em; color:var(--m); margin-top:6px; }
+  #district.on { animation:dNeon 1.8s cubic-bezier(.2,.7,.2,1) forwards; }
+  #district.on .nm { animation:dGlitch 1.8s steps(1) forwards; }
+  @keyframes dNeon { 0% { opacity:0; transform:translateX(-60vw) skewX(-30deg); filter:blur(8px); }
+    14% { opacity:1; transform:translateX(0) skewX(-8deg); filter:blur(0); } 20% { transform:skewX(0); }
+    78% { opacity:1; transform:translateX(0); filter:blur(0); } 100% { opacity:0; transform:translateX(60vw) skewX(30deg); filter:blur(8px); } }
+  @keyframes dGlitch { 0%,30%,34%,62%,65%,100% { transform:none; } 31% { transform:translate(6px,-2px); } 32% { transform:translate(-5px,2px); }
+    63% { transform:translate(-8px,0) scaleY(.9); } }
+  body.mobile #district { top:calc(env(safe-area-inset-top) + 64px); transform-origin:top center; }
+  body.mobile #district .nm { font-size:30px; } body.mobile #district .en, body.mobile #district .rn { font-size:10px; }
   #attrib { position:fixed; right:8px; bottom:4px; z-index:11; font-size:10px; color:#fff;
     text-shadow:0 1px 2px #000; opacity:.85; font-family:Arial; letter-spacing:0; }
   /* ===== craft select: the hangar before the grid ===== */
@@ -288,6 +305,7 @@
 </div>
 <canvas id="minimap" width="240" height="240"></canvas>
 <div id="attrib"></div>
+<div id="district"><div class="plate2"><div class="en">ENTERING</div><div class="nm"></div><div class="rn"></div></div></div>
 <div id="rotate"><div><div class="ph"></div>VÄND TELEFONEN<small>STOCKHOLM WIPEOUT KÖRS LIGGANDE</small></div></div>
 <div id="touch">
   <button class="tb" id="tbThrust">GAS</button><button class="tb" id="tbBrake">BRAKE</button>
@@ -1926,6 +1944,26 @@ function stepMissiles(dt){ for(let i=missiles.length-1;i>=0;i--){ const m=missil
     if(hit){ m.tgt.speed*=m.tgt.ph?m.tgt.ph.hitKeep+0.1:0.35; m.tgt.hitT=1.2; sfxAt('hit',m.tgt.mesh.position); burstAt(m.tgt.mesh.position); if(m.tgt.mesh.position.distanceTo(camera.position)<200) shake=Math.min(shake+0.5,1.4); hitFlash=0.6; }
     if(hit||m.life<=0){ scene.remove(m.spr); m.spr.material.dispose(); missiles.splice(i,1); } } }
 function shipT(s){ return ((s.t%1)+1)%1; }
+// ENTERING (Kim 2026-10-02: "lägg till 'entering' på östermalm, vasastan, kungsholmen och södermalm"). The entries come
+// from OSM's stadsdelar along the racing line (pipeline/districts.py -> track.json districts, in lap order from t=0).
+// name#n = the n-th entry into that district. The lap never enters Vasastan: its stand-in is the second entry into
+// Norrmalm (Birger Jarlsgatan, 4367 m). Kungsholmen's second entry sits on the jump's lip, so its first one is used.
+// Never in the first 3 s after GO, at least 5 s apart (a title that comes too soon waits its turn).
+const ENTERING=['Östermalm','Norrmalm#2','Kungsholmen#1','Södermalm#2'];
+const DISTRICTS=(()=>{ const all=(TRACK_JSON&&TRACK_JSON.districts)||[], seen={};
+  const tagged=all.map(d=>{ seen[d.name]=(seen[d.name]||0)+1; return {...d, tag:d.name+'#'+seen[d.name]}; });
+  return ENTERING.map(k=>tagged.find(d=>d.tag===(k.includes('#')?k:k+'#1'))).filter(Boolean); })();
+let distLastT=null, distShownAt=-99, distPending=null; const DIST_LOG=[];
+function districtTick(){ const p=player();
+  if(!p||state!=='race'||!DISTRICTS.length){ distLastT=null; distPending=null; distShownAt=-99; return; }
+  const now=shipT(p);
+  if(distLastT!==null&&now!==distLastT){ const a=distLastT, b=now;
+    for(const d of DISTRICTS){ const crossed=a<=b?(d.t>a&&d.t<=b):(d.t>a||d.t<=b); if(crossed&&raceTime>3) distPending=d; } }
+  if(distPending&&raceTime-distShownAt>5){ distShownAt=raceTime; showDistrict(distPending); distPending=null; }
+  distLastT=now; }
+function showDistrict(d){ DIST_LOG.push({ name:d.name, at:+raceTime.toFixed(1), m:Math.round(d.t*TRACK_LEN) });
+  const el=document.getElementById('district'); el.querySelector('.nm').textContent=d.name; el.querySelector('.rn').textContent=d.rn||'';
+  el.classList.remove('on'); void el.offsetWidth; el.classList.add('on'); }
 function startT(){ return (FEEL.startM||0)/TRACK_LEN; }   // the start/finish line as track parameter
 // FREE STEERING (hard mode, player only). CURV's sign: + means the outside of the bend is +lat, so with no input the
 // track turning under the craft rotates psi toward +lat at curvature*v. psi_dot = omega + signed*v - align*psi.
@@ -2297,7 +2335,7 @@ function loop(now){
     for(const m of padMats) for(const k of ['map','emissiveMap']) if(m[k]) m[k].offset.y=(m[k].offset.y-dt*1.6)%1;
     for(const m of wpadMats) for(const k of ['map','emissiveMap']) if(m[k]) m[k].rotation+=dt*1.4;
     stepMissiles(dt); if(FX.particles){ GLOW.tick(dt); DUST.tick(dt); } boostFlash=Math.max(0,boostFlash-dt*1.8); hitFlash=Math.max(0,hitFlash-dt*2);
-    updateHUD(dt); drawMinimap();
+    districtTick(); updateHUD(dt); drawMinimap();
     { const p=player(); const sf=(p.speed+p.boost)/MAXV;
       // FEEL: the streaks thicken on the way down
       drawSpeedFX(state==="race"?Math.min(1,Math.max(0,(sf-0.45)/0.55)+dropFX*FEEL.dropFX):0);
@@ -2325,7 +2363,7 @@ if(location.search.includes('check')) window.__SUN=SUN_DIR;
 window.__theme=THEME;
 if(location.search.includes('check')) window.__sw={
   frameAt, mkFrame, hitsAt:(x,z)=>tiles?hitsAt(x,z):[], tilesIdle:()=>tiles?tilesIdle():true, player, ships:()=>ships, keys,
-  setShield:v=>{ shieldT=v; }, setEnergy:v=>{ energy=v; }, shieldTouch:(d,k)=>SHIELD.touch(d,k), shieldVis:()=>SHIELD.mesh.visible,
+  setShield:v=>{ shieldT=v; }, setEnergy:v=>{ energy=v; }, shieldTouch:(d,k)=>SHIELD.touch(d,k), shieldVis:()=>SHIELD.mesh.visible, districts:()=>({ list:DISTRICTS.map(d=>({name:d.name,m:Math.round(d.t*TRACK_LEN)})), log:DIST_LOG }),
   stats:()=>({ hard:HARD, energy, wallT, wallHits, raceTime, state, airtime:airtimeCount }), grip:()=>GRIP_K(),
   passes:()=>composer.passes, bloomPass:bloom, flickN:()=>flickMats.length, state:()=>state, len:()=>TRACK_LEN, HALF_W, MAXV, curvAhead, camera, setPaused:v=>{ paused=v; },
   placeAt(t,lat=0){ const p=player(); p.t=t; p.lat=lat; p.speed=0; p.vlat=0; advance(p,0); camSnap=true; updateCamera(1/60); camera.updateMatrixWorld(); },
