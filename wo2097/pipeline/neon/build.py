@@ -24,6 +24,7 @@ def clear_at(t): return CLR[int(round((t%1.0)*SEG))%SEG]
 HWA=np.array(D['hw'],np.float64) if 'hw' in D else np.full(SEG,HW)
 def hw_at(t): x=(t%1.0)*SEG; i=int(x)%SEG; k=x-int(x); return HWA[i]*(1-k)+HWA[(i+1)%SEG]*k
 GAPS=D.get('gaps',[])
+START_T=D.get('start',{}).get('m',0.0)/L   # the start/finish line and the gantry: mid Guldbron since 2026-10-02 (FEEL.startM)
 def in_gap(t,margin=0.0):   # THE JUMP: no deck, barrier, pylon or pad between the lip and the landing
     t=t%1.0; return any(a-margin<=t<=b+margin for a,b in GAPS)
 BAR_H, SLAB = 1.7, 0.9
@@ -175,13 +176,13 @@ def sign(M,T,w,h,y,z,front,back):
         x0,x1=-w/2,w/2
         if not flip: M.quad(T((x0,y-h/2,zz)),T((x1,y-h/2,zz)),T((x1,y+h/2,zz)),T((x0,y+h/2,zz)),mm)
         else: M.quad(T((x1,y-h/2,zz)),T((x0,y-h/2,zz)),T((x0,y+h/2,zz)),T((x1,y+h/2,zz)),mm)
-p,r,u,fw,_=at(0.0); T=local(p,r,u,fw); M=MB(); W2=HW+3.2
+p,r,u,fw,_=at(START_T); T=local(p,r,u,fw); M=MB(); W2=HW+3.2
 PART='post'
 for sx in (-1,1):
     M.box(T,sx*W2,8,0,1.6,16,1.6,m_metal); M.box(T,sx*W2,8,0.85,0.5,14,0.5,m_neonY); M.box(T,sx*W2,2.2,0,1.7,1.4,1.7,m_haz)
 PART='banner'; M.box(T,0,14.2,0,W2*2+2,3.4,2.2,m_metal); sign(M,T,W2*2+1.6,3.0,14.2,1.18,'gantry.jpg','gantry.jpg')
 for i in range(5): M.box(T,(i-2)*2.2,11.8,1.25,1.1,1.1,0.4,mat(f'light_{i}',col=(0.02,0,0),emit_col=(0.3,0.0,0.0),emit=1.0))
-setobs.append(M.build('gantry',SET)); META={'gantry':dict(t=0.0)}
+setobs.append(M.build('gantry',SET)); META={'gantry':dict(t=START_T)}
 def arch_free(t):   # both posts clear: nothing from the tiles above the slab bottom where they stand
     c=clear_at(t); return all(np.isnan(v) or v< -1.2 for v in c[:2])
 ARCHES=[dict(n=A['n'],t=A['t'],b=A['b'],d=A['d']) for A in D['arches']]
@@ -193,7 +194,7 @@ for k in range(8):   # sponsor arches around the lap, away from the landmarks an
 # caught is fixed here: an arch narrows to the track (posts right outside the barriers) or moves along the lap (dm, m);
 # a billboard moves along the lap or changes side. Re-run the probe after any change to the track or the layout.
 ARCH_FIX={'SKEPPSBRON':dict(narrow=True,dm=-24), 'SPONSOR_6':dict(narrow=True)}
-BOARD_FIX={19:dict(dm=40), 23:dict(side=-1,dm=20), 31:dict(dm=70)}   # by billboard number i (t=(i+0.5)/nb)
+BOARD_FIX={0:dict(dm=30), 19:dict(dm=40), 23:dict(side=-1,dm=20), 31:dict(dm=70)}   # by billboard number i (t=(i+0.5)/nb)
 placed=0
 for A in ARCHES:
     if A['d']>260: log('arch skipped (landmark too far from the lap)',A['n'],round(A['d'])); continue
@@ -218,7 +219,7 @@ BOARD_AIM_M=200   # how far up the track each billboard looks for the racer (m)
 nb=int(L/300); M=MB(); boards=0; slots=[]
 for i in range(nb):
     t=(i+0.5)/nb
-    if t<0.012 or t>0.988 or in_gap(t,0.004): continue
+    if t<0.012 or t>0.988 or in_gap(t,0.004): continue   # the ad layout is fixed to the loop, not the line (IKÖA, board 0, moves 30 m on: framed by the gantry from the grid)
     fx=BOARD_FIX.get(i,{}); t=(t+fx.get('dm',0)/L)%1.0
     c=clear_at(t); free={-1:c[2],1:c[3]}; pref=fx.get('side',1 if i%2 else -1); sd=None
     for s_ in ((pref,) if 'side' in fx else (pref,-pref)):

@@ -999,6 +999,9 @@ function gauss(a,sig){ const n=a.length, r=Math.ceil(sig*3), k=[]; let sum=0;
 // race speed the craft goes light over them (the airtime is visual: see AIR). Prototype and plots: wo2097/pipeline/feel/.
 // Metres are along the survey (the racing line from design_track.py), start at Slussen.
 const FEEL={ on:true, slope:0.19, closeM:16, buffer:1.5, smoothM:10, finalM:14,
+  // THE START (Kim 2026-10-02): the grid, the line and the gantry stand mid Guldbron (Slussbron in OSM), 140 m into the
+  // loop, so IKÖA reads from the grid. The loop and its length are unchanged; startT() is where a lap begins and ends.
+  startM:140, gridM:[70,15],   // pads keep clear from 70 m behind the line to 15 m past it
   drops:[ ['SLUSSEN · STRÖMMEN',250,1000], ['NYBROVIKEN',1440,1830], ['NORRMALM',4380,4680], ['KLARA SJÖ',5340,5700],
           ['NORR MÄLARSTRAND',7340,7560], ['SÖDER',9150,9700] ],
   // wide and quiet (no pads, 10.5 m half width wherever the tiles leave room at +-11.5 m) before the big moments:
@@ -1112,14 +1115,15 @@ function feelLayout(S,R,SEG){
     for(let i=i0;i<=i1;i++) if(R.h[i%NS]<R.h[lo%NS]) lo=i;
     let cr=lo; for(let i=lo;i>=lo-Math.round(420/ds);i--) if(R.h[(i+NS)%NS]>R.h[(cr+NS)%NS]) cr=i;
     return { n, t0:toT(a), t1:toT(b), crest:toT(cr*ds), low:toT(lo*ds), drop:+(R.h[(cr+NS)%NS]-R.h[lo%NS]).toFixed(1) }; });
-  const chain=[]; for(const d of drops){ const nearStart=d.crest*TRACK_LEN<200||(1-d.crest)*TRACK_LEN<200;   // Slussen: the launch is the lead-in, the grid keeps clear
+  const chain=[]; for(const d of drops){ const dc=((d.crest-startT())%1+1)%1, nearStart=dc*TRACK_LEN<200||(1-dc)*TRACK_LEN<200;   // the launch is the lead-in, the grid keeps clear
     if(!nearStart) for(let k=F.chain;k>=1;k--) chain.push({t:d.crest-toT(k*F.chainGapM-12),lat:0});
     chain.push({t:d.crest+(d.low-d.crest)*0.4,lat:0}); chain.push({t:d.crest+(d.low-d.crest)*0.75,lat:0}); }
   if(F.jump) for(let k=4;k>=1;k--) chain.push({t:toT(F.jump.lipM-k*F.chainGapM),lat:0});   // four pads fire you off the lip
   const quiet=t=>F.wide.some(([a,b])=>t>=toT(a)&&t<=toT(b))||(F.jump&&t>=toT(F.jump.lipM-8)&&t<=toT(F.jump.landM+40));
   const even=Array.from({length:135},(_,i)=>({ t:(i+0.55)/135, lat:[-3.5,0,3.5][i%3] }))
     .filter(p=>!quiet(p.t)&&!chain.some(c=>Math.abs(c.t-p.t)*TRACK_LEN<55));
-  const pads=[...even,...chain].map(p=>({t:((p.t%1)+1)%1,lat:p.lat})).filter(p=>!gaps.some(([a,b])=>p.t>=a-0.001&&p.t<=b+0.004)).sort((a,b)=>a.t-b.t);
+  const onGrid=t=>{ const d=((t-startT())%1+1)%1*TRACK_LEN; return d>TRACK_LEN-F.gridM[0]||d<F.gridM[1]; };   // no boost under a grid slot
+  const pads=[...even,...chain].map(p=>({t:((p.t%1)+1)%1,lat:p.lat})).filter(p=>!gaps.some(([a,b])=>p.t>=a-0.001&&p.t<=b+0.004)&&!onGrid(p.t)).sort((a,b)=>a.t-b.t);
   BANK=saveB; HWA=saveW;
   return { bank, hw, gaps, drops, pads }; }
 function publishTrack(S){
@@ -1138,7 +1142,7 @@ function publishTrack(S){
   window.__dump={ cp:CP.map(v=>[+v.x.toFixed(3),+v.y.toFixed(3),+v.z.toFixed(3)]), frames, clear, trackLen:TRACK_LEN, halfW:HALF_W,
     pads:PADS.map(p=>[p.t,p.lat]), wpads:WPADS.map(p=>[offGap(p.t,typeof FL!=='undefined'&&FL?FL.gaps:GAPS),p.lat]),
     arches:ARCH_AT.map(a=>({...a, ...nearestT(a.lat,a.lon)})), snapped:S.top.filter(v=>v!=null).length, n:N,
-    profile:R.stats, survey:S,
+    profile:R.stats, survey:S, start:{ m:FEEL.startM },
     ...(FL?{ bank:FL.bank.map(v=>+v.toFixed(4)), hw:[...FL.hw].map(v=>+v.toFixed(2)), gaps:FL.gaps, drops:FL.drops, jump:FEEL.jumpStats||null }:{}) };
   document.getElementById('loadtxt').textContent='dump klar · '+JSON.stringify(R.stats);
 }
@@ -1376,7 +1380,7 @@ const TOTAL_LAPS=1;
 function makeShip(i){ const k=teamOrder()[i];   // slot i on the grid, team k: the player's choice takes slot 0
   return { id:k, slot:i, ph:physOf(STATS[k]), weap:!!STATS[k].weap,
   name:i===0?'YOU':(SHIP_NAMES[k]==='YOU'?'SENTINEL':SHIP_NAMES[k]), team:TEAMS[k].team, isPlayer:i===0, color:SHIP_COLS[k], mesh:buildCraft(k), trails:[makeTrail(SHIP_COLS[k]),makeTrail(SHIP_COLS[k])], brakeFlap:0, hitT:0,
-  t:1-((i+1)*9)/TRACK_LEN, lat:(i%2===0?-1:1)*(2+(i>>1)*1.8),
+  t:1+startT()-((i+1)*9)/TRACK_LEN, lat:(i%2===0?-1:1)*(2+(i>>1)*1.8),
   speed:0, vlat:0, lap:1, crossedStart:false, done:false, finishTime:0,
   boost:0, yaw:0, roll:0, aiMax:60+i*1.2+((i*37)%3), aiPhase:i*2.3,
   skill:[1.0,1.2,0.85,1.1,0.75,0.95][i], frame:mkFrame(),
@@ -1922,6 +1926,7 @@ function stepMissiles(dt){ for(let i=missiles.length-1;i>=0;i--){ const m=missil
     if(hit){ m.tgt.speed*=m.tgt.ph?m.tgt.ph.hitKeep+0.1:0.35; m.tgt.hitT=1.2; sfxAt('hit',m.tgt.mesh.position); burstAt(m.tgt.mesh.position); if(m.tgt.mesh.position.distanceTo(camera.position)<200) shake=Math.min(shake+0.5,1.4); hitFlash=0.6; }
     if(hit||m.life<=0){ scene.remove(m.spr); m.spr.material.dispose(); missiles.splice(i,1); } } }
 function shipT(s){ return ((s.t%1)+1)%1; }
+function startT(){ return (FEEL.startM||0)/TRACK_LEN; }   // the start/finish line as track parameter
 // FREE STEERING (hard mode, player only). CURV's sign: + means the outside of the bend is +lat, so with no input the
 // track turning under the craft rotates psi toward +lat at curvature*v. psi_dot = omega + signed*v - align*psi.
 const FS={ align:0.25, assist:0.8*HARD_EASE, auth:1.25, authV:170, abYaw:0.55, abDrag:12, abCap:1.35, cross:0.4 };
@@ -2046,7 +2051,8 @@ function advance(s,dt){
     if(s.isPlayer) dropFX+=(THREE.MathUtils.clamp(-slope*5,0,1)-dropFX)*Math.min(1,dt*4); }
   s.t+=(s.speed+s.boost+(s.gv||0))*(HARD&&s.isPlayer?Math.cos(s.psi||0):1)*dt/TRACK_LEN;
   const now=shipT(s);
-  if(prev>0.9&&now<0.1&&state==='race'){
+  const sT=startT(), rp=((prev-sT)%1+1)%1, rn=((now-sT)%1+1)%1;   // the lap runs from the line mid Guldbron
+  if(rp>0.9&&rn<0.1&&state==='race'){
     if(!s.crossedStart){ s.crossedStart=true; if(s.isPlayer) lapStart=raceTime; }
     else {
       if(s.isPlayer){ const lt=raceTime-lapStart; lapTimes.push(lt); lapStart=raceTime;
@@ -2228,7 +2234,7 @@ function drawMinimap(){
   const pth=()=>{ g.beginPath(); for(let i=0;i<=160;i++){ const p=curve.getPointAt(i/160); const x=p.x*mmScale+mmOX, y=p.z*mmScale+mmOY; i?g.lineTo(x,y):g.moveTo(x,y); } };
   g.lineJoin='round'; pth(); g.strokeStyle='rgba(5,7,11,0.85)'; g.lineWidth=9; g.stroke();
   pth(); g.strokeStyle='rgba(242,246,255,0.9)'; g.lineWidth=3; g.stroke();
-  { const p=curve.getPointAt(0); g.fillStyle=TH.mmStart; g.fillRect(p.x*mmScale+mmOX-5,p.z*mmScale+mmOY-5,10,10); }
+  { const p=curve.getPointAt(startT()); g.fillStyle=TH.mmStart; g.fillRect(p.x*mmScale+mmOX-5,p.z*mmScale+mmOY-5,10,10); }
   for(let i=ships.length-1;i>=0;i--){ const s=ships[i], x=s.mesh.position.x*mmScale+mmOX, y=s.mesh.position.z*mmScale+mmOY;
     const a=Math.atan2(s.frame.fwd.x,s.frame.fwd.z), r=s.isPlayer?8:5.5;
     g.save(); g.translate(x,y); g.rotate(-a+Math.PI); g.beginPath(); g.moveTo(0,-r); g.lineTo(r*0.7,r*0.8); g.lineTo(-r*0.7,r*0.8); g.closePath();
@@ -2301,7 +2307,7 @@ function loop(now){
     // loading: sväva över startområdet så tiles där streamas in snabbt
     // the title: a slow drift over Slussen and the water (it also keeps the start area streaming in)
     const a=loadStartTime?(now-loadStartTime)*0.0002:0;
-    frameAt(0,loadFrame); frameAt(0.015,lookFrame);
+    frameAt(startT(),loadFrame); frameAt((startT()+0.015)%1,lookFrame);
     camera.position.copy(loadFrame.p).addScaledVector(loadFrame.up,100+18*Math.sin(a*1.3))
       .addScaledVector(loadFrame.fwd,-70-30*Math.cos(a*0.8)).addScaledVector(loadFrame.right,Math.sin(a)*60);
     camera.lookAt(lookFrame.p);
