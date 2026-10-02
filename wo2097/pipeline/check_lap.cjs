@@ -9,7 +9,8 @@
 const PW=process.env.PW||'/Users/kimdahlroth/.nvm/versions/node/v25.1.0/lib/node_modules/@playwright/cli/node_modules/playwright';
 const {chromium}=require(PW); const fs=require('fs'); const path=require('path');
 const OUT=process.argv[2]||path.join(__dirname,'check'); fs.mkdirSync(OUT,{recursive:true});
-const URL='http://localhost:'+(process.env.PORT||8820)+'/index.html?check&theme='+(process.env.THEME||'neon')+'&grepp='+(process.env.GREPP||'normal');   // THEME=neon|used, GREPP=normal|hart
+const BANA=process.env.BANA||'';   // BANA=kultur: WIPEOUT KULTURSTOCKHOLM
+const URL='http://localhost:'+(process.env.PORT||8820)+'/index.html?check&theme='+(process.env.THEME||'neon')+'&grepp='+(process.env.GREPP||'normal')+(BANA?'&bana='+BANA:'');   // THEME=neon|used, GREPP=normal|hart
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 async function open(b){ const p=await b.newPage({viewport:{width:1440,height:900}}); const errs=[];
   p.on('pageerror',e=>errs.push(e.message)); p.on('console',m=>{ if(m.type()==='error'&&!/404/.test(m.text())) errs.push(m.text()); });
@@ -22,11 +23,11 @@ async function open(b){ const p=await b.newPage({viewport:{width:1440,height:900
     await p.evaluate(()=>{ __sw.setPaused(true); document.getElementById('msg').style.visibility='hidden'; });
     const len=await p.evaluate(()=>__sw.len()), STEP=8, N=Math.round(len/STEP);
     // where to photograph: the districts (arches in track.json + start) and the three tightest corners
-    const shots=await p.evaluate(async()=>{ const d=await fetch('wo2097/assets/track.json').then(r=>r.json()); const L=__sw.len(), pts=[];
+    const shots=await p.evaluate(async(B)=>{ const d=await fetch('wo2097/assets/'+(B==='kultur'?'kultur/':'')+'track.json').then(r=>r.json()); const L=__sw.len(), pts=[];
       const k=[]; for(let i=0;i<2000;i++) k.push([i/2000,__sw.curvAhead(i/2000,1).m]); k.sort((a,b)=>b[1]-a[1]);
       const worst=[]; for(const [t,m] of k){ if(worst.every(w=>Math.min(Math.abs(w.t-t),1-Math.abs(w.t-t))*L>400)) worst.push({t,n:'corner_R'+Math.round(1/m)+'m'}); if(worst.length===3) break; }
       pts.push({t:0.004,n:'start_slussen'}); for(const a of d.arches) if(a.d<260) pts.push({t:a.t,n:a.n.toLowerCase()});
-      pts.push({t:0.5,n:'mid_lap'}); return pts.concat(worst); });
+      pts.push({t:0.5,n:'mid_lap'}); return pts.concat(worst); },BANA);
     const viol=[], occl=[], inside=[], tops=[]; let worstRel=-1e9, worstAt=null; const t0=Date.now();
     for(let i=0;i<N;i++){ const t=i/N;
       await p.evaluate(t=>__sw.placeAt(t),t);

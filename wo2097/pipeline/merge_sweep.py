@@ -2,7 +2,7 @@
 coarser tiles than the chase camera does at race height, so tree crowns can come out a metre or two taller in the sweep.
     python3 merge_sweep.py <check outdir>      then: node dump_track.cjs rebuild && blender -b --factory-startup -P build.py"""
 import json, sys, os
-A = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'assets')
+A = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'assets', 'kultur' if len(sys.argv) > 2 and sys.argv[2] == 'kultur' else '')   # merge_sweep.py <check outdir> [kultur]
 S = json.load(open(os.path.join(A, 'survey.json'))); tops = json.load(open(os.path.join(sys.argv[1], 'sweep_tops.json')))
 n, ds, raised = S['n'], S['ds'], 0
 for m, y in tops:

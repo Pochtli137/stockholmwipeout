@@ -13,11 +13,11 @@ const IN=process.argv[2], OUT=process.argv[3];
 const P=JSON.parse(fs.readFileSync(IN,'utf8')), L=P.trackLen;
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 // structures: an arch or the gantry is one object, the billboards share one mesh and are told apart by their part tag
-const S={}; for(const b of P.boxes){ const k=b.obj==='billboards'?b.part.split(':')[0]:b.obj, part=b.obj==='billboards'?b.part.split(':')[1]:b.part;
+const S={}; for(const b of P.boxes){ const k=b.obj==='billboards'?b.part.split(':')[0]:b.obj, part=b.obj==='billboards'?b.part.split(':')[1]:(b.part.includes(':')?b.part.split(':')[1]:b.part);
   (S[k]=S[k]||{key:k,boxes:[],meta:P.meta[k]||{}}).boxes.push({part,c:b.c}); }
 (async()=>{ const br=await chromium.launch({channel:'chrome',args:['--use-angle=metal','--enable-gpu']});
   const p=await br.newPage({viewport:{width:1280,height:800}}); const errs=[]; p.on('pageerror',e=>errs.push(e.message));
-  await p.goto('http://localhost:'+(process.env.PORT||8820)+'/index.html?check&grepp=normal');
+  await p.goto('http://localhost:'+(process.env.PORT||8820)+'/index.html?check&grepp=normal'+(process.env.BANA?'&bana='+process.env.BANA:''));   // BANA=kultur
   for(let i=0;i<240;i++){ if(await p.evaluate(()=>!!window.__sw&&__sw.state()!=='loading')) break; await sleep(500); }
   await p.evaluate(()=>{ __sw.setPaused(true); document.getElementById('msg').style.visibility='hidden'; });
   const out=[];

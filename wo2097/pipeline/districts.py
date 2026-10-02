@@ -4,7 +4,9 @@ the calibrated centreline from assets/track.json tested against the polygons, an
 to track.json as `districts: [{t, name}]` (t = lap fraction where the racing line enters it). Pure python, no deps.
     python3 districts.py            (osm/districts_overpass.json is fetched once and never again)"""
 import json, os, math, urllib.request, urllib.parse
-H=os.path.dirname(os.path.abspath(__file__)); TJ=os.path.join(H,'..','assets','track.json'); CACHE=os.path.join(H,'osm','districts_overpass.json')
+import sys
+BANA=sys.argv[1] if len(sys.argv)>1 else 'stockholm'   # 'kultur': WIPEOUT KULTURSTOCKHOLM (its own track.json and Overpass cache)
+H=os.path.dirname(os.path.abspath(__file__)); TJ=os.path.join(H,'..','assets','kultur' if BANA=='kultur' else '','track.json'); CACHE=os.path.join(H,'osm','districts_overpass_kultur.json' if BANA=='kultur' else 'districts_overpass.json')
 LAT0,LON0=59.328,18.06; M_LAT=111320; M_LON=111320*math.cos(math.radians(LAT0))
 D=json.load(open(TJ)); F=D['frames']; N=len(F)
 ll=[(LAT0+f[2]/M_LAT, LON0-f[0]/M_LON) for f in F]

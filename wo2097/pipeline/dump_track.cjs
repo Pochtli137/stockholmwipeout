@@ -5,10 +5,10 @@
 // The racing line comes from design_track.py (route_smooth.json); the profile rules are PROFILE in index.html.
 const PW=process.env.PW||'/Users/kimdahlroth/.nvm/versions/node/v25.1.0/lib/node_modules/@playwright/cli/node_modules/playwright';
 const {chromium}=require(PW); const fs=require('fs'); const path=require('path');
-const MODE=process.argv[2]==='rebuild'?'rebuild':'dump', A=path.join(__dirname,'..','assets');
+const MODE=process.argv[2]==='rebuild'?'rebuild':'dump', BANA=process.env.BANA||'', A=path.join(__dirname,'..','assets',BANA==='kultur'?'kultur':'');   // BANA=kultur: WIPEOUT KULTURSTOCKHOLM
 (async()=>{ const b=await chromium.launch({channel:'chrome',args:['--use-angle=metal','--enable-gpu']}); const p=await b.newPage({viewport:{width:1280,height:800}});
   const errs=[]; p.on('pageerror',e=>errs.push(e.message)); p.on('console',m=>{ if(m.type()==='error') errs.push(m.text()); });
-  await p.goto('http://localhost:'+(process.env.PORT||8820)+'/index.html?'+MODE);
+  await p.goto('http://localhost:'+(process.env.PORT||8820)+'/index.html?'+MODE+(BANA?'&bana='+BANA:''));
   let last='';
   for(let i=0;i<3600;i++){ const st=await p.evaluate(()=>({done:!!window.__dump, txt:document.getElementById('loadtxt').textContent}));
     if(st.txt!==last&&i%15===0){ console.log(st.txt); last=st.txt; } if(st.done) break; await p.waitForTimeout(1000); }

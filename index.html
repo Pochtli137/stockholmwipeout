@@ -265,6 +265,65 @@
   #loadbar { width:100%; height:10px; margin:16px 0 8px; background:rgba(255,255,255,.06);
     clip-path:polygon(0 0,100% 0,calc(100% - 10px) 100%,0 100%); }
   #loadfill { height:100%; width:0%; background:repeating-linear-gradient(-55deg,var(--y) 0 10px,#e0c800 10px 20px); }
+  /* ===== WIPEOUT KULTURSTOCKHOLM (?bana=kultur): no neon. Cream paper and linen, serif display type, gold leaf, ink.
+     Fonts are OFL and embedded (wo2097/fonts): Playfair Display, DM Serif Display, Inter. Stockholm never gets this class. ===== */
+  @font-face { font-family:'KSerif'; src:url('wo2097/fonts/PlayfairDisplay.ttf') format('truetype'); font-weight:400 900; font-display:block; }
+  @font-face { font-family:'KSerif'; src:url('wo2097/fonts/PlayfairDisplay-Italic.ttf') format('truetype'); font-weight:400 900; font-style:italic; font-display:block; }
+  @font-face { font-family:'KDisplay'; src:url('wo2097/fonts/DMSerifDisplay-Regular.ttf') format('truetype'); font-display:block; }
+  @font-face { font-family:'KSans'; src:url('wo2097/fonts/Inter.ttf') format('truetype'); font-weight:100 900; font-display:block; }
+  body.bana-kultur { --y:#b8901c; --c:#2f5d8a; --m:#8e2a36; --k:#1d1a16; --w:#1d1a16; --g:#4f7f4a; --r:#b3261e; font-family:'KSans',sans-serif; }
+  body.bana-kultur .plate { background:linear-gradient(135deg,rgba(250,247,240,.93),rgba(238,231,216,.88)); border-left:4px solid var(--y);
+    box-shadow:0 3px 16px rgba(29,26,22,.22), 0 0 0 1px rgba(29,26,22,.10) inset; }
+  body.bana-kultur .orb { font-family:'KSerif',Georgia,serif; font-weight:900; letter-spacing:.01em; }
+  body.bana-kultur .lbl { font:600 10px/1 'KSans',sans-serif; letter-spacing:.3em; color:#6b6252; }
+  body.bana-kultur .kata { font:italic 500 12px/1 'KSerif',serif; letter-spacing:.06em; color:var(--m); }
+  body.bana-kultur #lapbox .of, body.bana-kultur #posbox .of { color:#8c826f; }
+  body.bana-kultur #lapbox .row { font-family:'KSerif',serif; font-weight:800; }
+  body.bana-kultur #lapbox .row span.t { color:var(--c); } body.bana-kultur #lapbox .row span.b { color:var(--y); }
+  body.bana-kultur #posbox { border-right:4px solid var(--m); } body.bana-kultur #posbox .big, body.bana-kultur #posbox .ord { color:var(--m); text-shadow:none; }
+  body.bana-kultur #speed .num { color:var(--k); text-shadow:none; font-style:italic; } body.bana-kultur #speed .unit { color:var(--y); font-family:'KSans',sans-serif; }
+  body.bana-kultur #weapon { border-left:4px solid var(--m); } body.bana-kultur #wslot { background:rgba(255,255,255,.6); border-color:rgba(29,26,22,.25); }
+  body.bana-kultur #wname { font-family:'KSerif',serif; font-weight:900; font-style:italic; color:var(--k); } body.bana-kultur #wname.empty { color:#a39a88; }
+  body.bana-kultur #whint, body.bana-kultur #help { color:#5d5546; } body.bana-kultur #help { text-shadow:0 1px 2px rgba(255,255,255,.7); }
+  body.bana-kultur #msg { color:#fbf7ee; font-family:'KSerif',serif; font-style:italic; text-shadow:0 2px 0 rgba(29,26,22,.6), 0 0 28px rgba(29,26,22,.45); }
+  body.bana-kultur #msg.count { color:#f4d77c; text-shadow:0 3px 0 rgba(29,26,22,.65), 0 0 34px rgba(29,26,22,.45); }
+  body.bana-kultur #sub { color:#fbf7ee; font-family:'KSans',sans-serif; text-shadow:0 1px 3px rgba(29,26,22,.85); }
+  body.bana-kultur #sub .kata { color:#f4d77c; text-shadow:0 1px 3px rgba(29,26,22,.85); }
+  body.bana-kultur #district .en { color:#f4d77c; font-family:'KSans',sans-serif; text-shadow:0 1px 3px rgba(29,26,22,.85); }
+  body.bana-kultur #district .nm { font-family:'KSerif',serif; font-style:italic; font-weight:900; color:#fbf7ee; background:none; -webkit-background-clip:border-box; background-clip:border-box;
+    text-shadow:0 3px 0 rgba(29,26,22,.6), 0 0 30px rgba(29,26,22,.5); }
+  body.bana-kultur #district .rn { font:italic 600 18px 'KSerif',serif; color:#fbf7ee; letter-spacing:.12em; text-shadow:0 1px 3px rgba(29,26,22,.9); }
+  body.bana-kultur #results, body.bana-kultur #keyveil, body.bana-kultur #loadveil { background:repeating-linear-gradient(90deg,rgba(255,255,255,.03) 0 2px,transparent 2px 6px),rgba(29,24,18,.62); }
+  body.bana-kultur .panel { background:rgba(250,246,238,.97); border-left:6px solid var(--y); }
+  body.bana-kultur .panel h1 { font-family:'KSerif',serif; font-weight:900; color:var(--k); }
+  body.bana-kultur .panel .kata { color:var(--m); } body.bana-kultur .panel p, body.bana-kultur .panel ol { color:#4a4236; }
+  body.bana-kultur #results table { font-family:'KSerif',serif; font-weight:800; color:var(--k); } body.bana-kultur #results td { border-bottom:1px solid rgba(29,26,22,.12); }
+  body.bana-kultur #results td.team { color:#7a705e; font-family:'KSans',sans-serif; } body.bana-kultur #results .you td { color:var(--m); }
+  body.bana-kultur #results .again { color:var(--c); font-family:'KSans',sans-serif; }
+  .unlock { margin-top:12px; font:800 13px "Rajdhani",sans-serif; letter-spacing:.3em; color:var(--y); cursor:pointer; user-select:none; }
+  .unlock:hover { filter:brightness(1.25); } .unlock b { color:var(--w); }
+  body.bana-kultur .unlock { font-family:'KSans',sans-serif; font-weight:700; letter-spacing:.24em; color:var(--m); } body.bana-kultur .unlock b { color:var(--k); }
+  body.bana-kultur #select .top, body.bana-kultur #select .hint { color:#6b6252; } body.bana-kultur #select .top b { color:var(--k); font-family:'KSerif',serif; }
+  body.bana-kultur #selNum { font-family:'KSerif',serif; } body.bana-kultur #selTeam { color:var(--k); font-family:'KSerif',serif; font-style:italic; }
+  body.bana-kultur #selSlogan { color:var(--m); font-family:'KSerif',serif; font-style:italic; font-weight:700; letter-spacing:.04em; }
+  body.bana-kultur #selSpec { color:#6b6252; } body.bana-kultur .stat span { color:#3d362c; } body.bana-kultur .bar i { background:rgba(29,26,22,.10); }
+  body.bana-kultur .bar i.on { background:var(--y); } body.bana-kultur #selDots i { background:rgba(29,26,22,.18); } body.bana-kultur #selDots i.on { background:var(--y); }
+  body.bana-kultur #select .nav button, body.bana-kultur #selGo { background:var(--k); color:#fbf7ee; font-family:'KSerif',serif; font-style:italic; }
+  body.bana-kultur #select .nav button.arrow { background:rgba(29,26,22,.12); color:var(--k); }
+  body.bana-kultur #select::before { background:linear-gradient(90deg,rgba(238,234,226,.6),transparent 11%,transparent 89%,rgba(238,234,226,.6)); }
+  body.bana-kultur .selNb { color:rgba(29,26,22,.7); } body.bana-kultur .selNb b { color:var(--y); text-shadow:none; }
+  body.bana-kultur #loadveil.title { background:radial-gradient(ellipse at 50% 42%,rgba(29,24,18,.05),rgba(29,24,18,.5) 72%),linear-gradient(180deg,rgba(29,24,18,.35),transparent 30%,transparent 70%,rgba(29,24,18,.6)) !important; }
+  body.bana-kultur .tlogo .t1 { font:600 clamp(16px,2.2vw,32px) 'KSans',sans-serif; letter-spacing:.6em; color:#fbf7ee; text-shadow:0 1px 4px rgba(29,26,22,.7); padding-left:.6em; }
+  body.bana-kultur .tlogo .t2 { font:italic 900 clamp(40px,8.2vw,132px)/.95 'KSerif',serif; letter-spacing:.0em; color:#fbf7ee;
+    text-shadow:0 3px 0 rgba(29,26,22,.55),0 0 40px rgba(29,26,22,.45),5px 5px 0 rgba(184,144,28,.85); }
+  body.bana-kultur .tlogo .t3 { font:900 clamp(24px,3.6vw,56px) 'KSerif',serif; letter-spacing:.3em; color:#f4d77c; text-shadow:0 2px 6px rgba(29,26,22,.7); }
+  body.bana-kultur .tlogo .trune { font:italic 600 clamp(14px,1.5vw,22px) 'KSerif',serif; letter-spacing:.14em; color:#fbf7ee; text-shadow:0 1px 4px rgba(29,26,22,.8); }
+  body.bana-kultur .tlogo .tsub { color:#efe6d2; text-shadow:0 1px 3px rgba(29,26,22,.8); }
+  body.bana-kultur #tpress { color:#fbf7ee; font-family:'KSerif',serif; font-style:italic; text-shadow:0 1px 4px rgba(29,26,22,.8); }
+  body.bana-kultur #tpress.ready { color:#f4d77c; } body.bana-kultur .tcred { color:rgba(251,247,238,.75); }
+  body.bana-kultur #sweep { background:linear-gradient(90deg,transparent,rgba(244,215,124,.9) 18%,#f6f1e6 34%,#f6f1e6 66%,rgba(142,42,54,.9) 82%,transparent); }
+  body.bana-kultur #district .sb { font:700 clamp(11px,1.2vw,16px) 'KSans',sans-serif; letter-spacing:.32em; color:#fbf7ee; margin-top:10px; text-shadow:0 1px 3px rgba(29,26,22,.9); }
+  #district .sb:empty { display:none; }
   #loadtxt { font:600 13px "Rajdhani",sans-serif; letter-spacing:.2em; color:#9ec4e8; }
 </style>
 </head>
@@ -291,7 +350,7 @@
 </div>
 <canvas id="minimap" width="240" height="240"></canvas>
 <div id="attrib"></div>
-<div id="district"><div class="plate2"><div class="en">ENTERING</div><div class="nm"></div><div class="rn"></div></div></div>
+<div id="district"><div class="plate2"><div class="en">ENTERING</div><div class="nm"></div><div class="rn"></div><div class="sb"></div></div></div>
 <div id="rotate"><div><div class="ph"></div>VÄND TELEFONEN<small>STOCKHOLM WIPEOUT KÖRS LIGGANDE</small></div></div>
 <div id="touch">
   <button class="tb" id="tbThrust">GAS</button><button class="tb" id="tbBrake">BRAKE</button>
@@ -383,6 +442,14 @@ function hudLayout(){ const W=innerWidth, H=innerHeight, por=H>W; document.body.
   document.body.classList.toggle('shorthelp',MOBILE||W<1150||H<720); }
 addEventListener('resize',hudLayout); addEventListener('orientationchange',()=>setTimeout(hudLayout,200)); hudLayout();
 const THEME='neon', USED=false; document.body.classList.add('theme-neon');
+// WHICH TRACK (2026-10-02): ?bana=kultur is WIPEOUT KULTURSTOCKHOLM, the second track over the same Google Stockholm. Stockholm
+// is the default and keeps every value it had: each per-track switch below reads KULTUR and falls back to the old literal.
+// Kulturstockholm's assets live in wo2097/assets/kultur/ and all its words in wo2097/assets/kultur/copy.json.
+const BANA=(new URLSearchParams(location.search).get('bana')||'').toLowerCase()==='kultur'?'kultur':'stockholm', KULTUR=BANA==='kultur';
+const ADIR=KULTUR?'wo2097/assets/kultur/':'wo2097/assets/';                         // track.json, survey.json, route_smooth.json
+const GLB=KULTUR?'wo2097/assets/kultur':`wo2097/assets/${THEME}`;                    // track.glb, craft_<i>.glb
+const COPY=KULTUR?await fetch('wo2097/assets/kultur/copy.json').then(r=>r.json()):null;
+if(KULTUR) document.body.classList.add('bana-kultur');
 // everything that differs between the two looks; the tiles, the track line and the physics are shared
 const TH={
   bloom:[0.6,0.3,1.4], sunCol:0xffc58a, sunI:2.4, hemi:[0xb7a4d8,0x3a2630,0.7], engineLight:1.0, countK:4, grade:false,
@@ -390,6 +457,16 @@ const TH={
   shade:'mix(vec3(0.30,0.20,0.36),vec3(0.18,0.14,0.30),smoothstep(0.0,0.6,h))', flare:'g==1?vec3(1.0,0.35,0.65):g==3?vec3(0.2,0.9,1.0):vec3(1.0,0.72,0.35)', flareK:'0.10',
   fx:['255,46,154',0.25,'255,230,0',0.22], shield:'0,225,255', mmStart:'#ffe600', spd:['#00e1ff','#ffe600','#ff2e9a'], boostCol:'#ffe600', en:['#ffb300','#35ff8b'],
   hangar:{ bg:0x05070b, fog:[40,90], key:[0xfff1e0,2.6], rimM:[0xff2e9a,2.2], rimC:[0x00e1ff,1.8], hemi:[0x8aa0c8,0x0a0c12,0.6], grid:[60,0x2a3a4c,0x121a24], floor:[0x0b0f16,0.6,0.35], disc:[0x121821,0.8,0.25] } };
+// KULTURSTOCKHOLM: a summer afternoon, the sun high in the south-west; blue sky, white cumulus with soft blue-grey bases, a light
+// haze. Bloom only for gold and glass (the ads stay under it), a gallery-white hangar. The grade and the glitter on the water are
+// KulturPass below. Fields that only Kulturstockholm has: sunAz/sunEl, fog, cloudLit, sunGlow.
+if(KULTUR) Object.assign(TH,{ bloom:[0.32,0.35,1.7], sunCol:0xfff2dc, sunI:3.1, hemi:[0xc4dcff,0x7a705c,1.05], engineLight:0.75, countK:4,
+  sky:{ zenith:0x2a64c4, upper:0x5a93de, mid:0x8dbbe8, horizSun:0xf1ead8, horizAway:0xc9dcee, sun:0xfff6e0, fogSun:0xe4e3dc, fogAway:0xc3d6e8 },
+  shade:'mix(vec3(0.74,0.79,0.88),vec3(0.62,0.69,0.82),smoothstep(0.0,0.6,h))', flare:'vec3(1.0,0.92,0.75)', flareK:'0.05',
+  cloudLit:'mix(vec3(1.0,0.98,0.94),vec3(1.04,1.04,1.02),smoothstep(0.1,0.5,h))', sunGlow:'0.30*pow(max(mu,0.0),8.0)+0.25*pow(max(mu,0.0),48.0)',
+  sunAz:232, sunEl:42, fog:[2600,17000],
+  fx:['244,215,124',0.22,'251,247,238',0.20], shield:'244,215,124', mmStart:'#b8901c', spd:['#2f5d8a','#b8901c','#8e2a36'], boostCol:'#b8901c', en:['#c07a1a','#4f7f4a'],
+  hangar:{ bg:0xeeeae2, fog:[70,160], key:[0xffffff,2.4], rimM:[0xffe2b0,1.1], rimC:[0xdce8ff,0.9], hemi:[0xffffff,0xc9c2b3,1.15], grid:[60,0xd9d2c3,0xe5e0d5], floor:[0xf3f0e9,0.0,0.65], disc:[0xfbfaf7,0.0,0.5] } });
 
 /* ============================== API KEY ============================== */
 if (location.search.includes('reset')) { localStorage.removeItem('ionKey'); history.replaceState(null,'',location.pathname); }
@@ -400,8 +477,8 @@ const DUMP = location.search.includes('dump');
 // ?rebuild: no tiles; recompute the height profile from the saved survey (wo2097/assets/survey.json) and publish it
 const REBUILD = location.search.includes('rebuild');
 // the racing line (wo2097/pipeline/design_track.py): the OSM route smoothed to a 120 m minimum radius
-const SMOOTH = (DUMP||REBUILD) ? await fetch('wo2097/assets/route_smooth.json').then(r=>r.ok?r.json():null).catch(()=>null) : null;
-const TRACK_JSON = (DUMP||DEMO||REBUILD) ? null : await fetch('wo2097/assets/track.json').then(r=>r.ok?r.json():null).catch(()=>null);
+const SMOOTH = (DUMP||REBUILD) ? await fetch(ADIR+'route_smooth.json').then(r=>r.ok?r.json():null).catch(()=>null) : null;
+const TRACK_JSON = (DUMP||DEMO||REBUILD) ? null : await fetch(ADIR+'track.json').then(r=>r.ok?r.json():null).catch(()=>null);
 // token: inbäddad via config.js (genereras från Vercel-env) → annars localStorage-prompt
 const API_KEY = (DEMO||REBUILD) ? '' : (window.ION_TOKEN || localStorage.getItem('ionKey') || '');
 const keyveil=document.getElementById('keyveil'), loadveil=document.getElementById('loadveil');
@@ -450,7 +527,7 @@ const NEON=(hex,k=2.6)=>new THREE.Color(hex).multiplyScalar(k);
 // colour from the same sky: gold towards the sun, lilac away from it, so the far city fades into the horizon behind it.
 // A post pass adds god rays through the gaps (a depth-masked radial march) and an occlusion-aware lens flare.
 // The tiles are not regraded: only the fog touches them.
-const SUN_AZ=THREE.MathUtils.degToRad(292), SUN_EL=THREE.MathUtils.degToRad(5.5);   // WNW, 5.5 deg: sunset over Mälaren
+const SUN_AZ=THREE.MathUtils.degToRad(TH.sunAz??292), SUN_EL=THREE.MathUtils.degToRad(TH.sunEl??5.5);   // WNW, 5.5 deg: sunset over Mälaren
 // azimuth from north, clockwise; east is -X in this frame, so the west-north-west sun sits at +X, slightly +Z
 const SUN_DIR=new THREE.Vector3(-Math.sin(SUN_AZ)*Math.cos(SUN_EL), Math.sin(SUN_EL), Math.cos(SUN_AZ)*Math.cos(SUN_EL)).normalize();
 // USED UNIVERSE: a dusty Stockholm evening. Slate above, a brown-amber band where the dust holds the last light.
@@ -476,7 +553,7 @@ THREE.ShaderChunk.fog_fragment=`
   #endif
   gl_FragColor.rgb=mix(gl_FragColor.rgb,fCol,fogFactor);
 #endif`;
-scene.fog=new THREE.Fog(SKY.fogAway.getHex(),1500,10500);
+scene.fog=new THREE.Fog(SKY.fogAway.getHex(),...(TH.fog||[1500,10500]));
 scene.background=null;
 
 const skyMat=new THREE.ShaderMaterial({ depthWrite:false, depthTest:false, side:THREE.BackSide, toneMapped:false, fog:false,
@@ -506,12 +583,12 @@ const skyMat=new THREE.ShaderMaterial({ depthWrite:false, depthTest:false, side:
       vec3 col=mix(horiz,uMid,smoothstep(0.0,0.10,e));
       col=mix(col,uUpper,smoothstep(0.08,0.30,e)); col=mix(col,uZenith,smoothstep(0.28,0.85,e));
       col=mix(col,horiz*0.85,smoothstep(0.0,-0.25,h));                   // under the horizon: haze (hidden by the city)
-      col+=uHSun*(0.55*pow(max(mu,0.0),6.0)+0.35*pow(max(mu,0.0),32.0)); // the glow the sun spreads over the sky
+      col+=uHSun*(${TH.sunGlow||'0.55*pow(max(mu,0.0),6.0)+0.35*pow(max(mu,0.0),32.0)'}); // the glow the sun spreads over the sky
       // clouds: a sunlit cumulus deck and high cirrus streaks
       vec4 c1=layer(d,1800.0,0.00055,vec2(0.012,0.004),0.52,0.22,vec2(1.0,1.0));
       vec4 c2=layer(d,6200.0,0.00018,vec2(0.004,0.0015),0.56,0.30,vec2(0.35,1.8));
       float horizonFade=smoothstep(0.012,0.14,h);
-      vec3 lit=mix(vec3(1.0,0.70,0.44),vec3(1.0,0.86,0.66),smoothstep(0.1,0.5,h));
+      vec3 lit=${TH.cloudLit||'mix(vec3(1.0,0.70,0.44),vec3(1.0,0.86,0.66),smoothstep(0.1,0.5,h))'};
       vec3 shade=${TH.shade};   // the clouds' undersides: lilac (neon) or grey-brown (used)
       float silver=pow(max(mu,0.0),8.0);
       vec3 cc2=mix(shade*1.3,lit*1.15,c2.y)+silver*vec3(1.2,0.7,0.35)*(1.0-c2.x);
@@ -634,6 +711,37 @@ class GradePass{ constructor(){ this.enabled=true; this.needsSwap=true; this.cle
   setSize(){} render(r,writeBuffer,readBuffer){ gradeMat.uniforms.tDiffuse.value=readBuffer.texture; gradeMat.uniforms.uT.value=(performance.now()/1000)%100;
     r.setRenderTarget(this.renderToScreen?null:writeBuffer); r.render(gradeScene,raysCam); } }
 if(TH.grade) composer.insertPass(new GradePass(),composer.passes.length-1);   // USED only: after the bloom, before the output
+// KULTURSTOCKHOLM's grade: Google's photo city is flat-lit, so a gentle S-curve, a touch of warmth in the highlights and of
+// saturation, and a soft vignette. The water glitters: the depth buffer gives every pixel its world position, and where that
+// sits on the water's surface (the game frame's sea level, Saltsjön and Mälaren within ~1 m) and the pixel is water-dark, small
+// cells twinkle where the sun's reflection would land. The ads (alpha 0.25 in the scene target) are left alone.
+const KPASS=KULTUR?(()=>{ const m=new THREE.ShaderMaterial({ uniforms:{ tDiffuse:{value:null}, tDepth:{value:null}, tMark:{value:null}, uInvProj:{value:new THREE.Matrix4()}, uInvView:{value:new THREE.Matrix4()},
+    uCam:{value:new THREE.Vector3()}, uSun:{value:SUN_DIR.clone()}, uT:{value:0}, uOn:{value:1} }, depthTest:false, depthWrite:false,
+  vertexShader:`varying vec2 vUv; void main(){ vUv=uv; gl_Position=vec4(position.xy,0.0,1.0); }`,
+  fragmentShader:`precision highp float; uniform sampler2D tDiffuse,tDepth,tMark; uniform mat4 uInvProj,uInvView; uniform vec3 uCam,uSun; uniform float uT,uOn; varying vec2 vUv;
+    float h21(vec2 p){ p=fract(p*vec2(123.34,456.21)); p+=dot(p,p+45.32); return fract(p.x*p.y); }
+    void main(){ vec3 c=texture2D(tDiffuse,vUv).rgb;
+      float d=texture2D(tDepth,vUv).x;
+      if(d<0.99999&&uOn>0.5){ vec4 v=uInvProj*vec4(vUv*2.0-1.0,d*2.0-1.0,1.0); v/=v.w; vec3 w=(uInvView*v).xyz;
+        float onWater=1.0-smoothstep(0.6,1.4,abs(w.y+21.3));
+        float l=dot(c,vec3(0.2126,0.7152,0.0722)), blu=step(c.r,c.b+0.03)*(1.0-smoothstep(0.25,0.45,l));
+        float ad=step(0.6,texture2D(tMark,vUv).a);
+        if(onWater*blu*ad>0.01){ vec3 vd=normalize(w-uCam); vec3 rf=reflect(vd,vec3(0.0,1.0,0.0)); float path=pow(max(dot(rf,uSun),0.0),6.0);
+          float dist=length(w-uCam); vec2 cell=floor(w.xz*1.4); float ph=h21(cell); float tw=fract(ph*7.13+uT*(0.7+ph*1.6));
+          float sp=step(0.95,h21(cell+floor(uT*4.0+ph*9.0)))*smoothstep(0.0,0.25,tw)*smoothstep(1.0,0.55,tw)*(1.0-smoothstep(60.0,700.0,dist));
+          c+=vec3(1.0,0.96,0.86)*onWater*blu*(sp*(0.06+1.1*path)+0.12*path); } }   // sparse, and bright only on the sun's path
+      float l=dot(c,vec3(0.2126,0.7152,0.0722));
+      c=mix(vec3(l),c,1.10);                                         // a little more colour
+      c=c*c*(3.0-2.0*c)*0.35+c*0.65;                                 // a gentle S-curve
+      c*=mix(vec3(1.0),vec3(1.04,1.01,0.95),smoothstep(0.45,0.9,l)); // warm highlights
+      vec2 q=vUv-0.5; c*=1.0-0.22*dot(q,q)*1.6;                      // a soft vignette, the ads at the edges stay readable
+      gl_FragColor=vec4(c,1.0); }` });
+  const sc=new THREE.Scene(); sc.add(new THREE.Mesh(new THREE.PlaneGeometry(2,2),m));
+  class KulturPass{ constructor(){ this.enabled=true; this.needsSwap=true; this.clear=false; this.renderToScreen=false; } setSize(){}
+    render(r,wb,rb){ const U=m.uniforms; U.tDiffuse.value=rb.texture; U.tDepth.value=sceneRT.depthTexture; U.tMark.value=sceneRT.texture;
+      U.uInvProj.value.copy(camera.projectionMatrixInverse); U.uInvView.value.copy(camera.matrixWorld); U.uCam.value.copy(camera.position); U.uT.value=(performance.now()/1000)%1000;
+      r.setRenderTarget(this.renderToScreen?null:wb); r.render(sc,raysCam); } }
+  const kp=new KulturPass(); composer.insertPass(kp,composer.passes.length-1); return { pass:kp, mat:m }; })():null;
 resizeComposer();
 const skyTick=(dt)=>{ skyMat.uniforms.uTime.value+=dt; skyDome.position.copy(camera.position); };
 
@@ -1034,7 +1142,16 @@ const FEEL={ on:true, slope:0.19, closeM:16, buffer:1.5, smoothM:10, finalM:14,
   // banking: degrees = min(bankMax, bankK * curvature), faded out on near-straights, smoothed along the lap
   bankMax:20, bankK:3000, bankFloor:5, bankSmoothM:45,
   camBank:0.75, dropFov:8, dropFX:0.3,
-  airAt:[1416,5325,7326], airZoneM:70 };   // the airtime crests (m along the lap): Nybroviken, Klara sjö, Norr Mälarstrand; every other crest holds the deck
+  airAt:[1416,5325,7326], airZoneM:70 };
+// KULTURSTOCKHOLM's rollercoaster (m along its own racing line from Börshuset): drops over Saltsjön, toward Gröna Lund, Nybroviken,
+// Strömmen and Riddarfjärden, no jump, the start line on Stortorget. evenPads/wpads scale the pad rhythm to the 8.3 km lap.
+if(KULTUR) Object.assign(FEEL,{ startM:30, gridM:[70,15],
+  drops:[ ['SALTSJÖN',1350,1950], ['TILL GRÖNA LUND',2550,3000], ['NYBROVIKEN',5050,5300], ['STRÖMMEN',5800,6150], ['RIDDARFJÄRDEN',7450,7900] ],
+  wide:[ [1450,1850], [7500,7850] ], hills:{ stepM:430, halfM:215, amp:[12,9,14,10], dropHill:14, skipM:[[-280,280]] },
+  jump:null, airAt:[620,3580,6450], evenPads:98, wpads:12,   // airtime over the crests: Slussen, Skansen, Sergels torg
+  // PIT LANES (Kim 2026-10-02: "pitstop vid riche"): the outer strip of the deck beside the restaurant, on its side of the line.
+  // Riche (Birger Jarlsgatan 4, by Nybroplan) is everyone's; Den Gyldene Freden (Gamla stan, the Academy's) only DE ADERTON's (team 0).
+  pits:[ { k:'freden', lat:59.32310, lon:18.07379, len:190, only:0 }, { k:'riche', lat:59.33395, lon:18.07445, len:240 } ] });   // the airtime crests (m along the lap): Nybroviken, Klara sjö, Norr Mälarstrand; every other crest holds the deck
 function feelProfile(base,req,n,ds){
   const F=FEEL, inwin=new Uint8Array(n);
   for(const [,a,b] of F.drops) for(let i=Math.max(0,Math.ceil(a/ds));i<=Math.min(n-1,Math.floor(b/ds));i++) inwin[i]=1;
@@ -1134,7 +1251,7 @@ function feelLayout(S,R,SEG){
     chain.push({t:d.crest+(d.low-d.crest)*0.4,lat:0}); chain.push({t:d.crest+(d.low-d.crest)*0.75,lat:0}); }
   if(F.jump) for(let k=4;k>=1;k--) chain.push({t:toT(F.jump.lipM-k*F.chainGapM),lat:0});   // four pads fire you off the lip
   const quiet=t=>F.wide.some(([a,b])=>t>=toT(a)&&t<=toT(b))||(F.jump&&t>=toT(F.jump.lipM-8)&&t<=toT(F.jump.landM+40));
-  const even=Array.from({length:135},(_,i)=>({ t:(i+0.55)/135, lat:[-3.5,0,3.5][i%3] }))
+  const NE=FEEL.evenPads||135, even=Array.from({length:NE},(_,i)=>({ t:(i+0.55)/NE, lat:[-3.5,0,3.5][i%3] }))
     .filter(p=>!quiet(p.t)&&!chain.some(c=>Math.abs(c.t-p.t)*TRACK_LEN<55));
   const onGrid=t=>{ const d=((t-startT())%1+1)%1*TRACK_LEN; return d>TRACK_LEN-F.gridM[0]||d<F.gridM[1]; };   // no boost under a grid slot
   const pads=[...even,...chain].map(p=>({t:((p.t%1)+1)%1,lat:p.lat})).filter(p=>!gaps.some(([a,b])=>p.t>=a-0.001&&p.t<=b+0.004)&&!onGrid(p.t)).sort((a,b)=>a.t-b.t);
@@ -1144,6 +1261,10 @@ function publishTrack(S){
   const R=designProfile(S), N=CP.length, NS=S.n, at=(arr,u)=>{ const x=((u%1)+1)%1*NS, i=Math.floor(x)%NS, j=(i+1)%NS, k=x-Math.floor(x); return arr[i]*(1-k)+arr[j]*k; };
   for(let i=0;i<N;i++) CP[i].y=at(R.h,i/N);
   curve.updateArcLengths(); TRACK_LEN=curve.getLength(); rebuildCurvature();
+  const PITL=[];   // the pit lanes: a window of track where the deck is wide (if the tiles leave room) and quiet
+  if(FEEL.pits){ const f=mkFrame(); for(const P of FEEL.pits){ const n=nearestT(P.lat,P.lon); frameAt(n.t,f);
+      const x=-(P.lon-ORIGIN.lon)*M_LON, z=(P.lat-ORIGIN.lat)*M_LAT, side=Math.sign((x-f.p.x)*f.right.x+(z-f.p.z)*f.right.z)||1, m=n.t*TRACK_LEN;
+      FEEL.wide.push([m-P.len/2-20,m+P.len/2+20]); PITL.push({ k:P.k, t0:((m-P.len/2)/TRACK_LEN%1+1)%1, t1:((m+P.len/2)/TRACK_LEN%1+1)%1, side, only:P.only??null, d:Math.round(n.d) }); } }
   const FL=FEEL.on?feelLayout(S,R,2400):null;
   if(FL){ BANK=Float32Array.from(FL.bank); HWA=Float32Array.from(FL.hw); GAPS=FL.gaps; PADS.length=0; PADS.push(...FL.pads); }
   // pylon feet: whatever is straight under the centre (street, roof or deck), never above the slab
@@ -1156,7 +1277,7 @@ function publishTrack(S){
   window.__dump={ cp:CP.map(v=>[+v.x.toFixed(3),+v.y.toFixed(3),+v.z.toFixed(3)]), frames, clear, trackLen:TRACK_LEN, halfW:HALF_W,
     pads:PADS.map(p=>[p.t,p.lat]), wpads:WPADS.map(p=>[offGap(p.t,typeof FL!=='undefined'&&FL?FL.gaps:GAPS),p.lat]),
     arches:ARCH_AT.map(a=>({...a, ...nearestT(a.lat,a.lon)})), snapped:S.top.filter(v=>v!=null).length, n:N,
-    profile:R.stats, survey:S, start:{ m:FEEL.startM },
+    profile:R.stats, survey:S, start:{ m:FEEL.startM }, ...(PITL.length?{ pits:PITL }:{}),
     ...(FL?{ bank:FL.bank.map(v=>+v.toFixed(4)), hw:[...FL.hw].map(v=>+v.toFixed(2)), gaps:FL.gaps, drops:FL.drops, jump:FEEL.jumpStats||null }:{}) };
   document.getElementById('loadtxt').textContent='dump klar · '+JSON.stringify(R.stats);
 }
@@ -1179,7 +1300,7 @@ async function dumpWalk(){
   document.getElementById('loadtxt').textContent='dump klar';
 }
 
-if(REBUILD){ (async()=>{ const S=await fetch('wo2097/assets/survey.json').then(r=>r.json()); publishTrack(S); })(); }
+if(REBUILD){ (async()=>{ const S=await fetch(ADIR+'survey.json').then(r=>r.json()); publishTrack(S); })(); }
 if(DEMO){ // platt mark istället för fotogrammetri — testar bara körkänslan
   const ground=new THREE.Mesh(new THREE.PlaneGeometry(8000,8000),
     new THREE.MeshBasicMaterial({ color:0x394a5a }));
@@ -1213,14 +1334,16 @@ function curvAhead(t,dist){
 /* ============================== BANVISUALER · 2097 ============================== */
 let trackGroup=null;
 const PADS=Array.from({length:135},(_,i)=>({ t:(i+0.55)/135, lat:[-3.5,0,3.5][i%3] }));
-const WPADS=Array.from({length:16},(_,i)=>({ t:(i+0.27)/16, lat:[-3.5,3.5,0][i%3] }));
+const NWP=FEEL.wpads||16, WPADS=Array.from({length:NWP},(_,i)=>({ t:(i+0.27)/NWP, lat:[-3.5,3.5,0][i%3] }));
 function offGap(t,gaps){ for(const [a,b] of gaps||GAPS) if(t>=a-0.002&&t<=b+0.004) return b+0.006; return t; }   // no weapon pad in the air over Västerbron
 for(const w of WPADS) w.t=offGap(w.t);
 // FEEL: the pads the dump laid out (chains into the drops, none in the quiet wide sections) replace the even rhythm
 if(TRACK_JSON&&TRACK_JSON.pads&&TRACK_JSON.drops){ PADS.length=0; for(const [t,lat] of TRACK_JSON.pads) PADS.push({t,lat}); }
 // sponsor arches over the real places: nearest point on the lap to each landmark
 // b = brand index in make_textures.py BRANDS (6 KLARNÅ, 17 SKATTEVERK-X, 8 SJ 2097, 13 SECURITAZ, 16 FÖRSÄKRINGSKASSÅN)
-const ARCH_AT=[ {n:'NORRMALMSTORG',lat:59.3337,lon:18.0733,b:6}, {n:'STADSHUSET',lat:59.3275,lon:18.0545,b:17},
+const ARCH_AT=KULTUR?(()=>{ const LM={ 'Kulturhuset':[59.33240,18.06480], 'Fotografiska':[59.31787,18.08548], 'Skansen':[59.32600,18.10350],
+    'Nationalmuseum':[59.32860,18.07810], 'Stadshuset':[59.32745,18.05430] };
+  return COPY.arches.map((A,i)=>({ n:A.landmark.toUpperCase(), lat:LM[A.landmark][0], lon:LM[A.landmark][1], b:i })); })():[ {n:'NORRMALMSTORG',lat:59.3337,lon:18.0733,b:6}, {n:'STADSHUSET',lat:59.3275,lon:18.0545,b:17},
   {n:'SKEPPSBRON',lat:59.3247,lon:18.0755,b:8}, {n:'STRANDVÄGEN',lat:59.3326,lon:18.0850,b:13}, {n:'KUNGSHOLMEN',lat:59.3300,lon:18.0310,b:16} ];
 function nearestT(lat,lon){ const x=-(lon-ORIGIN.lon)*M_LON, z=(lat-ORIGIN.lat)*M_LAT; let best=0,bd=1e18; const v=new THREE.Vector3();
   for(let i=0;i<2000;i++){ curve.getPointAt(i/2000,v); const d=(v.x-x)**2+(v.z-z)**2; if(d<bd){ bd=d; best=i/2000; } }
@@ -1254,9 +1377,9 @@ function flickTick(dt){ for(const f of flickMats){ if(f.off>0){ f.off-=dt; f.m.e
     else if(Math.random()<f.p*dt){ f.off=0.05+Math.random()*(f.p>0.5?0.5:0.18); } } }
 function loadModels(){
   if(!TRACK_JSON) return Promise.resolve();
-  const trackP=gltf.loadAsync(`wo2097/assets/${THEME}/track.glb`).then(g=>{ g.scene.traverse(o=>{ if(o.isMesh){ o.material=Array.isArray(o.material)?o.material:o.material; [].concat(o.material).forEach(tuneMaterial); o.frustumCulled=true; } });
+  const trackP=gltf.loadAsync(`${GLB}/track.glb`).then(g=>{ g.scene.traverse(o=>{ if(o.isMesh){ o.material=Array.isArray(o.material)?o.material:o.material; [].concat(o.material).forEach(tuneMaterial); o.frustumCulled=true; } });
     trackGroup=g.scene; scene.add(trackGroup); });
-  const shipP=Promise.all(TEAMS.map((T,i)=>gltf.loadAsync(`wo2097/assets/${THEME}/craft_${i}.glb`).then(g=>{ g.scene.traverse(o=>{ if(o.isMesh) [].concat(o.material).forEach(tuneMaterial); }); return g.scene; })))
+  const shipP=Promise.all(TEAMS.map((T,i)=>gltf.loadAsync(`${GLB}/craft_${i}.glb`).then(g=>{ g.scene.traverse(o=>{ if(o.isMesh) [].concat(o.material).forEach(tuneMaterial); }); return g.scene; })))
     .then(list=>{ SHIP_PROTOS=list; });
   return Promise.all([trackP,shipP]).then(()=>{ assetsReady=true; });
 }
@@ -1336,7 +1459,7 @@ function emitShip(s,dt,sf){ if(!FX.particles||s.mesh.position.distanceToSquared(
         leaf?0.32:0.46,leaf?0.4:0.4,leaf?0.14:0.33, leaf?0.35:0.9+Math.random(), 0.9+Math.random()*1.1, leaf?3:1.2, 0.965, leaf?0:1.4); } } } }
 window.__particles=()=>({ glow:GLOW.alive, dust:DUST.alive });
 // invented teams, 2097 colour blocking: primary hull, secondary pods and wing, number and glyph on the wing
-const TEAMS=[   // parodies of Swedish brands, 2097 (same colours as wo2097/pipeline: make_textures.py and build.py)
+const TEAMS=KULTUR?COPY.teams.map(T=>({ team:T.team, pilot:T.pilot, a:parseInt(T.a.slice(1),16), b:parseInt(T.b.slice(1),16), n:T.n, glyph:'dot', eng:parseInt(T.eng.slice(1),16), boss:!!T.boss })):[   // parodies of Swedish brands, 2097 (same colours as wo2097/pipeline: make_textures.py and build.py)
   {team:'VOLVÖ SECURITY',  pilot:'YOU',        a:0xd6deeb, b:0x0c1830, n:'01', glyph:'rings', eng:0x9fd8ff},
   {team:'SAAPH DEFENCE',   pilot:'VALKYRIA',   a:0xc81020, b:0x0c0d12, n:'07', glyph:'tri',   eng:0xff3b3b},
   {team:'SPOTIFAI NEURAL', pilot:'AURORA',     a:0x1ed760, b:0x07090d, n:'12', glyph:'wave',  eng:0x35ff8b},
@@ -1375,10 +1498,16 @@ const SHIP_COLS=TEAMS.map(T=>T.eng);
 // what each team is: the slogan and spec from the hangar, and the stats that really change the craft.
 // Bars are 0..1; physOf() turns them into multipliers on top speed, thrust, steering and grip, wall drain and
 // how much speed a missile hit leaves you. Tuned so every craft is within a couple of percent over the lap.
-const TEAM_RUNES=['ᚠᚢᛚᚠᚢ᛫ᛋᛅᚴᛁᚱᚼᛁᛏ','ᛋᛅᚠ᛫ᚠᚢᚱᛋᚠᛅᚱ','ᛋᛒᚢᛏᛁᚠᛅᛁ᛫ᚾᛁᚢᚱᛅᛚ','ᛁᚴᚢᛅ᛫ᛒᛚᛅᛏᛒᛅᚴᛁᛏ','ᚴᛚᛅᚱᚾᚬ᛫ᛋᚴᚢᛚᛏ','ᛁᚱᛁᚴᛋᚢᚾ᛫ᛋᛁᚴᚾᛅᛚ'];   // the team names in Younger Futhark (wo2097/pipeline/runes.py)
-const TEAM_SLOGAN=['SÄKERHET. FÖR ÄGARNA.','WE ARM BOTH SIDES.','VI VET VAD DU KÄNNER HÄRNÄST.','MONTERA DITT MEDBORGARSKAP.','KÖR NU. BETALA FÖR ALLTID.','ALLTID UPPKOPPLAD. ALLTID AVLYSSNAD.'];
-const TEAM_SPEC=['PANSRAD · BOXIG · KROCKZON FRAM','STEALTH · CANARDER · VAPENBALKAR','ORGANISK · VÅGFORMSRYGG','PLATTPAKET · 48 INSEXSKRUVAR','NÅLNOS · DELTAVINGE · EN DYSA','KATAMARAN · SIGNALFENOR · PARABOL'];
-const STATS=[
+const TEAM_RUNES=KULTUR?COPY.teams.map(T=>T.latin):['ᚠᚢᛚᚠᚢ᛫ᛋᛅᚴᛁᚱᚼᛁᛏ','ᛋᛅᚠ᛫ᚠᚢᚱᛋᚠᛅᚱ','ᛋᛒᚢᛏᛁᚠᛅᛁ᛫ᚾᛁᚢᚱᛅᛚ','ᛁᚴᚢᛅ᛫ᛒᛚᛅᛏᛒᛅᚴᛁᛏ','ᚴᛚᛅᚱᚾᚬ᛫ᛋᚴᚢᛚᛏ','ᛁᚱᛁᚴᛋᚢᚾ᛫ᛋᛁᚴᚾᛅᛚ'];   // the team names in Younger Futhark (wo2097/pipeline/runes.py)
+const TEAM_SLOGAN=KULTUR?COPY.teams.map(T=>T.slogan):['SÄKERHET. FÖR ÄGARNA.','WE ARM BOTH SIDES.','VI VET VAD DU KÄNNER HÄRNÄST.','MONTERA DITT MEDBORGARSKAP.','KÖR NU. BETALA FÖR ALLTID.','ALLTID UPPKOPPLAD. ALLTID AVLYSSNAD.'];
+const TEAM_SPEC=KULTUR?COPY.teams.map(T=>T.spec):['PANSRAD · BOXIG · KROCKZON FRAM','STEALTH · CANARDER · VAPENBALKAR','ORGANISK · VÅGFORMSRYGG','PLATTPAKET · 48 INSEXSKRUVAR','NÅLNOS · DELTAVINGE · EN DYSA','KATAMARAN · SIGNALFENOR · PARABOL'];
+const STATS=KULTUR?[   // KULTURSTOCKHOLM reuses Stockholm's balance team by team; DE ADERTON (the boss) is stronger
+  {spd:0.84, thr:0.72, han:0.66, shd:1.00},             // DE ADERTON: fast and unremovable
+  {spd:0.60, thr:1.00, han:0.62, shd:0.52},             // SOMMARPRATARNA: thrust (ERIXON's)
+  {spd:0.84, thr:0.68, han:0.58, shd:0.45, weap:true},  // KULTURSIDAN: fast, the reviews come to it (SAAPH's)
+  {spd:0.66, thr:0.62, han:1.00, shd:0.58},             // NATURVINSBAREN: handling (SPOTIFAI's)
+  {spd:1.00, thr:0.58, han:0.50, shd:0.25},             // VERNISSAGEN: top speed, fragile (KLARNÅ's)
+  {spd:0.70, thr:0.70, han:0.72, shd:0.70} ]:[         // STIPENDIATERNA: balanced (IKÖA's)
   {spd:0.64, thr:0.60, han:0.62, shd:1.00},             // VOLVÖ: armour, the slowest in a straight line
   {spd:0.84, thr:0.68, han:0.58, shd:0.45, weap:true},  // SAAPH: fast, and the missiles come to it
   {spd:0.66, thr:0.62, han:1.00, shd:0.58},             // SPOTIFAI: handling
@@ -1393,7 +1522,7 @@ const CHECK=location.search.includes('check');
 // before the lip at what a bot lap carries there (58 m/s, 12 of boost, the downhill's 1.6), with the pad chain still
 // ahead, and runs again from the same point 3 s after the landing. R (or a tap on the tag) restarts at any time.
 const TEST=(()=>{ const q=location.search.match(/[?&]test=([^&]+)/); if(!q) return null; const k=decodeURIComponent(q[1]).toLowerCase();
-  if(k==='vasterbron'||k==='västerbron') return { name:'VÄSTERBRON', at:()=>(GAPS.length?GAPS[0][0]*TRACK_LEN:FEEL.jump.lipM)-500, speed:58, boost:12, gv:1.6, auto:true };
+  if((k==='vasterbron'||k==='västerbron')&&FEEL.jump) return { name:'VÄSTERBRON', at:()=>(GAPS.length?GAPS[0][0]*TRACK_LEN:FEEL.jump.lipM)-500, speed:58, boost:12, gv:1.6, auto:true };
   const v=parseFloat(k); return isFinite(v)?{ name:Math.round(v)+' M', at:()=>v, speed:58, boost:0, gv:0, auto:false }:null; })();
 let TEAM_CHOICE=(()=>{ const m=location.search.match(/[?&]team=(\d)/); if(m) return +m[1];
   try{ const v=+localStorage.getItem('swTeam'); return v>=0&&v<6?v:0; }catch(e){ return 0; } })();
@@ -1401,10 +1530,11 @@ function teamOrder(){ const o=[TEAM_CHOICE]; for(let i=0;i<6;i++) if(i!==TEAM_CH
 const TOTAL_LAPS=1;
 function makeShip(i){ const k=teamOrder()[i];   // slot i on the grid, team k: the player's choice takes slot 0
   return { id:k, slot:i, ph:physOf(STATS[k]), weap:!!STATS[k].weap,
-  name:i===0?'YOU':(SHIP_NAMES[k]==='YOU'?'SENTINEL':SHIP_NAMES[k]), team:TEAMS[k].team, isPlayer:i===0, color:SHIP_COLS[k], mesh:buildCraft(k), trails:[makeTrail(SHIP_COLS[k]),makeTrail(SHIP_COLS[k])], brakeFlap:0, hitT:0,
+  name:i===0?(KULTUR?'DU':'YOU'):(SHIP_NAMES[k]==='YOU'?'SENTINEL':SHIP_NAMES[k]), team:TEAMS[k].team, isPlayer:i===0, color:SHIP_COLS[k], mesh:buildCraft(k), trails:[makeTrail(SHIP_COLS[k]),makeTrail(SHIP_COLS[k])], brakeFlap:0, hitT:0,
   t:1+startT()-((i+1)*9)/TRACK_LEN, lat:(i%2===0?-1:1)*(2+(i>>1)*1.8),
   speed:0, vlat:0, lap:1, crossedStart:false, done:false, finishTime:0,
-  boost:0, yaw:0, roll:0, aiMax:60+i*1.2+((i*37)%3), aiPhase:i*2.3,
+  boost:0, yaw:0, roll:0, aiMax:60+i*1.2+((i*37)%3)+(KULTUR&&TEAMS[k].boss&&i>0?3:0), aiPhase:i*2.3,   // KULTURSTOCKHOLM: DE ADERTON as AI is the boss
+  pitPlan:KULTUR&&i>0?(TEAMS[k].boss?['freden']:(((i*7+3)%5)<2?['riche']:[])):[],   // which AI take a pit lane (PITS)
   skill:[1.0,1.2,0.85,1.1,0.75,0.95][i], frame:mkFrame(),
   pos:new THREE.Vector3(), heading:0, frac:0, prevFrac:0, wallTouch:false }; }
 let ships=[];
@@ -1618,7 +1748,7 @@ function scheduleStep(t,step){
    outside the barriers, wo2097/assets/survey.json): open over the roofs, ringing between tall facades. */
 let sfxBus=null, sfxMeter=null, sendIn=null, revGain=null, scrape=null, encl=0; const aiEng=[];
 const _lsPrev=new THREE.Vector3(), _lsV=new THREE.Vector3(), _ad=new THREE.Vector3(), _av=new THREE.Vector3(), _af=new THREE.Vector3();
-let survey=null; fetch('wo2097/assets/survey.json').then(r=>r.ok?r.json():null).then(d=>{ survey=d; }).catch(()=>{});
+let survey=null; fetch(ADIR+'survey.json').then(r=>r.ok?r.json():null).then(d=>{ survey=d; }).catch(()=>{});
 function panAt(pos){ const pn=actx.createPanner(); pn.panningModel='HRTF'; pn.distanceModel='inverse'; pn.refDistance=18; pn.rolloffFactor=1.3; pn.maxDistance=3000;
   if(pn.positionX){ pn.positionX.value=pos.x; pn.positionY.value=pos.y; pn.positionZ.value=pos.z; } else pn.setPosition(pos.x,pos.y,pos.z); return pn; }
 function spatialInit(){
@@ -1824,7 +1954,7 @@ function hangarPod(k){ if(hPods[k]) return hPods[k]; if(!SHIP_PROTOS) return nul
   disc.position.y=-1.3; g.add(disc); g.visible=false; hScene.add(g); hPods[k]=g; return g; }
 function bars(id,v){ const el=document.getElementById(id); if(!el.children.length) for(let i=0;i<12;i++) el.appendChild(document.createElement('i'));
   const n=Math.round(v*12); [...el.children].forEach((b,i)=>b.classList.toggle('on',i<n)); }
-function selInfo(){ const T=TEAMS[selIdx], st=STATS[selIdx], col='#'+new THREE.Color(T.a===0xd6deeb||T.a===0xf2f6ff?T.eng:T.a).getHexString();
+function selInfo(){ const T=TEAMS[selIdx], st=STATS[selIdx], lite=c=>((c>>16&255)*0.3+(c>>8&255)*0.59+(c&255)*0.11)>170, col='#'+new THREE.Color(KULTUR?(lite(T.a)?T.b:T.a):(T.a===0xd6deeb||T.a===0xf2f6ff?T.eng:T.a)).getHexString();   // KULTURSTOCKHOLM: the gallery is white, a light livery shows its dark colour
   document.getElementById('selNum').textContent=T.n; document.getElementById('selNum').style.color=col;
   document.getElementById('selTeam').textContent=T.team; document.getElementById('selRune').textContent=TEAM_RUNES[selIdx]; document.getElementById('selSlogan').textContent=TEAM_SLOGAN[selIdx];
   document.getElementById('selSpec').textContent=TEAM_SPEC[selIdx]; document.getElementById('selCount').textContent=(selIdx+1)+' / 6';
@@ -1908,12 +2038,26 @@ let titleReady=false, titleGo=false, titleDone=false;
 const tpress=document.getElementById('tpress'), sweepEl=document.getElementById('sweep');
 if(!selectDone) document.body.classList.add('titling');   // no race HUD behind the title and the hangar
 function titlePrompt(){ tpress.textContent=MOBILE?'TAP':'PRESS ENTER'; tpress.classList.add('ready'); }
+// KULTURSTOCKHOLM's words on the title, the HUD and the hangar, from copy.json (Stockholm's DOM is never touched)
+if(KULTUR){ const $=s=>document.querySelector(s), T=COPY.title, Hd=COPY.hud;
+  $('.tlogo .t1').textContent=T.t1; $('.tlogo .t2').textContent=T.t2; $('.tlogo .t3').textContent=T.t3; $('.tlogo .trune').textContent=T.latin; $('.tlogo .tsub').textContent=T.sub;
+  tpress.textContent=T.loading; document.title='WIPEOUT KULTURSTOCKHOLM 2097';
+  $('#lapbox').innerHTML=`<span class="lbl">${Hd.lap}</span><span class="kata">${Hd.lapLatin}</span><br><span class="big orb" id="lap">1</span><span class="of orb">/1</span>
+    <div class="row"><span class="lbl">${Hd.time}&nbsp;</span> <span class="t" id="time">0:00.00</span></div><div class="row"><span class="lbl">${Hd.best}&nbsp;</span> <span class="b" id="best">--</span></div>`;
+  $('#posbox').innerHTML=`<span class="lbl">${Hd.position}</span><span class="kata">${Hd.positionLatin}</span><br><span class="big orb" id="pos">1</span><span class="ord orb" id="posOrd">st</span><span class="of orb">/6</span>`;
+  $('#whint').innerHTML=`${Hd.weapon} · <span class="kata" style="margin:0">${Hd.weaponLatin}</span> · <b>SPACE</b> ${Hd.fireHint}`;
+  const bl=document.querySelectorAll('#speed .barlbl .lbl'); bl[0].innerHTML=`${Hd.turbo} <span class="kata">${Hd.turboLatin}</span>`; bl[1].innerHTML=`${Hd.shield} <span class="kata">${Hd.shieldLatin}</span>`;
+  $('#speed .unit').textContent=Hd.speedUnit;
+  $('#select .top').innerHTML=`<span><b>${COPY.select.league}</b> &nbsp;${COPY.select.title} <span class="kata">ELIGE CURRUM</span></span><span id="selCount">1 / 6</span>`;
+  $('#select .hint').textContent=COPY.select.hint; $('#selGo').textContent=COPY.select.go; document.querySelectorAll('#select .stat span').forEach((e,i)=>{ e.textContent=COPY.select.stats[i]; });
+  $('#results .panel .kata').textContent=COPY.results.latin; $('#results .again').innerHTML=COPY.results.again;
+  $('#rotate small').textContent='WIPEOUT KULTURSTOCKHOLM KÖRS LIGGANDE'; }
 function titleToSelect(){ if(titleDone) return; titleDone=true; ensureAudio(); uiArmed=true; if(actx) uiConfirm(actx.currentTime);
   loadveil.classList.add('go'); sweepEl.classList.remove('run'); void sweepEl.offsetWidth; sweepEl.classList.add('run');
   setTimeout(()=>enterSelect(),430);
   setTimeout(()=>{ loadveil.style.display='none'; loadveil.classList.remove('go'); sweepEl.classList.remove('run'); document.body.classList.remove('titling'); },1000); }
 function titleWant(){ if(state!=='loading'||titleDone||keyveil.style.display==='flex') return; titleGo=true;
-  if(titleReady) titleToSelect(); else tpress.textContent='LADDAR STOCKHOLM · STRAX'; }
+  if(titleReady) titleToSelect(); else tpress.textContent=KULTUR?COPY.title.loadingSoon:'LADDAR STOCKHOLM · STRAX'; }
 addEventListener('keydown',e=>{ if(state==='loading'&&(e.code==='Enter'||e.code==='Space')){ e.preventDefault(); titleWant(); } },true);
 loadveil.addEventListener('pointerdown',e=>{ e.preventDefault(); titleWant(); });
 function startRace(){
@@ -1924,7 +2068,18 @@ function startRace(){
   spawnShips(); camSnap=true; state='count'; countT=3.999; raceTime=0; lapTimes=[]; lapStart=0; resetKit(); TOUCH.calibrate();
   if(TEST) testPlace();
 }
-function restart(){ if(TEST){ testPlace(); return; } document.getElementById('results').style.display='none'; paused=false; pauseMsg=null; wallT=0; wallHits=0; for(const x of ships) x.psi=0;
+// PIT LANES (KULTURSTOCKHOLM, track.json pits): ride the marked outer strip and the shield energy (ANSEENDE) fills while the speed is
+// held to PIT.cap; nothing else changes. A lane with `only` refills that team alone; everyone else gets the sign's answer.
+const PITS=(TRACK_JSON&&TRACK_JSON.pits)||[], PIT={ cap:40, fill:38, lat:4.3 }; let pitKey=null;
+function pitWin(P,t){ return P.t0<=P.t1?(t>=P.t0&&t<=P.t1):(t>=P.t0||t<=P.t1); }
+function pitIn(s){ const t=shipT(s); for(const P of PITS) if(pitWin(P,t)&&Math.sign(s.lat)===P.side&&Math.abs(s.lat)>=PIT.lat) return P; return null; }
+function pitStep(s,dt){ const P=pitIn(s), ok=!!P&&(P.only==null||s.id===P.only);
+  if(ok){ s.speed=Math.min(s.speed,PIT.cap); s.boost=0; if(s.isPlayer) energy=Math.min(100,energy+PIT.fill*dt); }
+  if(!s.isPlayer||state!=='race') return;
+  const key=P?P.k+(ok?'':'!'):null;
+  if(key!==pitKey){ if(P) flash(ok?COPY.pits[P.k].enter:COPY.pits[P.k].denied); else if(pitKey&&!pitKey.endsWith('!')) flash(COPY.pits[pitKey].exit); pitKey=key; } }
+window.__pits=()=>({ pits:PITS, key:pitKey, ai:ships.map(x=>({ n:x.name, plan:x.pitPlan, inPit:!!pitIn(x) })) });
+function restart(){ if(TEST){ testPlace(); return; } pitKey=null; document.getElementById('results').style.display='none'; paused=false; pauseMsg=null; wallT=0; wallHits=0; for(const x of ships) x.psi=0;
   if(actx){ mstep=0; nextStep=actx.currentTime+0.1; }
   spawnShips(); camSnap=true; state='count'; countT=3.999; raceTime=0; lapTimes=[]; lapStart=0; resetKit(); TOUCH.calibrate();
   msg.textContent=''; sub.innerHTML=''; }
@@ -1972,14 +2127,15 @@ let boostMeter=50, shake=0, fovKick=0;
 // 2097 kit: shield energy (the walls eat it), one weapon slot, missiles in flight, flashes for the FX layer
 let energy=100, weapon=null, shieldT=0, boostFlash=0, hitFlash=0, critT=0; const missiles=[];
 const WEAPONS=['TURBO','SHIELD','MISSILE'];
-function pickWeapon(){ weapon=player()&&player().weap&&Math.random()<0.6?'MISSILE':WEAPONS[Math.floor(Math.random()*WEAPONS.length)]; flash(weapon); drawWeaponIcon(); if(player()) sfxAt('pickup',player().mesh.position); }
+const WNAME=w=>KULTUR&&w?COPY.powerups[w].name:w;   // KULTURSTOCKHOLM: STIPENDIUM, LIVSTIDSSTOL, SÅGNING (the mechanics are Stockholm's)
+function pickWeapon(){ weapon=player()&&player().weap&&Math.random()<0.6?'MISSILE':WEAPONS[Math.floor(Math.random()*WEAPONS.length)]; flash(KULTUR?COPY.powerups[weapon].flash:weapon); drawWeaponIcon(); if(player()) sfxAt('pickup',player().mesh.position); }
 function fireWeapon(){ const p=player(); if(!weapon||!p) return;
   sfxAt(weapon==='TURBO'?'turbo':weapon==='SHIELD'?'shield':'fire',p.mesh.position);
   if(weapon==='TURBO'){ p.boost=Math.max(p.boost,42); fovKick=1; boostFlash=1; }
   else if(weapon==='SHIELD'){ shieldT=5; }
   else if(weapon==='MISSILE'){ let tgt=null, best=1e9;
     for(const o of ships){ if(o===p) continue; let d=o.t-p.t; d-=Math.floor(d); const m=d*TRACK_LEN; if(m>4&&m<450&&m<best){ best=m; tgt=o; } }
-    const spr=new THREE.Sprite(new THREE.SpriteMaterial({ map:glowTex, color:NEON(0xff6a00,3), blending:THREE.AdditiveBlending, depthWrite:false, toneMapped:false }));
+    const spr=new THREE.Sprite(new THREE.SpriteMaterial({ map:glowTex, color:NEON(KULTUR?0xff2a2a:0xff6a00,3), blending:THREE.AdditiveBlending, depthWrite:false, toneMapped:false }));
     spr.scale.set(3,3,1); scene.add(spr); missiles.push({ t:p.t, lat:p.lat, tgt, spr, life:3 }); }
   weapon=null; drawWeaponIcon(); }
 function stepMissiles(dt){ for(let i=missiles.length-1;i>=0;i--){ const m=missiles[i]; m.life-=dt; m.t+=150*dt/TRACK_LEN;
@@ -1987,6 +2143,7 @@ function stepMissiles(dt){ for(let i=missiles.length-1;i>=0;i--){ const m=missil
     const f=mkFrame(); frameAt(m.t,f); m.spr.position.copy(f.p).addScaledVector(f.right,m.lat).addScaledVector(f.up,1.6);
     const hit=m.tgt && (m.t-m.tgt.t)*TRACK_LEN>-2;
     if(hit&&m.tgt.isPlayer&&shieldT>0){ SHIELD.touch(0,1.4); scene.remove(m.spr); m.spr.material.dispose(); missiles.splice(i,1); continue; }   // the field eats it
+    if(hit&&KULTUR) flash(COPY.powerups.MISSILE.hit);
     if(hit){ m.tgt.speed*=m.tgt.ph?m.tgt.ph.hitKeep+0.1:0.35; m.tgt.hitT=1.2; sfxAt('hit',m.tgt.mesh.position); burstAt(m.tgt.mesh.position); if(m.tgt.mesh.position.distanceTo(camera.position)<200) shake=Math.min(shake+0.5,1.4); hitFlash=0.6; }
     if(hit||m.life<=0){ scene.remove(m.spr); m.spr.material.dispose(); missiles.splice(i,1); } } }
 function shipT(s){ return ((s.t%1)+1)%1; }
@@ -1995,7 +2152,7 @@ function shipT(s){ return ((s.t%1)+1)%1; }
 // name#n = the n-th entry into that district. The lap never enters Vasastan: its stand-in is the second entry into
 // Norrmalm (Birger Jarlsgatan, 4367 m). Kungsholmen's second entry sits on the jump's lip, so its first one is used.
 // Never in the first 3 s after GO, at least 5 s apart (a title that comes too soon waits its turn).
-const ENTERING=['Östermalm','Norrmalm#2','Kungsholmen#1','Södermalm#2'];
+const ENTERING=KULTUR?((TRACK_JSON&&TRACK_JSON.districts)||[]).filter(d=>d.t>0.01).filter((d,i,a)=>COPY.entering[d.name]&&a.findIndex(x=>x.name===d.name)===i).map(d=>d.name):['Östermalm','Norrmalm#2','Kungsholmen#1','Södermalm#2'];
 const DISTRICTS=(()=>{ const all=(TRACK_JSON&&TRACK_JSON.districts)||[], seen={};
   const tagged=all.map(d=>{ seen[d.name]=(seen[d.name]||0)+1; return {...d, tag:d.name+'#'+seen[d.name]}; });
   return ENTERING.map(k=>tagged.find(d=>d.tag===(k.includes('#')?k:k+'#1'))).filter(Boolean); })();
@@ -2008,7 +2165,8 @@ function districtTick(){ const p=player();
   if(distPending&&raceTime-distShownAt>5){ distShownAt=raceTime; showDistrict(distPending); distPending=null; }
   distLastT=now; }
 function showDistrict(d){ DIST_LOG.push({ name:d.name, at:+raceTime.toFixed(1), m:Math.round(d.t*TRACK_LEN) });
-  const el=document.getElementById('district'); el.querySelector('.nm').textContent=d.name; el.querySelector('.rn').textContent=d.rn||'';
+  const el=document.getElementById('district'); el.querySelector('.nm').textContent=d.name; el.querySelector('.rn').textContent=KULTUR?'':(d.rn||'');
+  el.querySelector('.sb').textContent=KULTUR?(COPY.entering[d.name]||''):'';
   el.classList.remove('on'); void el.offsetWidth; el.classList.add('on'); }
 function startT(){ return (FEEL.startM||0)/TRACK_LEN; }   // the start/finish line as track parameter
 // FREE STEERING (hard mode, player only). CURV's sign: + means the outside of the bend is +lat, so with no input the
@@ -2077,6 +2235,8 @@ function stepShip(s,dt){
     if(overtakeBias) wantLat=wantLat*0.35+overtakeBias*0.65;
     for(const pad of PADS){ let dT=pad.t-tn0; dT-=Math.round(dT);
       if(dT>0 && dT*TRACK_LEN<140){ wantLat=wantLat*0.2+pad.lat*0.8; break; } }
+    if(PITS.length&&s.pitPlan.length) for(const P of PITS){ if(!s.pitPlan.includes(P.k)) continue;   // an AI that takes the pit lane
+      let dT=P.t0-tn0; dT-=Math.floor(dT); if(pitWin(P,tn0)||dT*TRACK_LEN<120){ wantLat=P.side*(hwAt(tn0)-2.4); break; } }
     s.vlat+=(wantLat-s.lat)*(3.0+s.skill)*dt; s.vlat-=s.vlat*2.8*dt;
     s.roll=THREE.MathUtils.lerp(s.roll,-s.vlat*0.05,6*dt);
   }
@@ -2093,6 +2253,7 @@ function stepShip(s,dt){
     if(s.isPlayer){ shake=Math.min(shake+0.4,1.2); if(state==='race') wallT+=dt; if(hitNow) SHIELD.touch(Math.sign(s.lat),shieldT>0?1:0.5); } }
   else s.onWall=false;
   s.boost=Math.max(0,s.boost-22*dt);
+  if(PITS.length) pitStep(s,dt);
   if(s.isPlayer){ const wall=Math.abs(s.lat)>=lim-0.01;
     if(wall&&shieldT<=0) energy=Math.max(0,energy-(HARD?40:26)*s.ph.drain*dt); else energy=Math.min(100,energy+1.8*dt);
     shieldT=Math.max(0,shieldT-dt);
@@ -2149,7 +2310,7 @@ function advance(s,dt){
     if(!s.crossedStart){ s.crossedStart=true; if(s.isPlayer) lapStart=raceTime; }
     else {
       if(s.isPlayer){ const lt=raceTime-lapStart; lapTimes.push(lt); lapStart=raceTime;
-        if(bestLap===null||lt<bestLap) bestLap=lt; flash('LAP '+fmt(lt)); }
+        if(bestLap===null||lt<bestLap) bestLap=lt; flash((KULTUR?COPY.hud.lapFlash+' ':'LAP ')+fmt(lt)); }
       s.lap++;
       if(s.lap>TOTAL_LAPS&&!s.done){ s.done=true; s.finishTime=raceTime;
         if(s.isPlayer) finishRace(); } } }
@@ -2256,7 +2417,7 @@ const WATER=(()=>{ const W=TRACK_JSON&&TRACK_JSON.water; if(!W||!W.hull) return 
 })();
 const SHIELD=(()=>{
   const mat=new THREE.ShaderMaterial({ transparent:true, depthWrite:false, blending:THREE.AdditiveBlending, toneMapped:false,
-    uniforms:{ uT:{value:0}, uA:{value:0}, uCol:{value:new THREE.Color(0x00e1ff)}, uHit:{value:0}, uHitDir:{value:new THREE.Vector3()}, uLow:{value:0} },
+    uniforms:{ uT:{value:0}, uA:{value:0}, uCol:{value:new THREE.Color(KULTUR?0xf4d77c:0x00e1ff)}, uHit:{value:0}, uHitDir:{value:new THREE.Vector3()}, uLow:{value:0} },
     vertexShader:`varying vec3 vN; varying vec3 vV; varying vec3 vP;
       void main(){ vP=position; vec4 mv=modelViewMatrix*vec4(position,1.0); vN=normalize(normalMatrix*normal); vV=normalize(-mv.xyz); gl_Position=projectionMatrix*mv; }`,
     fragmentShader:`uniform float uT,uA,uHit,uLow; uniform vec3 uCol,uHitDir; varying vec3 vN; varying vec3 vV; varying vec3 vP;
@@ -2315,10 +2476,23 @@ function finishRace(){
     tr.innerHTML=`<td class="sw"><i style="background:#${s.color.toString(16).padStart(6,'0')}"></i></td><td>${String(i+1).padStart(2,'0')}</td><td>${s.name}</td><td class="team">${s.team}</td><td>${s.done?fmt(s.finishTime):'+'+(order[0].t-s.t).toFixed(2)+' LAP'}</td>`;
     tbl.appendChild(tr); });
   const p=order.indexOf(player())+1;
-  document.getElementById('resTitle').textContent=
+  document.getElementById('resTitle').textContent=KULTUR?(p===1?COPY.results.win:p<=3?COPY.results.podium:COPY.results.done):
     p===1?'1ST · SEGER':p<=3?'PODIUM · PALLPLATS':'RACE COMPLETE';
   document.getElementById('results').style.display='flex';
+  resultsLink();
 }
+// THE OTHER TRACK (2026-10-02): any finished race on Stockholm, in any place, unlocks WIPEOUT KULTURSTOCKHOLM: a line on the results
+// panel (click it or press K) loads ?bana=kultur; the unlock is remembered. Kulturstockholm's panel leads back the same way (S).
+function goBana(k){ try{ if(k==='kultur') localStorage.setItem('swKulturUnlocked','1'); }catch(e){}
+  const q=new URLSearchParams(location.search); q.delete('bana'); if(k==='kultur') q.set('bana','kultur'); location.href=location.pathname+(q.toString()?'?'+q.toString():''); }
+function resultsLink(){ if(CHECK) return;   // the play-through checker stays on its track
+  const panel=document.querySelector('#results .panel'); let el=document.getElementById('banaLink');
+  if(!el){ el=document.createElement('div'); el.id='banaLink'; el.className='unlock'; panel.appendChild(el);
+    el.addEventListener('click',e=>{ e.stopPropagation(); goBana(KULTUR?'stockholm':'kultur'); }); }
+  if(!KULTUR) try{ localStorage.setItem('swKulturUnlocked','1'); }catch(e){}
+  el.innerHTML=KULTUR?COPY.results.back+' &nbsp;<b>'+COPY.results.backKey+'</b>':'DU HAR LÅST UPP WIPEOUT KULTURSTOCKHOLM · KLICKA HÄR &nbsp;<b>K</b>'; }
+addEventListener('keydown',e=>{ if(state!=='done'||CHECK||document.getElementById('results').style.display!=='flex') return;
+  if(!KULTUR&&e.code==='KeyK') goBana('kultur'); else if(KULTUR&&e.code==='KeyS') goBana('stockholm'); });
 
 /* ============================== KAMERA ============================== */
 const camPos=new THREE.Vector3(0,60,150), camLook=new THREE.Vector3(), camUp=new THREE.Vector3(0,1,0), _cu=new THREE.Vector3();
@@ -2378,8 +2552,16 @@ const SPD_SEG=segs('spdseg',24), BST_SEG=segs('boostseg',20), EN_SEG=segs('enseg
 function fillSeg(list,frac,colFn){ const k=Math.round(frac*list.length); list.forEach((e,i)=>{ const on=i<k; const c=on?colFn(i/list.length):'rgba(255,255,255,0.08)'; if(e._c!==c){ e.style.background=c; e._c=c; } }); }
 const wctx=document.getElementById('wicon').getContext('2d');
 function drawWeaponIcon(){ const g=wctx, w=92; g.clearRect(0,0,w,w); const el=document.getElementById('wname');
-  el.textContent=weapon||'— — —'; el.className=weapon?'':'empty';
+  el.textContent=WNAME(weapon)||'— — —'; el.className=weapon?'':'empty';
   if(!weapon) return; g.save(); g.translate(w/2,w/2);
+  if(KULTUR){   // a sealed grant letter, a gilded chair, a red review
+    if(weapon==='TURBO'){ g.fillStyle='#f3ead2'; g.fillRect(-34,-22,68,44); g.strokeStyle='#8c826f'; g.lineWidth=3; g.strokeRect(-34,-22,68,44);
+      g.beginPath(); g.moveTo(-34,-22); g.lineTo(0,6); g.lineTo(34,-22); g.stroke(); g.fillStyle='#b8901c'; g.beginPath(); g.arc(0,8,11,0,7); g.fill(); }
+    else if(weapon==='SHIELD'){ g.fillStyle='#b8901c'; g.fillRect(-20,-34,40,8); g.fillRect(-20,-34,7,42); g.fillRect(13,-34,7,42); g.fillRect(-24,4,48,9);
+      g.fillRect(-22,13,6,24); g.fillRect(16,13,6,24); g.fillStyle='#8e2a36'; g.fillRect(-13,-26,26,30); }
+    else { g.fillStyle='#fbf7ee'; g.fillRect(-26,-34,52,68); g.fillStyle='#b3261e'; g.font='900 34px KSerif,serif'; g.textAlign='center'; g.fillText('★',0,-2);
+      g.fillStyle='rgba(29,26,22,.5)'; for(let k=0;k<4;k++) g.fillRect(-18,8+k*6,36-(k%2)*10,2); g.strokeStyle='#b3261e'; g.lineWidth=5; g.beginPath(); g.moveTo(-30,30); g.lineTo(30,-30); g.stroke(); }
+    g.restore(); return; }
   if(weapon==='TURBO'){ g.fillStyle='#35ff8b'; for(let k=0;k<3;k++){ const y=18-k*18; g.beginPath(); g.moveTo(-30,y); g.lineTo(0,y-22); g.lineTo(30,y); g.lineTo(30,y+10); g.lineTo(0,y-12); g.lineTo(-30,y+10); g.fill(); } }
   else if(weapon==='SHIELD'){ g.strokeStyle='#00e1ff'; g.lineWidth=7; g.beginPath(); for(let k=0;k<6;k++){ const a=k/6*Math.PI*2-Math.PI/2; g.lineTo(Math.cos(a)*34,Math.sin(a)*34); } g.closePath(); g.stroke(); g.fillStyle='rgba(0,225,255,0.35)'; g.fill(); }
   else { g.fillStyle='#ff6a00'; g.beginPath(); g.moveTo(0,-36); g.lineTo(14,-8); g.lineTo(14,24); g.lineTo(26,36); g.lineTo(-26,36); g.lineTo(-14,24); g.lineTo(-14,-8); g.closePath(); g.fill(); g.fillStyle='#ffe600'; g.fillRect(-14,6,28,8); }
@@ -2404,7 +2586,7 @@ function drawMinimap(){
     const a=Math.atan2(s.frame.fwd.x,s.frame.fwd.z), r=s.isPlayer?8:5.5;
     g.save(); g.translate(x,y); g.rotate(-a+Math.PI); g.beginPath(); g.moveTo(0,-r); g.lineTo(r*0.7,r*0.8); g.lineTo(-r*0.7,r*0.8); g.closePath();
     g.fillStyle='#'+s.color.toString(16).padStart(6,'0'); g.fill(); g.lineWidth=2; g.strokeStyle='#05070b'; g.stroke(); g.restore(); }
-  g.font='700 11px Rajdhani, sans-serif'; g.fillStyle='#8aa0b8'; g.fillText('SAGL · STHLM GP',8,W-8);
+  g.font='700 11px Rajdhani, sans-serif'; g.fillStyle='#8aa0b8'; g.fillText(KULTUR?COPY.minimap:'SAGL · STHLM GP',8,W-8);
 }
 function updateHUD(dt){
   const p=player(); if(!p) return;
@@ -2419,7 +2601,7 @@ function updateHUD(dt){
   fillSeg(SPD_SEG,Math.min(1,sfh/1.25),u=>u<0.55?TH.spd[0]:u<0.85?TH.spd[1]:TH.spd[2]);
   fillSeg(BST_SEG,boostMeter/100,()=>TH.boostCol);
   fillSeg(EN_SEG,energy/100,u=>energy<25?(Math.sin(performance.now()*0.02)>0?'#ff3b3b':'#5a0d0d'):energy<50?TH.en[0]:TH.en[1]);
-  if(critT>0&&Math.floor(critT*2)%4===0&&flashT<=0) flash('ENERGY CRITICAL');
+  if(critT>0&&Math.floor(critT*2)%4===0&&flashT<=0) flash(KULTUR?COPY.hud.critical:'ENERGY CRITICAL');
   if(flashT>0){ flashT-=dt; if(flashT<=0&&state==='race'){ msg.textContent=''; msg.style.fontSize='74px'; } }
 }
 let lastAttrib=0;
@@ -2456,10 +2638,10 @@ function loop(now){
   if(state==='count'){
     countT-=dt; const n=Math.ceil(countT);
     lightMats.forEach((m,i)=>{ if(!m) return; const lit=i<Math.min(5,Math.floor((4-countT)/4*5)+1); m.emissive.setRGB(lit?TH.countK:0.15,0,0); });   // used: 1.6 (under its lower bloom threshold 4 floods the frame)
-    if(countT<=0){ state='race'; msg.className='hud'; msg.textContent='GO'; msg.style.fontSize='120px'; flashT=0.8; boostFlash=0.7;
+    if(countT<=0){ state='race'; msg.className='hud'; msg.textContent=KULTUR?COPY.go:'GO'; msg.style.fontSize='120px'; flashT=0.8; boostFlash=0.7;
       sub.innerHTML=''; lapStart=0; raceTime=0; lightMats.forEach(m=>m&&m.emissive.setRGB(0,TH.countK,TH.countK*0.15)); }
     else { msg.className='hud count'; msg.textContent=n; msg.style.fontSize='150px';
-      sub.innerHTML='STOCKHOLM GRAND PRIX · SAGL 2097 · 1 LAP<span class="kata">ᛋᛏᚢᚴᚼᚢᛚᛘᛋ᛫ᛋᛏᚢᚱᛅ᛫ᛒᚱᛁᛋ</span>'; } }
+      sub.innerHTML=KULTUR?COPY.countdownSub+'<span class="kata">'+COPY.countdownLatin+'</span>':'STOCKHOLM GRAND PRIX · SAGL 2097 · 1 LAP<span class="kata">ᛋᛏᚢᚴᚼᚢᛚᛘᛋ᛫ᛋᛏᚢᚱᛅ᛫ᛒᚱᛁᛋ</span>'; } }
   if(state==='race') raceTime+=dt;
   if(state!=='loading'){
     for(const s of ships) stepShip(s,dt);

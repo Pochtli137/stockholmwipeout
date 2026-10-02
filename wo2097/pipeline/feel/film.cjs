@@ -10,7 +10,7 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 (async()=>{ const b=await chromium.launch({channel:'chrome',args:['--use-angle=metal','--enable-gpu']});
   const p=await b.newPage({viewport:{width:W,height:H},deviceScaleFactor:1}); const errs=[];
   p.on('pageerror',e=>errs.push(e.message)); p.on('console',m=>{ if(m.type()==='error'&&!/404|favicon/.test(m.text())) errs.push(m.text()); });
-  await p.clock.install(); await p.goto(`http://localhost:${PORT}/index.html?check`);
+  await p.clock.install(); await p.goto(`http://localhost:${PORT}/index.html?check${process.env.BANA?"&bana="+process.env.BANA:""}`);   // BANA=kultur
   const t0=Date.now(); while(Date.now()-t0<180000){ await p.clock.runFor(33); await sleep(25);
     if(await p.evaluate(()=>!!window.__sw&&__sw.state()==='race').catch(()=>false)) break; }
   const now=await p.evaluate(()=>Date.now()); await p.clock.pauseAt(now+50);

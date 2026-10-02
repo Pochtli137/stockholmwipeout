@@ -19,8 +19,13 @@ STEP = 8.0             # spacing of the control points handed to the game (its c
 
 src = open(os.path.join(ROOT, 'index.html'), encoding='utf-8').read()
 o = re.search(r'const ORIGIN=\{ lat:([\d.]+), lon:([\d.]+)', src); OLAT, OLON = float(o.group(1)), float(o.group(2))
-block = src[src.index('const ROUTE=['):]; block = block[:block.index('];')]
-ROUTE = [(float(a), float(b)) for a, b in re.findall(r'\[([\d.]+),([\d.]+)\]', block)]
+import sys
+BANA = sys.argv[1] if len(sys.argv) > 1 else 'stockholm'   # 'kultur': WIPEOUT KULTURSTOCKHOLM (kultur/route.py), same origin
+if BANA == 'kultur':
+    OUT = os.path.join(OUT, 'kultur'); ROUTE = [tuple(p) for p in json.load(open(os.path.join(OUT, 'route_osm.json')))]
+else:
+    block = src[src.index('const ROUTE=['):]; block = block[:block.index('];')]
+    ROUTE = [(float(a), float(b)) for a, b in re.findall(r'\[([\d.]+),([\d.]+)\]', block)]
 M_LAT = 111320.0; M_LON = 111320.0 * math.cos(math.radians(OLAT))
 P = np.array([[-(lo - OLON) * M_LON, (la - OLAT) * M_LAT] for la, lo in ROUTE])   # (x = west, z = north)
 # the same trims the game does: tail points that sit on the start, near-duplicates
@@ -106,5 +111,5 @@ try:
     for i in range(len(Q)):
         a, b = Q[i], Q[(i + 1) % len(Q)]; c = min(1, kabs[i] * R_MIN)
         d.line([tr(a), tr(b)], fill=(int(255 * c), int(230 * (1 - c) + 30), int(255 * (1 - c))), width=3)
-    im.save(os.path.join(H, 'route_smooth.png')); print('overlay -> route_smooth.png (grey = OSM streets, colour = racing line, red = at the radius limit)')
+    im.save(os.path.join(H, 'kultur' if BANA == 'kultur' else '', 'route_smooth.png')); print('overlay -> route_smooth.png (grey = OSM streets, colour = racing line, red = at the radius limit)')
 except Exception as ex: print('no overlay', ex)
