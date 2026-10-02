@@ -8,6 +8,7 @@ import bpy, bmesh, os, sys, json, math, time
 import numpy as np
 HERE=os.path.dirname(os.path.abspath(__file__)); TEX=os.path.join(HERE,'tex'); SHARED=os.path.abspath(os.path.join(HERE,'..','..','assets')); OUT=os.path.join(SHARED,'neon')   # NEON theme snapshot (b08a156)
 argv=sys.argv[sys.argv.index('--')+1:] if '--' in sys.argv else []; NOBAKE='--nobake' in argv
+PROBE=argv[argv.index('--probe')+1] if '--probe' in argv else None   # write the set pieces' boxes to this json and stop (setpieces_probe.cjs)
 T0=time.time()
 def log(*a): print(f'[{time.time()-T0:6.1f}s]',*a,flush=True)
 bpy.ops.wm.read_factory_settings(use_empty=True); scene=bpy.context.scene
@@ -46,7 +47,7 @@ def srgb(h): h=h.lstrip('#'); c=[int(h[i:i+2],16)/255 for i in (0,2,4)]; return 
 
 # ------------------------------------------------------------------ a small mesh builder in game coordinates
 class MB:
-    def __init__(s): s.v=[]; s.f=[]; s.uv=[]; s.mi=[]; s.mats=[]
+    def __init__(s): s.v=[]; s.f=[]; s.uv=[]; s.mi=[]; s.mats=[]; s.boxes=[]
     def m(s,mat):
         if mat not in s.mats: s.mats.append(mat)
         return s.mats.index(mat)
@@ -57,6 +58,7 @@ class MB:
     def box(s,T,cx,cy,cz,w,h,d,mat,top_uv=False):   # T maps a local point to game coords
         x0,x1,y0,y1,z0,z1=cx-w/2,cx+w/2,cy-h/2,cy+h/2,cz-d/2,cz+d/2
         P=lambda x,y,z:T((x,y,z))
+        s.boxes.append((PART,[tuple(float(c) for c in P(x,y,z)) for x in (x0,x1) for y in (y0,y1) for z in (z0,z1)]))
         s.quad(P(x0,y1,z1),P(x1,y1,z1),P(x1,y1,z0),P(x0,y1,z0),mat,((0,0),(1,0),(1,1),(0,1)) if top_uv else ((0,0),)*4)   # top
         for q in ((P(x0,y0,z0),P(x1,y0,z0),P(x1,y0,z1),P(x0,y0,z1)),(P(x0,y0,z1),P(x1,y0,z1),P(x1,y1,z1),P(x0,y1,z1)),
                   (P(x1,y0,z0),P(x0,y0,z0),P(x0,y1,z0),P(x1,y1,z0)),(P(x1,y0,z1),P(x1,y0,z0),P(x1,y1,z0),P(x1,y1,z1)),
@@ -68,8 +70,11 @@ class MB:
         for mt in s.mats: me.materials.append(mt)
         me.polygons.foreach_set('material_index',np.array(s.mi,np.int32))
         uvl=me.uv_layers.new(name='UVMap'); flat=[c for fu in s.uv for uv in fu for c in uv]; uvl.data.foreach_set('uv',flat)
-        me.validate(); ob=bpy.data.objects.new(name,me); (coll or scene.collection).objects.link(ob); return ob
+        me.validate(); ob=bpy.data.objects.new(name,me); (coll or scene.collection).objects.link(ob)
+        if coll is not None and coll.name=='setpieces': SETBOXES.extend(dict(obj=name,part=pt,c=c) for pt,c in s.boxes)
+        return ob
 
+PART=''; SETBOXES=[]   # every set-piece box, tagged, for the tile-clipping probe
 def frame(i):
     f=FR[i%SEG]; return f[0:3],f[3:6],f[6:9],f[9:12],f[12]
 def at(t):   # interpolate the dumped frames at track parameter t
@@ -171,17 +176,24 @@ def sign(M,T,w,h,y,z,front,back):
         if not flip: M.quad(T((x0,y-h/2,zz)),T((x1,y-h/2,zz)),T((x1,y+h/2,zz)),T((x0,y+h/2,zz)),mm)
         else: M.quad(T((x1,y-h/2,zz)),T((x0,y-h/2,zz)),T((x0,y+h/2,zz)),T((x1,y+h/2,zz)),mm)
 p,r,u,fw,_=at(0.0); T=local(p,r,u,fw); M=MB(); W2=HW+3.2
+PART='post'
 for sx in (-1,1):
     M.box(T,sx*W2,8,0,1.6,16,1.6,m_metal); M.box(T,sx*W2,8,0.85,0.5,14,0.5,m_neonY); M.box(T,sx*W2,2.2,0,1.7,1.4,1.7,m_haz)
-M.box(T,0,14.2,0,W2*2+2,3.4,2.2,m_metal); sign(M,T,W2*2+1.6,3.0,14.2,1.18,'gantry.jpg','gantry.jpg')
+PART='banner'; M.box(T,0,14.2,0,W2*2+2,3.4,2.2,m_metal); sign(M,T,W2*2+1.6,3.0,14.2,1.18,'gantry.jpg','gantry.jpg')
 for i in range(5): M.box(T,(i-2)*2.2,11.8,1.25,1.1,1.1,0.4,mat(f'light_{i}',col=(0.02,0,0),emit_col=(0.3,0.0,0.0),emit=1.0))
-setobs.append(M.build('gantry',SET))
+setobs.append(M.build('gantry',SET)); META={'gantry':dict(t=0.0)}
 def arch_free(t):   # both posts clear: nothing from the tiles above the slab bottom where they stand
     c=clear_at(t); return all(np.isnan(v) or v< -1.2 for v in c[:2])
 ARCHES=[dict(n=A['n'],t=A['t'],b=A['b'],d=A['d']) for A in D['arches']]
 for k in range(8):   # sponsor arches around the lap, away from the landmarks and the start
     t=(k+0.55)/8
     if all(min(abs(t-A['t']),1-abs(t-A['t']))*L>600 for A in ARCHES): ARCHES.append(dict(n=f'SPONSOR_{k}',t=t,b=(k*5+3)%NB,d=0))
+# CLEAR OF THE TILES (Kim 2026-10-02, the SJ 2097 arch on Skeppsbron had a post inside the facade): the survey above
+# samples the posts coarsely, so setpieces_probe.cjs raycasts every set-piece box against the finest tiles. What it
+# caught is fixed here: an arch narrows to the track (posts right outside the barriers) or moves along the lap (dm, m);
+# a billboard moves along the lap or changes side. Re-run the probe after any change to the track or the layout.
+ARCH_FIX={'SKEPPSBRON':dict(narrow=True,dm=-24), 'SPONSOR_6':dict(narrow=True)}
+BOARD_FIX={19:dict(dm=40), 23:dict(side=-1,dm=20), 31:dict(dm=70)}   # by billboard number i (t=(i+0.5)/nb)
 placed=0
 for A in ARCHES:
     if A['d']>260: log('arch skipped (landmark too far from the lap)',A['n'],round(A['d'])); continue
@@ -193,10 +205,13 @@ for A in ARCHES:
         if t is not None: break
     if t is None: log('arch skipped (tiles at the posts)',A['n']); continue
     if in_gap(t,0.01): log('arch skipped (in the jump)',A['n']); continue
-    p,r,u,fw,_=at(t); T=local(p,r,u,fw); M=MB(); W2=hw_at(t)+3.5; b=A['b']
+    fx=ARCH_FIX.get(A['n'],{}); t=(t+fx.get('dm',0)/L)%1.0
+    p,r,u,fw,_=at(t); T=local(p,r,u,fw); M=MB(); W2=hw_at(t)+(0.9 if fx.get('narrow') else 3.5); b=A['b']   # narrow: the posts' inner face 5 cm outside the barrier
+    PART='post'
     for sx in (-1,1): M.box(T,sx*W2,6,0,1.3,12,1.3,m_metal); M.box(T,sx*W2,1.6,0,1.4,1.0,1.4,m_haz)
-    M.box(T,0,11.4,0,W2*2+2,3.0,1.6,m_metal); sign(M,T,W2*2+1.4,2.6,11.4,0.88,f'arch_{b}.jpg',f'arch_{(b+7)%NB}.jpg')
+    PART='banner'; M.box(T,0,11.4,0,W2*2+2,3.0,1.6,m_metal); sign(M,T,W2*2+1.4,2.6,11.4,0.88,f'arch_{b}.jpg',f'arch_{(b+7)%NB}.jpg')
     M.box(T,0,9.8,0,W2*2+2,0.2,1.8,m_neonY); setobs.append(M.build('arch_'+A['n'].lower(),SET)); placed+=1
+    META['arch_'+A['n'].lower()]=dict(t=t,brand=b)
 log('arches placed',placed,'of',len(ARCHES))
 PARTY_NEON=[(1,0.08,0.18),(0.3,0.6,1),(1,0.85,0.1),(0.4,1,0.4),(1,0.25,0.3),(0.4,0.55,1),(1,0.85,0.1),(0.6,1,0.3)]   # rim colours, S..MP
 BOARD_AIM_M=200   # how far up the track each billboard looks for the racer (m)
@@ -204,8 +219,9 @@ nb=int(L/300); M=MB(); boards=0; slots=[]
 for i in range(nb):
     t=(i+0.5)/nb
     if t<0.012 or t>0.988 or in_gap(t,0.004): continue
-    c=clear_at(t); free={-1:c[2],1:c[3]}; pref=1 if i%2 else -1; sd=None
-    for s_ in (pref,-pref):
+    fx=BOARD_FIX.get(i,{}); t=(t+fx.get('dm',0)/L)%1.0
+    c=clear_at(t); free={-1:c[2],1:c[3]}; pref=fx.get('side',1 if i%2 else -1); sd=None
+    for s_ in ((pref,) if 'side' in fx else (pref,-pref)):
         v=free[s_]
         if not np.isnan(v) and v<3.5: sd=s_; break   # the board spans +6.3..+13.7 m over the deck: the tiles must stay below
     if sd is not None: slots.append((i,t,sd,free[sd]))
@@ -216,7 +232,8 @@ bi=0
 for si,(i,t,sd,fr) in enumerate(slots):
     p,r,u,fw,_=at(t); T=local(p,r,u,fw,rot=sd*0.42,lat=sd*(hw_at(t)+10),lift=10)
     leg=10-3.5-max(fr,-60.0)                               # mast from the board down to the roof or street under it
-    M.box(T,0,-3.5-leg/2,0,0.8,leg,0.8,m_metal)            # the mast stays plumb
+    PART=f'board{si}:mast'; M.box(T,0,-3.5-leg/2,0,0.8,leg,0.8,m_metal)            # the mast stays plumb
+    META[f'board{si}']=dict(t=t,side=sd,i=i,party=PARTIES_SHORT[pslot[si]] if si in pslot else None,brand=None if si in pslot else bi%NB)
     # the board itself turns to face the racer coming at it: aimed at the racing line BOARD_AIM_M before it, which
     # also tips it a little down toward the deck, so the slogan reads square-on in the chase camera
     B=p+r*(sd*(hw_at(t)+10))+u*10; qp,_,qu,_,_=at((t-BOARD_AIM_M/L)%1.0); Q=qp+qu*1.5
@@ -226,7 +243,7 @@ for si,(i,t,sd,fr) in enumerate(slots):
     Yb=np.cross(Zb,Xb) if hand>0 else np.cross(Xb,Zb); Yb=Yb/np.linalg.norm(Yb)
     assert np.dot(Yb,u)>0.5, 'billboard frame flipped'
     TB=lambda q,B=B,Xb=Xb,Yb=Yb,Zb=Zb: tuple(B+Xb*q[0]+Yb*q[1]+Zb*q[2])
-    M.box(TB,0,0,0,14.4,7.4,0.5,m_metal)
+    PART=f'board{si}:board'; M.box(TB,0,0,0,14.4,7.4,0.5,m_metal)
     if si in pslot:   # a party's lit election board, with a neon rim in the party colour
         k=pslot[si]; mm=mat(f'pboard_{k}',tex=f'pbill_{k}.jpg',emit_tex=f'pbill_{k}.jpg',emit=0.5,rough=0.5)
         rim=mat(f'prim_{k}',col=(0,0,0),emit_col=PARTY_NEON[k],emit=6.0)
@@ -237,6 +254,8 @@ for si,(i,t,sd,fr) in enumerate(slots):
 log('party boards',len(pslot),'of',len(slots),'placed boards, at t:',' '.join(f'{PARTIES_SHORT[k]}={slots[j][1]:.4f}' for j,k in sorted(pslot.items())))
 log('billboards',boards,'of',nb)
 setobs.append(M.build('billboards',SET)); log('set pieces',len(setobs))
+if PROBE:   # the set pieces' boxes for the tile-clipping probe (setpieces_probe.cjs), then stop: nothing is exported
+    json.dump(dict(boxes=SETBOXES,meta=META,trackLen=L),open(PROBE,'w')); log('probe',len(SETBOXES),'boxes ->',PROBE); os._exit(0)
 
 # the craft moved to build_craft.py (detailed hard-surface models); this script only builds the track set
 crafts=[]
