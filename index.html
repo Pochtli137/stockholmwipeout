@@ -35,7 +35,6 @@
   body.theme-neon #minimap { filter:drop-shadow(0 0 6px rgba(0,225,255,.35)); }
   body.theme-neon #msg { text-shadow:0 0 30px rgba(0,225,255,.75), 4px 4px 0 rgba(255,46,154,.55); }
   body.theme-neon #msg.count { text-shadow:0 0 40px rgba(255,230,0,.7), 6px 6px 0 rgba(0,0,0,.6); }
-  body.theme-neon #band { background:repeating-linear-gradient(-55deg,rgba(255,230,0,.95) 0 26px,rgba(5,7,11,.95) 26px 52px); }
   body.theme-neon .bar i.on { background:var(--c); box-shadow:0 0 8px var(--c); }
   body.theme-neon #results, body.theme-neon #keyveil, body.theme-neon #loadveil { background:repeating-linear-gradient(-55deg,rgba(255,230,0,.05) 0 40px,transparent 40px 80px),rgba(3,5,9,.9); }
   body.theme-neon .panel { background:rgba(8,11,18,.97); }
@@ -157,9 +156,18 @@
   #msg.count { color:var(--y); text-shadow:0 0 30px rgba(231,180,87,.55), 6px 6px 0 rgba(0,0,0,.6); }
   #sub { left:0; right:0; top:calc(38% + 150px); text-align:center; font:700 16px/1 "Rajdhani",sans-serif; letter-spacing:.5em; color:var(--c); pointer-events:none; }
   #sub .kata { display:block; margin:10px 0 0; font-size:13px; }
-  #band { position:fixed; left:-5%; right:-5%; top:calc(38% - 6px); height:150px; z-index:9; pointer-events:none; display:none;
-    background:repeating-linear-gradient(-55deg,rgba(196,160,40,.9) 0 26px,rgba(20,18,16,.95) 26px 52px); transform:skewY(-4deg);
-    mask-image:linear-gradient(90deg,transparent,#000 18%,#000 82%,transparent); opacity:.22; }
+  /* the countdown band: two crisp hazard rails framing the number, sliding in from the sides and out at GO. A HUD plate,
+     not a sheet over the city (the old faint full-width stripe field read as a glitch in the grid view, Kim 2026-10-02) */
+  #band { position:fixed; left:0; right:0; top:calc(38% - 6px); height:150px; z-index:9; pointer-events:none; display:none; overflow:hidden;
+    background:linear-gradient(90deg,transparent,rgba(3,5,9,.32) 22%,rgba(3,5,9,.32) 78%,transparent); }
+  #band::before, #band::after { content:''; position:absolute; left:0; right:0; height:9px; opacity:.92;
+    background:repeating-linear-gradient(-55deg,#ffe600 0 13px,#05070b 13px 26px); box-shadow:0 0 14px rgba(255,230,0,.35);
+    mask-image:linear-gradient(90deg,transparent,#000 14%,#000 86%,transparent); -webkit-mask-image:linear-gradient(90deg,transparent,#000 14%,#000 86%,transparent);
+    animation:bandInL .32s cubic-bezier(.2,.8,.2,1) both; }
+  #band::before { top:0; } #band::after { bottom:0; animation-name:bandInR; }
+  #band.out { background:none; } #band.out::before { animation:bandOutL .22s ease-in forwards; } #band.out::after { animation:bandOutR .22s ease-in forwards; }
+  @keyframes bandInL { from { transform:translateX(-100%); } } @keyframes bandInR { from { transform:translateX(100%); } }
+  @keyframes bandOutL { to { transform:translateX(100%); } } @keyframes bandOutR { to { transform:translateX(-100%); } }
   #attrib { position:fixed; right:8px; bottom:4px; z-index:11; font-size:10px; color:#fff;
     text-shadow:0 1px 2px #000; opacity:.85; font-family:Arial; letter-spacing:0; }
   /* ===== craft select: the hangar before the grid ===== */
@@ -2273,8 +2281,8 @@ function loop(now){
     countT-=dt; const n=Math.ceil(countT); const band=document.getElementById('band');
     lightMats.forEach((m,i)=>{ if(!m) return; const lit=i<Math.min(5,Math.floor((4-countT)/4*5)+1); m.emissive.setRGB(lit?TH.countK:0.15,0,0); });   // used: 1.6 (under its lower bloom threshold 4 floods the frame)
     if(countT<=0){ state='race'; msg.className='hud'; msg.textContent='GO'; msg.style.fontSize='120px'; flashT=0.8; boostFlash=0.7;
-      sub.innerHTML=''; band.style.display='none'; lapStart=0; raceTime=0; lightMats.forEach(m=>m&&m.emissive.setRGB(0,TH.countK,TH.countK*0.15)); }
-    else { msg.className='hud count'; msg.textContent=n; msg.style.fontSize='150px'; band.style.display='block';
+      sub.innerHTML=''; band.classList.add('out'); setTimeout(()=>{ if(state!=='count') band.style.display='none'; },240); lapStart=0; raceTime=0; lightMats.forEach(m=>m&&m.emissive.setRGB(0,TH.countK,TH.countK*0.15)); }
+    else { msg.className='hud count'; msg.textContent=n; msg.style.fontSize='150px'; if(band.style.display!=='block'||band.classList.contains('out')){ band.classList.remove('out'); band.style.display='block'; }
       sub.innerHTML='STOCKHOLM GRAND PRIX · SAGL 2097 · 1 LAP<span class="kata">ᛋᛏᚢᚴᚼᚢᛚᛘᛋ᛫ᛋᛏᚢᚱᛅ᛫ᛒᚱᛁᛋ</span>'; } }
   if(state==='race') raceTime+=dt;
   if(state!=='loading'){
