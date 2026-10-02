@@ -1033,6 +1033,13 @@ const FEEL={ on:true, slope:0.19, closeM:16, buffer:1.5, smoothM:10, finalM:14,
   // ramp climbs off the bridge, the deck ends at the lip, the rail flies a ballistic arc over the arch's crown (a parabola
   // tuned to race speed, ~84 m/s) with no track under it, and a landing ramp takes it back down to the bridge.
   jump:{ name:'VÄSTERBRON', rampM:7690, lipM:7960, landM:8220, outM:8440, s0:0.18, overTop:32 },
+  // BULLET TIME over the bridge (Kim 2026-10-02: "bullettime, en roll och dämpat ljud med vindsus"), by flight fraction g
+  // (0 = lip, 1 = touchdown): time sinks to `floor` within ~0.3 s of the lip, holds over the apex (g 0.52) to `holdTo`,
+  // and is back to 1.0 by `upTo`, well before the wheels touch. One slow barrel roll of the craft's mesh from rollFrom to
+  // rollTo (level again before the ramp-up ends); the chase camera pulls back, up and out to the side (orbit, m) and is
+  // home before touchdown. The music sinks behind a ~500 Hz low-pass at -8 dB, the engine dips and wind rises with the
+  // slow-mo; the sound stays under (audioHold) until the touchdown, where it snaps back on a low thud.
+  bullet:{ floor:0.37, inK:10, holdTo:0.53, upTo:0.66, rollFrom:0.1, rollTo:0.62, back:6, up:3.5, orbit:5, camOut:0.72, musLP:500, musDb:-8, engDip:0.6, audioHold:0.8 },
   // speed pads: chains of three into every drop, two more on the way down; none in the quiet wide sections
   chain:3, chainGapM:36,
   // banking: degrees = min(bankMax, bankK * curvature), faded out on near-straights, smoothed along the lap
@@ -1524,6 +1531,26 @@ function ensureAudio(){
     if(SFX.spatial){ spatialInit(); if(SFX.newPlayerEngine) engGain.connect(sendIn); }   // (flags) the spatial bus; the new engine rings in the street canyons
   }catch(e){ audioOn=false; } }
 function noiseSrc(){ const s=actx.createBufferSource(); s.buffer=sharedNoise; s.loop=true; return s; }
+// THE JUMP'S WIND: two band-passed noise layers (a low rush and a high whistle) that sweep slowly and drift across the
+// stereo field, silent until the bullet time pulls them up. Built on first use, straight to the output.
+let wind=null, musDucked=false;
+function windTick(a){ if(!actx||!sharedNoise) return;
+  if(!wind){ if(a<0.01) return; wind={ g:actx.createGain(), pan:actx.createStereoPanner?actx.createStereoPanner():null, f:[] };
+    wind.g.gain.value=0; if(wind.pan){ wind.g.connect(wind.pan); wind.pan.connect(actx.destination); } else wind.g.connect(actx.destination);
+    for(const [hz,q,lv] of [[420,0.7,1.0],[1500,2.2,0.35]]){ const n=noiseSrc(), bp=actx.createBiquadFilter(), gg=actx.createGain();
+      bp.type='bandpass'; bp.frequency.value=hz; bp.Q.value=q; gg.gain.value=lv; n.connect(bp); bp.connect(gg); gg.connect(wind.g); n.start(); wind.f.push([bp,hz]); } }
+  const t=actx.currentTime, on=paused?0:a;
+  wind.g.gain.setTargetAtTime(0.22*on*on, t, on>0.02?0.12:0.05);
+  for(const [bp,hz] of wind.f) bp.frequency.setTargetAtTime(hz*(0.75+0.35*Math.sin(t*0.9+hz)+0.2*Math.sin(t*2.3)), t, 0.2);
+  if(wind.pan) wind.pan.pan.setTargetAtTime(0.35*Math.sin(t*0.7), t, 0.2); }
+// the touchdown: a low sine drop and a short filtered thump of noise, once, under everything else
+function jumpThud(){ if(!actx||!audioOn||paused||!sharedNoise) return; const t=actx.currentTime;
+  const o=actx.createOscillator(), g=actx.createGain(); o.type='sine'; o.frequency.setValueAtTime(78,t); o.frequency.exponentialRampToValueAtTime(34,t+0.32);
+  g.gain.setValueAtTime(0.0001,t); g.gain.linearRampToValueAtTime(0.55,t+0.008); g.gain.exponentialRampToValueAtTime(0.0001,t+0.45);
+  o.connect(g); g.connect(actx.destination); o.start(t); o.stop(t+0.5);
+  const n=noiseSrc(), lp=actx.createBiquadFilter(), ng=actx.createGain(); lp.type='lowpass'; lp.frequency.value=220;
+  ng.gain.setValueAtTime(0.0001,t); ng.gain.linearRampToValueAtTime(0.35,t+0.005); ng.gain.exponentialRampToValueAtTime(0.0001,t+0.18);
+  n.connect(lp); lp.connect(ng); ng.connect(actx.destination); n.start(t); n.stop(t+0.2); }
 function mKick(t){ const o=actx.createOscillator(),g=actx.createGain();
   o.frequency.setValueAtTime(140,t); o.frequency.exponentialRampToValueAtTime(45,t+0.11);
   g.gain.setValueAtTime(0.0001,t); g.gain.linearRampToValueAtTime(0.95,t+0.004); g.gain.exponentialRampToValueAtTime(0.0001,t+0.22);
@@ -1665,13 +1692,16 @@ function updateAudio(){ if(!actx||!audioOn||!engGain) return;
   if(actx.state==='suspended') actx.resume();
   const p=player(); if(!p){ engGain.gain.value=0; return; }
   const nb=SFX.newPlayerEngine?p.boost:0;   // the live engine (8269ea8) ignores boost
-  engGain.gain.value=paused||state!=='race'?0.012:0.026+p.speed*0.0004+nb*0.0006;
-  for(const o of oscs) o.frequency.setTargetAtTime(45+p.speed*1.5+nb*2.4,actx.currentTime,0.05);
+  const bA=jumpAudio, JB=FEEL.bullet;
+  engGain.gain.value=(paused||state!=='race'?0.012:0.026+p.speed*0.0004+nb*0.0006)*(1-JB.engDip*bA);
+  for(const o of oscs) o.frequency.setTargetAtTime((45+p.speed*1.5+nb*2.4)*(1-0.3*bA),actx.currentTime,0.05);
+  windTick(bA);
   if(musicGain){
     const e=musicEnergy();
     // master-filtret öppnar sig med energin (dovt → ljust), volymen växer något
-    mFilter.frequency.setTargetAtTime(520+e*e*15500, actx.currentTime, 0.5);
-    musicGain.gain.setTargetAtTime(paused?0.05:(state==='race'?0.24+e*0.13:0.2), actx.currentTime, 0.5);
+    const fN=520+e*e*15500, tc=bA>0.01||musDucked?0.06:0.5; musDucked=bA>0.01;   // the jump: fast in and out, otherwise as deployed
+    mFilter.frequency.setTargetAtTime(fN+(Math.min(fN,JB.musLP)-fN)*bA, actx.currentTime, tc);
+    musicGain.gain.setTargetAtTime((paused?0.05:(state==='race'?0.24+e*0.13:0.2))*Math.pow(10,JB.musDb*bA/20), actx.currentTime, tc);
     if(!paused){ const la=actx.currentTime+0.13;
       if(nextStep<actx.currentTime-0.4) nextStep=actx.currentTime+0.05;
       while(nextStep<la){ scheduleStep(nextStep,mstep); mstep=(mstep+1)%CYCLE_STEPS; nextStep+=STEPDUR; } }
@@ -2065,7 +2095,8 @@ function stepShip(s,dt){
 // so the race is unchanged. It lands with a thud: a camera jolt and a short suspension squash.
 const AIR={ g:9.81, probe:4, lift:0.5, squashK:0.06, squashMax:0.55, shakeK:0.12 }, GRAV={ k:1.6, decay:0.5, min:-6, max:10 };
 const _fa=mkFrame(), _fb=mkFrame();
-let jumpCam=0, timeScale=1;   // THE JUMP: the camera pulls back and time slows a touch at the top of the arc
+let jumpCam=0, timeScale=1, bulletAmt=0, jumpAudio=0;   // THE JUMP: the camera pulls out and time slows (FEEL.bullet); jumpAudio 0..1 ducks the sound
+const JUMPLOG={ real:0, sim:0 };   // ?check: real and simulated seconds spent over the gap
 let dropFX=0;   // the player's descent, 0..1, for the lens and the speed lines
 function airZone(t){ const m=(((t%1)+1)%1)*TRACK_LEN; return FEEL.airAt.some(c=>Math.abs(m-c)<FEEL.airZoneM); }
 function airStep(s,dt,t,f){
@@ -2073,7 +2104,7 @@ function airStep(s,dt,t,f){
   const g=gapAt(t);   // THE JUMP: the rail itself is the arc, so no extra lift; the landing is the event
   if(g>=0){ s.inGap=true; s.air=0; s.airV=0; s.squash=(s.squash||0)*Math.exp(-dt*7); return; }
   if(s.inGap){ s.inGap=false; s.squash=AIR.squashMax; s.airT=(s.airT||0)+1;
-    if(s.isPlayer){ shake=Math.min(shake+1.1,1.6); airtimeCount++; boostFlash=Math.max(boostFlash,0.35); } }
+    if(s.isPlayer){ shake=Math.min(shake+1.1,1.6); airtimeCount++; boostFlash=Math.max(boostFlash,0.35); jumpThud(); } }
   const v=s.speed+s.boost+(s.gv||0), d=AIR.probe/TRACK_LEN;
   const aT=v*v*(frameAt(t-d,_fa).p.y-2*f.p.y+frameAt(t+d,_fb).p.y)/(AIR.probe*AIR.probe);   // the deck's vertical acceleration under the craft
   if((s.air||0)>0||(aT<-AIR.g-AIR.lift&&airZone(t))){ s.airV=(s.airV||0)+(-AIR.g-aT)*dt; s.air=(s.air||0)+s.airV*dt;
@@ -2105,6 +2136,7 @@ function advance(s,dt){
   const basis=new THREE.Matrix4().makeBasis(f.right,f.up,f.fwd.clone().negate());
   s.mesh.quaternion.setFromRotationMatrix(basis);
   s.mesh.rotateY(s.yaw); s.mesh.rotateZ(s.roll);
+  if(s.isPlayer){ const g=gapAt(now), B=FEEL.bullet; if(g>=0) s.mesh.rotateZ(Math.PI*2*THREE.MathUtils.smootherstep(g,B.rollFrom,B.rollTo)); }   // the barrel roll, level again before the landing
   if(s.air>0||s.squash>0.01) s.mesh.rotateX(THREE.MathUtils.clamp((s.airV||0)*0.02,-0.2,0.2)-(s.squash||0)*0.25);   // nose up on the way up, down on the way down, dips as it lands
   const sf=Math.min(1.4,(s.speed+s.boost)/MAXV), glow=0.9+Math.min(1,sf)*0.8+(s.boost>1?0.4:0), ud=s.mesh.userData;
   ud.engL.scale.set(glow,glow,1); ud.engR.scale.set(glow,glow,1);
@@ -2209,8 +2241,9 @@ function updateCamera(dt){
   // speed FOV opens to ~105 deg; on a phone that shrank the craft to 4 % of the width. Here the lag stays under a metre,
   // the lens is capped, and the camera sits a touch higher so the craft rides in the lower-middle third above the thumbs.
   const MC=MOBILE?mobCam():null;
-  const target=p.mesh.position.clone().addScaledVector(backLevel,(MC?MC.back:12)+jumpCam*9).addScaledVector(UP,(MC?MC.up:4.6)+jumpCam*4)
-    .addScaledVector(f.right,p.lat*0.08);
+  const JB=FEEL.bullet, je=jumpCam*jumpCam*(3-2*jumpCam);
+  const target=p.mesh.position.clone().addScaledVector(backLevel,(MC?MC.back:12)+je*JB.back).addScaledVector(UP,(MC?MC.up:4.6)+je*JB.up)
+    .addScaledVector(f.right,p.lat*0.08+je*JB.orbit);
   const lookT=p.mesh.position.clone().addScaledVector(fwdLevel,MC?MC.look:12).addScaledVector(UP,MC?MC.lookUp:1.4);
   if(camSnap){ camPos.copy(target); camLook.copy(lookT); camSnap=false; }
   if(MC) camPos.copy(target); else camPos.lerp(target,1-Math.pow(0.0008,dt));   // phones: rigid, so the distance never grows with speed
@@ -2307,8 +2340,13 @@ let last=performance.now();
 function loop(now){
   requestAnimationFrame(loop);
   let dt=Math.min((now-last)/1000,0.05); last=now;
-  { const pg=(state==='race'&&ships.length)?gapAt(shipT(player())):-1;   // THE JUMP: ~0.7x for the middle of the flight
-    const want=pg>=0.3&&pg<=0.7?0.7:1; timeScale+=(want-timeScale)*Math.min(1,dt*6); jumpCam+=((pg>=0?1:0)-jumpCam)*Math.min(1,dt*(pg>=0?2.5:1.5)); }
+  { const pg=(state==='race'&&ships.length&&!paused)?gapAt(shipT(player())):-1, B=FEEL.bullet;   // THE JUMP: bullet time
+    const want=pg<0?1:pg<B.holdTo?B.floor:pg<B.upTo?B.floor+(1-B.floor)*THREE.MathUtils.smoothstep(pg,B.holdTo,B.upTo):1;
+    if(want<timeScale) timeScale+=(want-timeScale)*Math.min(1,dt*B.inK); else timeScale=want;   // in: eased over ~0.3 s; out: on the flight's own clock
+    jumpCam+=((pg>=0&&pg<B.camOut?1:0)-jumpCam)*Math.min(1,dt*(pg>=0&&pg<B.camOut?2.2:5));
+    bulletAmt=(1-timeScale)/(1-B.floor);
+    jumpAudio=pg<0?0:pg<B.holdTo?bulletAmt:Math.max(bulletAmt,B.audioHold);   // the sound stays under until the wheels touch, then snaps back
+    if(pg>=0){ JUMPLOG.real+=dt; JUMPLOG.sim+=dt*timeScale; } }
   const rdt=dt; dt*=timeScale;
   skyTick(rdt); flickTick(rdt);
   if(tiles){ camera.updateMatrixWorld();
@@ -2363,7 +2401,7 @@ if(location.search.includes('check')) window.__SUN=SUN_DIR;
 window.__theme=THEME;
 if(location.search.includes('check')) window.__sw={
   frameAt, mkFrame, hitsAt:(x,z)=>tiles?hitsAt(x,z):[], tilesIdle:()=>tiles?tilesIdle():true, player, ships:()=>ships, keys,
-  setShield:v=>{ shieldT=v; }, setEnergy:v=>{ energy=v; }, shieldTouch:(d,k)=>SHIELD.touch(d,k), shieldVis:()=>SHIELD.mesh.visible, districts:()=>({ list:DISTRICTS.map(d=>({name:d.name,m:Math.round(d.t*TRACK_LEN)})), log:DIST_LOG }),
+  setShield:v=>{ shieldT=v; }, setEnergy:v=>{ energy=v; }, shieldTouch:(d,k)=>SHIELD.touch(d,k), shieldVis:()=>SHIELD.mesh.visible, jump:()=>({ ...JUMPLOG, timeScale, jumpCam, bulletAmt, jumpAudio, audio:actx?{ ctx:actx.state, wind:wind?+wind.g.gain.value.toFixed(3):0, music:musicGain?+musicGain.gain.value.toFixed(3):null, lpHz:mFilter?Math.round(mFilter.frequency.value):null, eng:engGain?+engGain.gain.value.toFixed(4):null }:null }), jumpReset:()=>{ JUMPLOG.real=0; JUMPLOG.sim=0; }, setBullet:o=>Object.assign(FEEL.bullet,o), districts:()=>({ list:DISTRICTS.map(d=>({name:d.name,m:Math.round(d.t*TRACK_LEN)})), log:DIST_LOG }),
   stats:()=>({ hard:HARD, energy, wallT, wallHits, raceTime, state, airtime:airtimeCount }), grip:()=>GRIP_K(),
   passes:()=>composer.passes, bloomPass:bloom, flickN:()=>flickMats.length, state:()=>state, len:()=>TRACK_LEN, HALF_W, MAXV, curvAhead, camera, setPaused:v=>{ paused=v; },
   placeAt(t,lat=0){ const p=player(); p.t=t; p.lat=lat; p.speed=0; p.vlat=0; advance(p,0); camSnap=true; updateCamera(1/60); camera.updateMatrixWorld(); },
