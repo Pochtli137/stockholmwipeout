@@ -9,10 +9,10 @@ verksamheten. Inga partiannonser på den här banan.
 depåer, ENTERING, resultat, upplåsning). Skyltar, vepor, väggar och plattor bakas ur samma fil med
 `wo2097/pipeline/kultur/build.sh`. Kim kan skriva om allt där utan att röra koden.
 
-## Rutten: 8,3 km, ett varv, cirka 105 s
+## Rutten: 8,2 km, ett varv, cirka 110 s
 
 Ett varv som vänder runt Saltsjön, laddat med landmärken, med start och mål vid **Börshuset på Stortorget**, Akademiens hem.
-Linjen är handlagd i stora bågar (minsta radie 131 m, regeln är 120 m) och kalibreras mot gatan och taken av samma dump som
+Linjen är handlagd i stora bågar (minsta radie 132 m, regeln är 120 m), går runt Tyska kyrkans och Klara kyrkas torn och kalibreras mot gatan och taken av samma dump som
 Stockholmsbanan. Ingen Västerbron.
 
 | m | Plats | Vad som händer |
