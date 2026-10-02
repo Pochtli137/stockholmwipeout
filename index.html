@@ -415,7 +415,8 @@ if(!API_KEY&&!DEMO&&!REBUILD){ loadveil.style.display='none'; keyveil.style.disp
 /* ============================== SETUP ============================== */
 const canvas=document.getElementById('c');
 const renderer=new THREE.WebGLRenderer({ canvas, antialias:true });
-renderer.setPixelRatio(Math.min(devicePixelRatio,MOBILE?1.5:2));   // phones: 1.5 is sharp enough and saves a third of the fill
+renderer.setPixelRatio(Math.min(devicePixelRatio,MOBILE?1.5:2));
+renderer.localClippingEnabled=true;   // Västerbron is cut out of the tiles (VB_CLIP)   // phones: 1.5 is sharp enough and saves a third of the fill
 const scene=new THREE.Scene();
 scene.background=new THREE.Color(0x9ec8e8);
 scene.fog=new THREE.Fog(0xaccbe6, 2500, 11000);
@@ -689,6 +690,7 @@ function drawSpeedFX(intensity){
 const ORIGIN={ lat:59.32800, lon:18.06000, h:45 };
 const D2R=THREE.MathUtils.DEG2RAD;
 let tiles=null, rootLoaded=false;
+const VB_CLIP=[];   // the planes of the Västerbron corridor (WATER, below): filled once the track is known
 if(API_KEY){
   tiles=new TilesRenderer();
   tiles.registerPlugin(new CesiumIonAuthPlugin({ apiToken:API_KEY, assetId:'2275207', autoRefreshToken:true }));
@@ -704,6 +706,7 @@ if(API_KEY){
   tiles.errorTarget=MOBILE?20:10; // full detalj från start → korrekta gatuhöjder (ingen grov skräpgeometri); telefoner: grövre
   if(MOBILE&&tiles.lruCache){ const c=tiles.lruCache;   // iOS kills a tab at ~1-1.5 GB: keep the tile cache near 250 MB
     if('maxBytesSize' in c){ c.minBytesSize=0.18e9; c.maxBytesSize=0.25e9; } c.minSize=Math.min(c.minSize||2000,2000); c.maxSize=Math.min(c.maxSize||3000,3000); }
+  tiles.addEventListener('load-model',({scene:s})=>s.traverse(o=>{ if(o.material) for(const m of [].concat(o.material)){ m.clippingPlanes=VB_CLIP; m.clipIntersection=true; } }));   // every tile: Västerbron's corridor is cut away
   tiles.addEventListener('load-tile-set',()=>{
     if(!rootLoaded){ rootLoaded=true; loadStartTime=performance.now(); } });
   scene.add(tiles.group);
@@ -2173,47 +2176,75 @@ function advance(s,dt){
 }
 // SHIELD FIELD: an energy skin around the player's craft, there only for the 5 s after a SHIELD pickup (Kim 2026-10-02:
 // no default shield, the idle field is gone). While lit it blocks the wall drain, barges AI aside and eats missiles. Additive fresnel shell, a little bigger than the hull so it never z-fights.
-// GLITTER OVER VÄSTERBRON (Kim 2026-10-02: "googlebron syns där under så lägg glittrande vatten där så att vi döljer den i
-// hoppet"): a sheet of moving water over Google's bridge along the jump, measured by pipeline/water_profile.cjs into
-// track.json `water` (extent along and across the line, height every stepM: just over the deck, parapets and lamp posts).
-// Small-wave normals, a dim sky fresnel, the sun's path and a glitter of sparkles that slows with the bullet time; soft
-// edges into the real water. The bridge's pylons stand on it (neon/build.py).
-const WATER=(()=>{ const W=TRACK_JSON&&TRACK_JSON.water; if(!W||!W.h) return { tick(){} };
-  const L=TRACK_LEN, gAt=m=>{ const x=Math.max(0,Math.min(W.h.length-1,(m-W.fromM)/W.stepM)), i=Math.min(W.h.length-2,Math.floor(x)); return W.h[i]+(W.h[i+1]-W.h[i])*(x-i); };
-  const STEP=4, nA=Math.ceil((W.toM-W.fromM)/STEP)+1, nX=14, pos=[], uv=[], idx=[], f=mkFrame(), r=new THREE.Vector3();
-  for(let i=0;i<nA;i++){ const m=Math.min(W.toM,W.fromM+i*STEP); frameAt(m/L,f); r.set(f.right.x,0,f.right.z).normalize(); const y=gAt(m);
-    for(let j=0;j<nX;j++){ const lat=W.latL+(W.latR-W.latL)*j/(nX-1); pos.push(f.p.x+r.x*lat,y,f.p.z+r.z*lat); uv.push(m-W.fromM,lat-W.latL); } }
-  for(let i=0;i<nA-1;i++) for(let j=0;j<nX-1;j++){ const a=i*nX+j, b=a+nX; idx.push(a,a+1,b,a+1,b+1,b); }   // wound to face up
-  const geo=new THREE.BufferGeometry(); geo.setAttribute('position',new THREE.Float32BufferAttribute(pos,3)); geo.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2)); geo.setIndex(idx);
-  const mat=new THREE.ShaderMaterial({ transparent:true, depthWrite:false, toneMapped:false,
-    uniforms:{ uT:{value:0}, uSun:{value:SUN_DIR.clone()}, uLen:{value:W.toM-W.fromM}, uWid:{value:W.latR-W.latL}, uEdge:{value:W.edgeM}, uFade:{value:W.fadeM} },
-    vertexShader:`varying vec2 vUv; varying vec3 vW; void main(){ vUv=uv; vec4 w=modelMatrix*vec4(position,1.0); vW=w.xyz; gl_Position=projectionMatrix*viewMatrix*w; }`,
-    fragmentShader:`uniform float uT,uLen,uWid,uEdge,uFade; uniform vec3 uSun; varying vec2 vUv; varying vec3 vW;
+// VÄSTERBRON IS GONE (Kim 2026-10-02: "kan vi ändra på googlemappen så att det bara blir vatten?"): in 2097 the track
+// replaced it. Google's data stays as it is; we only stop drawing the bridge where it crosses Riddarfjärden. Every tile
+// material gets the same six clipping planes (clipIntersection): four walls of the corridor that water_profile.cjs
+// measured (track.json water.hull, corners as m along the lap and m right of the line; the ends sit on the shores, so
+// both landfalls stay) and a floor and a ceiling (clipY: just over Mälaren's surface, `level`, to above the lamp
+// posts). Whatever of the tiles lies inside all six is not drawn. Then our water fills the hole, at the true level: a
+// sheet over the corridor, solid out to `core` m around it and fading into Google's own water over `feather` m. Small-wave
+// normals, the sky in a dim fresnel, the sun's glint and a glitter that slows with the bullet time, on Google's lake
+// colour. A ring of foam where each of the bridge's pylons now stands in it.
+const WATER=(()=>{ const W=TRACK_JSON&&TRACK_JSON.water; if(!W||!W.hull) return { tick(){} };
+  const L=TRACK_LEN, f=mkFrame(), r=new THREE.Vector3();
+  const xz=(m,lat)=>{ frameAt(((m/L)%1+1)%1,f); r.set(f.right.x,0,f.right.z).normalize(); return new THREE.Vector2(f.p.x+r.x*lat,f.p.z+r.z*lat); };
+  const P=W.hull.map(([m,lat])=>xz(m,lat)), c=P.reduce((a,p)=>a.add(p),new THREE.Vector2()).multiplyScalar(1/P.length);
+  const edges=P.map((a,i)=>{ const b=P[(i+1)%P.length]; let n=new THREE.Vector2(b.y-a.y,a.x-b.x).normalize(); if(n.dot(c.clone().sub(a))>0) n.negate(); return { n, d:-n.dot(a) }; });   // outward
+  VB_CLIP.length=0;
+  for(const e of edges) VB_CLIP.push(new THREE.Plane(new THREE.Vector3(e.n.x,0,e.n.y),e.d));   // n.p+d<0 inside every wall
+  VB_CLIP.push(new THREE.Plane(new THREE.Vector3(0,-1,0),W.clipY[0]), new THREE.Plane(new THREE.Vector3(0,1,0),-W.clipY[1]));
+  // the sheet: one quad over the hull plus the feather, its alpha from the signed distance to the hull
+  const pad=W.core+W.feather, ext=[Infinity,-Infinity,Infinity,-Infinity];
+  for(const p of P){ ext[0]=Math.min(ext[0],p.x-pad); ext[1]=Math.max(ext[1],p.x+pad); ext[2]=Math.min(ext[2],p.y-pad); ext[3]=Math.max(ext[3],p.y+pad); }
+  const geo=new THREE.PlaneGeometry(ext[1]-ext[0],ext[3]-ext[2],1,1); geo.rotateX(-Math.PI/2); geo.translate((ext[0]+ext[1])/2,W.y,(ext[2]+ext[3])/2);
+  const mat=new THREE.ShaderMaterial({ transparent:true, depthWrite:false, toneMapped:false, fog:true,
+    uniforms:{ ...THREE.UniformsUtils.clone(THREE.UniformsLib.fog), uT:{value:0}, uSun:{value:SUN_DIR.clone()}, uE:{value:edges.map(e=>new THREE.Vector3(e.n.x,e.n.y,e.d))},
+      uCore:{value:W.core}, uFeather:{value:W.feather}, uDeep:{value:new THREE.Color(0.0218,0.0418,0.0695)} },   // linear; Google's lake reads sRGB ~39,56,73 here
+    vertexShader:`#include <fog_pars_vertex>
+      varying vec3 vW; void main(){ vec4 w=modelMatrix*vec4(position,1.0); vW=w.xyz; vec4 mvPosition=viewMatrix*w; gl_Position=projectionMatrix*mvPosition;
+      #include <fog_vertex>
+      }`,
+    fragmentShader:`#include <fog_pars_fragment>
+      uniform float uT,uCore,uFeather; uniform vec3 uSun,uDeep; uniform vec3 uE[4]; varying vec3 vW;
       float h21(vec2 p){ return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453); }
       float vn(vec2 p){ vec2 i=floor(p), f=fract(p); f=f*f*(3.0-2.0*f);
         return mix(mix(h21(i),h21(i+vec2(1,0)),f.x),mix(h21(i+vec2(0,1)),h21(i+vec2(1,1)),f.x),f.y); }
       void main(){
-        vec2 p=vW.xz;
-        // small waves: two drifting noise octaves as a slope field
-        float e=0.6, a=vn(p*0.09+vec2(uT*0.05,uT*0.03)), b=vn(p*0.23-vec2(uT*0.08,-uT*0.06));
-        vec2 sl=vec2(vn(p*0.09+vec2(e,0)+vec2(uT*0.05,uT*0.03))-a, vn(p*0.09+vec2(0,e)+vec2(uT*0.05,uT*0.03))-a)*1.6
-               +vec2(vn(p*0.23+vec2(e,0)-vec2(uT*0.08,-uT*0.06))-b, vn(p*0.23+vec2(0,e)-vec2(uT*0.08,-uT*0.06))-b)*0.9;
-        vec3 n=normalize(vec3(-sl.x,1.0,-sl.y));
-        vec3 v=normalize(cameraPosition-vW), rf=reflect(-v,n);
-        float fres=0.04+0.96*pow(1.0-max(dot(n,v),0.0),5.0);
-        vec3 deep=vec3(0.021,0.043,0.074), sky=mix(vec3(0.05,0.08,0.15),vec3(0.15,0.11,0.19),clamp(1.0-rf.y*2.0,0.0,1.0));   // linear: ~rgb 41,60,78 like the lake
-        vec3 col=mix(deep,sky,clamp(fres*0.45,0.0,0.28));
-        float sun=pow(max(dot(rf,uSun),0.0),180.0)*6.0;
-        // the glitter: sparse cells that flash on and off, brightest along the sun's path
-        vec2 c=p*1.7; vec2 ci=floor(c); float ph=h21(ci), tw=fract(ph*7.13+uT*(0.6+ph*1.4));
-        float sp=step(0.92,h21(ci+floor(uT*3.0+ph*9.0)))*smoothstep(0.42,0.0,length(fract(c)-0.5))*smoothstep(0.0,0.2,tw)*smoothstep(1.0,0.6,tw);
-        float path=pow(max(dot(rf,uSun),0.0),8.0);
-        col+=vec3(1.0,0.93,0.8)*(sun+sp*(0.5+3.5*path));
-        float edge=smoothstep(0.0,uEdge,vUv.y)*smoothstep(uWid,uWid-uEdge,vUv.y)*smoothstep(0.0,uFade,vUv.x)*smoothstep(uLen,uLen-uFade,vUv.x);
-        gl_FragColor=vec4(col,edge);
+        vec2 p=vW.xz; float sd=-1e9; for(int i=0;i<4;i++) sd=max(sd,dot(uE[i].xy,p)+uE[i].z);   // >0 outside the hull
+        float a=1.0-smoothstep(uCore,uCore+uFeather,sd); if(a<0.002) discard;
+        // gentle ripples: two drifting noise octaves as a slope field
+        float e=0.6; vec2 o1=vec2(uT*0.05,uT*0.03), o2=-vec2(uT*0.08,-uT*0.06);
+        float n1=vn(p*0.09+o1), n2=vn(p*0.23+o2);
+        vec2 sl=vec2(vn(p*0.09+vec2(e,0)+o1)-n1, vn(p*0.09+vec2(0,e)+o1)-n1)*1.2+vec2(vn(p*0.23+vec2(e,0)+o2)-n2, vn(p*0.23+vec2(0,e)+o2)-n2)*0.7;
+        vec3 n=normalize(vec3(-sl.x,1.0,-sl.y)), v=normalize(cameraPosition-vW), rf=reflect(-v,n);
+        float fres=0.02+0.98*pow(1.0-max(dot(n,v),0.0),5.0);
+        vec3 sky=vec3(0.06,0.075,0.10);   // the photographed lake's own reflection, cool and dim (the 2097 pink would read as a patch)
+        vec3 col=uDeep*(0.94+0.12*vn(p*0.035))+(sky-uDeep)*clamp(fres*0.5,0.0,0.3);   // Google's lake carries a slow mottle
+        vec3 rs=reflect(-v,normalize(mix(vec3(0.0,1.0,0.0),n,0.3)));   // the sun sees a calmer surface: ripples drew white strokes into it
+        float sun=min(pow(max(dot(rs,uSun),0.0),1500.0)*0.8,0.35);   // a sharp, capped glint: wide hot spots bloomed into blobs
+        vec2 cc=p*1.7, ci=floor(cc); float ph=h21(ci), tw=fract(ph*7.13+uT*(0.6+ph*1.4));
+        float sp=step(0.93,h21(ci+floor(uT*3.0+ph*9.0)))*smoothstep(0.42,0.0,length(fract(cc)-0.5))*smoothstep(0.0,0.2,tw)*smoothstep(1.0,0.6,tw);
+        float path=pow(max(dot(rs,uSun),0.0),8.0), near=1.0-smoothstep(120.0,320.0,length(cameraPosition-vW));   // far off the glitter would only speckle
+        col+=vec3(1.0,0.93,0.8)*(sun+sp*near*(0.2+0.9*path));
+        gl_FragColor=vec4(col,a);
+        #include <fog_fragment>
       }` });
-  const mesh=new THREE.Mesh(geo,mat); mesh.renderOrder=2; mesh.frustumCulled=true; geo.computeBoundingSphere(); scene.add(mesh);
-  return { mesh, tick(dt){ mat.uniforms.uT.value+=dt; } };
+  const mesh=new THREE.Mesh(geo,mat); mesh.renderOrder=2; scene.add(mesh);
+  // foam where the pylons stand in it (the same pylons as neon/build.py: every L/42, none in the jump)
+  const foamMat=new THREE.ShaderMaterial({ transparent:true, depthWrite:false, toneMapped:false, uniforms:{ uT:mat.uniforms.uT },
+    vertexShader:`varying vec2 vP; void main(){ vP=position.xz; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
+    fragmentShader:`uniform float uT; varying vec2 vP;
+      float h21(vec2 p){ return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453); }
+      void main(){ float r=length(vP), an=atan(vP.y,vP.x);
+        float w=0.12*sin(an*7.0+uT*1.7)+0.08*sin(an*13.0-uT*2.3);
+        float ring=smoothstep(0.7,0.95,r)*(1.0-smoothstep(1.4+w,2.3+w,r));
+        float fleck=step(0.55,h21(floor(vec2(an*9.0,r*6.0-uT*1.5))));
+        gl_FragColor=vec4(vec3(0.82,0.86,0.88),ring*(0.45+0.4*fleck)); }` });
+  const n=Math.floor(L/42), feet=[];
+  for(let i=0;i<n;i++){ const t=i/n; if(gapAt(t)>=0) continue; const m=t*L; if(Math.min(...GAPS.map(([a,b])=>Math.min(Math.abs(t-a),Math.abs(t-b))))<0.002) continue;
+    const q=xz(m,0); let sd=-1e9; for(const e of edges) sd=Math.max(sd,e.n.dot(q)+e.d); if(sd>0) continue;
+    const ring=new THREE.Mesh(new THREE.RingGeometry(0.7,2.6,40,1).rotateX(-Math.PI/2),foamMat); ring.position.set(q.x,W.y+0.03,q.y); ring.renderOrder=3; scene.add(ring); feet.push(Math.round(m)); }
+  return { mesh, feet, planes:[...VB_CLIP], tick(dt){ mat.uniforms.uT.value+=dt; } };
 })();
 const SHIELD=(()=>{
   const mat=new THREE.ShaderMaterial({ transparent:true, depthWrite:false, blending:THREE.AdditiveBlending, toneMapped:false,
@@ -2457,7 +2488,7 @@ if(location.search.includes('check')) window.__SUN=SUN_DIR;
 window.__theme=THEME;
 if(location.search.includes('check')) window.__sw={
   frameAt, mkFrame, hitsAt:(x,z)=>tiles?hitsAt(x,z):[], tilesIdle:()=>tiles?tilesIdle():true, player, ships:()=>ships, keys,
-  setShield:v=>{ shieldT=v; }, setEnergy:v=>{ energy=v; }, shieldTouch:(d,k)=>SHIELD.touch(d,k), shieldVis:()=>SHIELD.mesh.visible, waterVis:v=>{ if(WATER.mesh) WATER.mesh.visible=v; }, water:()=>{ const m=WATER.mesh; if(!m) return null; m.geometry.computeBoundingBox(); const b=m.geometry.boundingBox; return { n:m.geometry.attributes.position.count, min:b.min.toArray().map(Math.round), max:b.max.toArray().map(Math.round), inScene:!!m.parent, vis:m.visible }; }, jump:()=>({ ...JUMPLOG, timeScale, jumpCam, bulletAmt, jumpAudio, audio:actx?{ ctx:actx.state, wind:wind?+wind.g.gain.value.toFixed(3):0, music:musicGain?+musicGain.gain.value.toFixed(3):null, lpHz:mFilter?Math.round(mFilter.frequency.value):null, eng:engGain?+engGain.gain.value.toFixed(4):null }:null }), jumpReset:()=>{ JUMPLOG.real=0; JUMPLOG.sim=0; }, setBullet:o=>Object.assign(FEEL.bullet,o), districts:()=>({ list:DISTRICTS.map(d=>({name:d.name,m:Math.round(d.t*TRACK_LEN)})), log:DIST_LOG }),
+  setShield:v=>{ shieldT=v; }, setEnergy:v=>{ energy=v; }, shieldTouch:(d,k)=>SHIELD.touch(d,k), shieldVis:()=>SHIELD.mesh.visible, waterVis:v=>{ if(WATER.mesh) WATER.mesh.visible=v; }, water:()=>{ const m=WATER.mesh; if(!m) return null; m.geometry.computeBoundingBox(); const b=m.geometry.boundingBox; return { min:b.min.toArray().map(Math.round), max:b.max.toArray().map(Math.round), feet:WATER.feet, planes:VB_CLIP.length, vis:m.visible }; }, clipOn:v=>{ VB_CLIP.length=0; if(v) VB_CLIP.push(...WATER.planes); }, jump:()=>({ ...JUMPLOG, timeScale, jumpCam, bulletAmt, jumpAudio, audio:actx?{ ctx:actx.state, wind:wind?+wind.g.gain.value.toFixed(3):0, music:musicGain?+musicGain.gain.value.toFixed(3):null, lpHz:mFilter?Math.round(mFilter.frequency.value):null, eng:engGain?+engGain.gain.value.toFixed(4):null }:null }), jumpReset:()=>{ JUMPLOG.real=0; JUMPLOG.sim=0; }, setBullet:o=>Object.assign(FEEL.bullet,o), districts:()=>({ list:DISTRICTS.map(d=>({name:d.name,m:Math.round(d.t*TRACK_LEN)})), log:DIST_LOG }),
   stats:()=>({ hard:HARD, energy, wallT, wallHits, raceTime, state, airtime:airtimeCount }), grip:()=>GRIP_K(),
   passes:()=>composer.passes, bloomPass:bloom, flickN:()=>flickMats.length, state:()=>state, len:()=>TRACK_LEN, HALF_W, MAXV, curvAhead, camera, setPaused:v=>{ paused=v; },
   placeAt(t,lat=0){ const p=player(); p.t=t; p.lat=lat; p.speed=0; p.vlat=0; advance(p,0); camSnap=true; updateCamera(1/60); camera.updateMatrixWorld(); },
