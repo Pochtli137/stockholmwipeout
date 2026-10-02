@@ -26,10 +26,21 @@ Publikt repo `Pochtli137/stockholmwipeout`. Live https://stockholmwipeout.vercel
 - **Titelskärmen har Stockholms riktiga stadsvapen, S:t Erik** (Kim 2026-09-30: "vi kan använda riktiga st erik här").
   Filen är `wo2097/assets/stockholm_vapen.svg` från Wikimedia Commons (Koyos, CC BY-SA 2.5, märkt som skyddat insignia), krediterad
   i raden under laddningslinjen. Risken är flaggad för Kim: vapnet skyddas av lagen 1970:498 och staden kräver tillstånd för
-  användning, främst ett problem i kommersiell kontext. Kreditraden får inte tas bort (CC BY-SA).- **Banan är en berg-och-dalbana (2026-10-01):** fall på 22–37 m, tre krön med luftfärd och ett hopp över Västerbron (lucka
+  användning, främst ett problem i kommersiell kontext. Kreditraden får inte tas bort (CC BY-SA).
+- **Banan är en berg-och-dalbana (2026-10-01):** fall på 22–37 m, tre krön med luftfärd och ett hopp över Västerbron (lucka
   260 m, 32 m över brons krön). Tuberna provades och togs bort. **Speakern provades och togs bort** (grenen
   `worktree-agent-a6f5d7aa01afc8d29` finns kvar i historiken; ElevenLabs-nyckeln ligger i `.env`).
-- **Skölden är ett fält runt skeppet:** svagt i vila efter energin, starkt 5 s efter upplockning (väggar biter inte, AI knuffas, missiler tas).
+- **Skölden är ett fält runt skeppet, men bara i 5 s efter en SHIELD-upplockning** (väggar biter inte, AI knuffas, missiler tas).
+  Inget fält i vila (Kim 2026-10-01: "ta bort den där defaultskölden"); meshen göms helt, noll opacitet lämnade en artefakt.
+- **Starten ligger mitt på Guldbron** (2026-10-01), 140 m in i varvet, så att IKÖA-skylten syns. Nedräkningsbandet är borta, bara siffran.
+- **ENTERING-titlar** på Östermalm, Norrmalm (Vasastan ligger inte på varvet), Kungsholmen och Södermalm. Bara titeln: inga
+  portar, inga moves, ingen musik (den versionen rullades tillbaka 2026-09-29).
+- **Västerbron (2026-10-02):** bullet time i hoppet (0,37x, en roll, dämpad musik, vind, duns vid landning). Googles bro klipps bort
+  vid rendering i en korridor över vattnet (datan orörd) och Mälaren fyller hålet på sin riktiga nivå (−20,69 m i spelets ram,
+  nollan ligger 45 m över ellipsoiden vid Medborgarplatsen). Pylonerna går ner i vattnet med skumringar. Porten över avstampet
+  säger bara **"DU HAR MYCKET ATT LEVA FÖR"**, utan stödlinjens nummer (Kim: "det här är en dystopi"). Brostumpar i betong provades
+  och togs bort (grenen `stump`): de drog mer blick än skarven. Kilen under brons ände vid Långholmen syns svagt, accepterad.
+- **Utvecklarläge:** `?test=vasterbron` startar 500 m före hoppet och startar om 3 s efter landning (R direkt). `?test=<meter>` valfri plats.
 - **Partiannonserna är tillbaka i neon**, åtta partier lika, utan Direktdemokraterna. Slogans och symboler i `wo2097/pipeline/README.md`.
 - **Mobil styrs bara med tilt** (tillstånd frågas vid TAP på titeln, kräver HTTPS). Styrplattan är borta.
 - **UI-ljud:** titel, ENTER, svep vid byte av skepp, lock-in vid val. Racets ljud är oförändrat.
@@ -39,6 +50,7 @@ Publikt repo `Pochtli137/stockholmwipeout`. Live https://stockholmwipeout.vercel
 - `main`: live, neon-2097-versionen.
 - `crafts`: gammal gren, allt ligger på `main`.
 - `blender`: den avvisade OSM-staden. Lokal.
+- `vasterbron`: inslagen i `main` 2026-10-02. `stump`: de avvisade brostumparna. Lokal.
 
 ## Öppet
 - **Cesium ion-token i `config.js` i det publika repot. Kim roterar den i Cesium ion.**

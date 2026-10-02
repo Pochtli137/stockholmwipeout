@@ -1,5 +1,12 @@
 # TODO
 
+## Läge 2026-10-02
+**Deployat:** grenen `vasterbron` inslagen i `main`: start mitt på Guldbron, ENTERING-titlar, ingen sköld i vila, nedräkningsbandet
+borta, bullet time över Västerbron, bron bortklippt med vatten på Mälarens riktiga nivå, porten "DU HAR MYCKET ATT LEVA FÖR",
+`?test=vasterbron`. Detaljer i CLAUDE.md.
+**Kvar:** kilen under brons ände vid Långholmen (svag, accepterad tills vidare). Ion-tokenen. Musiken och skarpare stad nedan.
+**Overifierat:** bullet time och vattnet på riktig iPhone.
+
 ## Idéer som väntar (2026-10-02)
 - **Skarpare stad:** `tiles.errorTarget` står på 10 (dator) / 20 (mobil). Prova 4–6 på dator lokalt, mät fps, minne och laddtid före/efter. Mobil ska stå kvar. Kim: avvakta.
 - **Musik:** ElevenLabs Music, provlyssning av tre riktningar först. Kontot behöver credits.
