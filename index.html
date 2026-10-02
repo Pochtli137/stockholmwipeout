@@ -892,7 +892,7 @@ function snapTick(now){
   if(TRACK_JSON){ if(snapDone) return;
     const el=(now-loadStartTime)/1000; document.getElementById('loadfill').style.width=Math.min(100,el/6*100)+'%';
     document.getElementById('loadtxt').textContent='streamar stadsdelen runt starten · '+(assetsReady?'banan laddad':'laddar banan');
-    if(el>6 && assetsReady){ snapDone=true; startRace(); } return; }
+    if(el>6 && assetsReady && (!TEST||tilesIdle())){ snapDone=true; startRace(); } return; }
   if(DUMP){ if(!dumpStarted&&(now-loadStartTime)>3000){ dumpStarted=true; dumpWalk(); } return; }
   if(now-lastSnapWalk<200) return; lastSnapWalk=now;
   const N=CP.length, cam=camera.position;
@@ -1384,6 +1384,14 @@ const STATS=[
   {spd:0.60, thr:1.00, han:0.62, shd:0.52} ];           // ERIXON: thrust
 function physOf(st){ return { vmax:0.965+0.06*st.spd, acc:0.82+0.38*st.thr, steer:0.86+0.26*st.han, grip:0.88+0.22*st.han, drain:1.6-0.95*st.shd, hitKeep:0.25+0.25*st.shd }; }
 const CHECK=location.search.includes('check');
+// ?test=vasterbron, ?test=<m> (Kim 2026-10-02: "ge mig en bana i local där jag bara kan testa västerbron sen så slipper
+// jag köra dit hela tiden"): a dev quick-start, linked from nowhere. No title, no hangar (the remembered craft), no
+// countdown: the field drops in at <m> along the lap at race speed and plays on as in a lap. Västerbron starts 500 m
+// before the lip at what a bot lap carries there (58 m/s, 12 of boost, the downhill's 1.6), with the pad chain still
+// ahead, and runs again from the same point 3 s after the landing. R (or a tap on the tag) restarts at any time.
+const TEST=(()=>{ const q=location.search.match(/[?&]test=([^&]+)/); if(!q) return null; const k=decodeURIComponent(q[1]).toLowerCase();
+  if(k==='vasterbron'||k==='västerbron') return { name:'VÄSTERBRON', at:()=>(GAPS.length?GAPS[0][0]*TRACK_LEN:FEEL.jump.lipM)-500, speed:58, boost:12, gv:1.6, auto:true };
+  const v=parseFloat(k); return isFinite(v)?{ name:Math.round(v)+' M', at:()=>v, speed:58, boost:0, gv:0, auto:false }:null; })();
 let TEAM_CHOICE=(()=>{ const m=location.search.match(/[?&]team=(\d)/); if(m) return +m[1];
   try{ const v=+localStorage.getItem('swTeam'); return v>=0&&v<6?v:0; }catch(e){ return 0; } })();
 function teamOrder(){ const o=[TEAM_CHOICE]; for(let i=0;i<6;i++) if(i!==TEAM_CHOICE) o.push(i); return o; }
@@ -1793,7 +1801,7 @@ const msg=document.getElementById('msg'), sub=document.getElementById('sub');
    After the tiles are in, before the grid: the six Blender craft on a turntable in a studio rig (the showroom's
    look), one at a time. ← → / A D / the buttons / the dots switch with a slide, drag spins it, ENTER / SPACE / KÖR
    locks in: a white flash, the team sting, the camera pushes in, then the countdown. ?check skips it. */
-let selectDone=CHECK||DUMP||REBUILD, selIdx=TEAM_CHOICE, selFrom=-1, selT=1, selDir=1, selLock=0, selSpin=0, selDrag=null;
+let selectDone=CHECK||DUMP||REBUILD||!!TEST, selIdx=TEAM_CHOICE, selFrom=-1, selT=1, selDir=1, selLock=0, selSpin=0, selDrag=null;
 const hScene=new THREE.Scene(), hCam=new THREE.PerspectiveCamera(34,1,0.1,400); const hPods=[];
 { const HG=TH.hangar;   // neon: the 2097 studio; used: a depot under Slussen (oil-stained concrete, a sodium work lamp, a tube behind)
   hScene.background=new THREE.Color(HG.bg); hScene.fog=new THREE.Fog(HG.bg,...HG.fog);
@@ -1911,11 +1919,30 @@ function startRace(){
   if(actx) uiHandOff();
   if(actx){ mstep=0; nextStep=actx.currentTime+0.1; } // stegringen börjar om med loppet
   spawnShips(); camSnap=true; state='count'; countT=3.999; raceTime=0; lapTimes=[]; lapStart=0; resetKit(); TOUCH.calibrate();
+  if(TEST) testPlace();
 }
-function restart(){ document.getElementById('results').style.display='none'; paused=false; pauseMsg=null; wallT=0; wallHits=0; for(const x of ships) x.psi=0;
+function restart(){ if(TEST){ testPlace(); return; } document.getElementById('results').style.display='none'; paused=false; pauseMsg=null; wallT=0; wallHits=0; for(const x of ships) x.psi=0;
   if(actx){ mstep=0; nextStep=actx.currentTime+0.1; }
   spawnShips(); camSnap=true; state='count'; countT=3.999; raceTime=0; lapTimes=[]; lapStart=0; resetKit(); TOUCH.calibrate();
   msg.textContent=''; sub.innerHTML=''; }
+// ?test: the field around the player at the test point, all at race speed, and the race running
+const TEST_FIELD=[[14,-2.6,1.05],[30,2.6,1.0],[-9,2.2,1.07],[58,-1.0,0.97],[-26,-3.0,1.08]];   // AI: m ahead, lat, speed x
+function testPlace(){ const L=TRACK_LEN, t0=((TEST.at()/L)%1+1)%1, v=TEST.speed+TEST.boost;
+  document.getElementById('results').style.display='none'; paused=false; pauseMsg=null;
+  ships.forEach((s,i)=>{ const [d,lat,k]=i===0?[0,0,1]:TEST_FIELD[(i-1)%TEST_FIELD.length];
+    s.t=1+t0+d/L; s.lat=lat; s.vlat=0; s.speed=i===0?TEST.speed:v*k; s.boost=i===0?TEST.boost:0; s.gv=TEST.gv;
+    s.air=0; s.airV=0; s.inGap=false; s.squash=0; s.yaw=0; s.roll=0; s.psi=0; s.hitT=0; s.done=false; s.finishTime=0; s.crossedStart=true; s.lap=1;
+    advance(s,0); if(i===0&&HARD) initPlayerFree(s); });
+  resetKit(); state='race'; raceTime=0; lapStart=0; lapTimes=[]; timeScale=1; jumpCam=0; bulletAmt=0; jumpAudio=0; shake=0; flashT=0;
+  distLastT=null; distPending=null; TEST.inGap=false; TEST.landAt=null; camSnap=true; msg.textContent=''; sub.innerHTML='';
+  if(!TEST.tag){ const el=TEST.tag=document.createElement('div'); el.textContent='TEST: '+TEST.name+' · R = igen';
+    el.style.cssText='position:fixed;left:calc(env(safe-area-inset-left) + 16px);bottom:'+(MOBILE?'calc(env(safe-area-inset-bottom) + 10px)':'58px')+';z-index:11;'
+      +'font:700 11px "Rajdhani",sans-serif;letter-spacing:.24em;color:rgba(255,230,0,.75);text-shadow:0 0 6px rgba(0,0,0,.8);cursor:pointer;user-select:none;';
+    el.addEventListener('pointerdown',e=>{ e.stopPropagation(); testPlace(); }); document.body.appendChild(el); } }
+function testTick(){ if(!TEST||state!=='race') return;   // Västerbron: again from the same point 3 s after the touchdown
+  const g=gapAt(shipT(player()));
+  if(g>=0) TEST.inGap=true; else if(TEST.inGap){ TEST.inGap=false; TEST.landAt=raceTime; }
+  if(TEST.auto&&TEST.landAt!==null&&raceTime-TEST.landAt>3) testPlace(); }
 function resetKit(){ energy=100; weapon=null; shieldT=0; boostMeter=50; for(const m of missiles) scene.remove(m.spr); missiles.length=0; drawWeaponIcon(); }
 function fmt(t){ const m=Math.floor(t/60),s=t-m*60; return m+':'+s.toFixed(2).padStart(5,'0'); }
 
@@ -2401,7 +2428,7 @@ function loop(now){
     for(const m of padMats) for(const k of ['map','emissiveMap']) if(m[k]) m[k].offset.y=(m[k].offset.y-dt*1.6)%1;
     for(const m of wpadMats) for(const k of ['map','emissiveMap']) if(m[k]) m[k].rotation+=dt*1.4;
     stepMissiles(dt); if(FX.particles){ GLOW.tick(dt); DUST.tick(dt); } boostFlash=Math.max(0,boostFlash-dt*1.8); hitFlash=Math.max(0,hitFlash-dt*2);
-    districtTick(); updateHUD(dt); drawMinimap();
+    districtTick(); testTick(); updateHUD(dt); drawMinimap();
     { const p=player(); const sf=(p.speed+p.boost)/MAXV;
       // FEEL: the streaks thicken on the way down
       drawSpeedFX(state==="race"?Math.min(1,Math.max(0,(sf-0.45)/0.55)+dropFX*FEEL.dropFX):0);
@@ -2411,7 +2438,8 @@ function loop(now){
     // loading: sväva över startområdet så tiles där streamas in snabbt
     // the title: a slow drift over Slussen and the water (it also keeps the start area streaming in)
     const a=loadStartTime?(now-loadStartTime)*0.0002:0;
-    frameAt(startT(),loadFrame); frameAt((startT()+0.015)%1,lookFrame);
+    const t0=TEST?((TEST.at()/TRACK_LEN)%1+1)%1:startT();   // ?test: stream the test point in, not the grid
+    frameAt(t0,loadFrame); frameAt((t0+0.015)%1,lookFrame);
     camera.position.copy(loadFrame.p).addScaledVector(loadFrame.up,100+18*Math.sin(a*1.3))
       .addScaledVector(loadFrame.fwd,-70-30*Math.cos(a*0.8)).addScaledVector(loadFrame.right,Math.sin(a)*60);
     camera.lookAt(lookFrame.p);
