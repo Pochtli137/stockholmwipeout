@@ -1,5 +1,9 @@
 # TODO
 
+## Idéer som väntar (2026-10-02)
+- **Skarpare stad:** `tiles.errorTarget` står på 10 (dator) / 20 (mobil). Prova 4–6 på dator lokalt, mät fps, minne och laddtid före/efter. Mobil ska stå kvar. Kim: avvakta.
+- **Musik:** ElevenLabs Music, provlyssning av tre riktningar först. Kontot behöver credits.
+
 ## Läge 2026-09-29, natt
 **Tillbakarullat (Kim: "det här funkade inte"):** stadsdelsportar, ENTERING-titlar, flourishes/moves och Rez-musiken
 (revert av `ae0b0bd` och `fd889c6`, historiken kvar). Mobilfixarna (`7052cc5`, kameran i `6be353c`) är kvar. Deployat.
