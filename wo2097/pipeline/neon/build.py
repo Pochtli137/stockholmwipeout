@@ -235,6 +235,45 @@ if GAPS:
         M.quad(T((a,10.5,zz)),T((b,10.5,zz)),T((b,17.0,zz)),T((a,17.0,zz)),m_gate)
     M.box(T,0,10.18,0,GW+0.4,0.12,1.3,m_warm); setobs.append(M.build('gate_vasterbron',SET)); META['gate_vasterbron']=dict(t=t)
     log('gate at Västerbron',round(t*L),'m,',round(GW,1),'x 6.5 m')
+# THE STUMPS (2026-10-02): Västerbron is cut out of the tiles over the water (index.html WATER), and where the cut meets
+# the kept landfalls on Långholmen and at Rålambshov the deck ended in an open, hollow section over a dark cliff. A
+# concrete abutment closes each cut: its face 1.2 m out over the water from the cut, 6 m deep into the landfall, from
+# under the water up to 0.9 m over the deck's top (water_profile.cjs measures it), a little wider than the deck, on a
+# broader footing. Dark concrete, a thin yellow neon line along the top and down the front corners, no text: the bridge is gone, this is
+# what is left of it.
+m_conc=mat('stump_concrete',tex='stump_conc.jpg',rough=0.9); m_wet=mat('stump_wet',col=(0.03,0.04,0.05),rough=0.6)
+m_cope=mat('stump_cope',col=(0.16,0.18,0.22),rough=0.85)
+def tbox(M,T,cx,cy,cz,w,h,d,mt,tile=4.8):   # MB.box with the texture laid on every face in metres (tile x tile per repeat)
+    x0,x1,y0,y1,z0,z1=cx-w/2,cx+w/2,cy-h/2,cy+h/2,cz-d/2,cz+d/2; P=lambda x,y,z:T((x,y,z)); U=lambda a,b:(a/tile,b/tile)
+    M.quad(P(x0,y1,z1),P(x1,y1,z1),P(x1,y1,z0),P(x0,y1,z0),mt,(U(x0,z1),U(x1,z1),U(x1,z0),U(x0,z0)))
+    M.quad(P(x0,y0,z0),P(x1,y0,z0),P(x1,y0,z1),P(x0,y0,z1),mt,(U(x0,z0),U(x1,z0),U(x1,z1),U(x0,z1)))
+    M.quad(P(x0,y0,z1),P(x1,y0,z1),P(x1,y1,z1),P(x0,y1,z1),mt,(U(x0,y0),U(x1,y0),U(x1,y1),U(x0,y1)))
+    M.quad(P(x1,y0,z0),P(x0,y0,z0),P(x0,y1,z0),P(x1,y1,z0),mt,(U(-x1,y0),U(-x0,y0),U(-x0,y1),U(-x1,y1)))
+    M.quad(P(x1,y0,z1),P(x1,y0,z0),P(x1,y1,z0),P(x1,y1,z1),mt,(U(-z1,y0),U(-z0,y0),U(-z0,y1),U(-z1,y1)))
+    M.quad(P(x0,y0,z0),P(x0,y0,z1),P(x0,y1,z1),P(x0,y1,z0),mt,(U(z0,y0),U(z1,y0),U(z1,y1),U(z0,y1)))
+def stump(A,B,top,name):
+    flat=lambda v:np.array([v[0],0.0,v[2]])/np.linalg.norm([v[0],v[2]])
+    def pt(lat):   # a point on the cut line at this offset from the racing line
+        m=A[0]+(B[0]-A[0])*(lat-A[1])/(B[1]-A[1]); p,r=at(m/L)[:2]; q=p+flat(r)*lat; return np.array([q[0],0.0,q[2]])
+    a,b=pt(-5.5),pt(21.5)   # the deck with its parapets runs -5..+21 m right of the line
+    x=(b-a)/np.linalg.norm(b-a); y=np.array([0,1.0,0]); z=np.cross(x,y); z/=np.linalg.norm(z)
+    hc=np.mean([pt(-8)+(pt(24)-pt(-8))*0.5]+[np.array([q[0],0,q[2]]) for q in [at(m/L)[0] for m,_ in WAT['hull']]],axis=0)
+    if np.dot(hc-(a+b)/2,z)<0: z=-z   # z points out over the water, into the cut
+    p0,r0,u0,f0,_=at(A[0]/L)
+    if np.dot(np.cross(x,y),z)*np.dot(np.cross(r0,u0),-f0)<0: x=-x   # the same handedness as the track's frames: faces wind outward
+    o=(a+b)/2; half=np.linalg.norm(b-a)/2+0.5; bot=WAT['level']-1.0; wl=WAT['level']+1.4; tp=top+0.9
+    T=lambda q:tuple(o+x*q[0]+y*q[1]+z*q[2])
+    M=MB(); global PART; PART='abutment'
+    tbox(M,T,0,(bot+tp)/2,-2.4,half*2,tp-bot,7.2,m_conc)                       # the body: 1.2 m out over the water, 6 m in
+    for k in (-1,0,1):                                                          # three pilasters break the face
+        tbox(M,T,k*half*0.62,(bot+tp-0.6)/2,1.5,1.6,tp-0.6-bot,0.6,m_conc)
+    M.box(T,0,(bot+wl)/2,-2.4,half*2+0.08,wl-bot,7.28,m_wet)                    # the wet band at the waterline
+    tbox(M,T,0,tp+0.22,-2.0,half*2+0.6,0.45,8.6,m_cope)                         # the coping, a little proud
+    M.box(T,0,tp+0.05,2.25,half*2+0.62,0.1,0.1,m_neonY)                         # one thin neon line under its front edge
+    for sx in (-1,1): M.box(T,sx*(half+0.02),(wl+tp)/2,1.22,0.1,tp-wl,0.1,m_neonY)   # and down its two front corners to the waterline
+    setobs.append(M.build(name,SET)); META[name]=dict(t=(A[0]+B[0])/2/L); log('stump',name,'width',round(half*2,1),'top',round(tp+0.45,2),'bottom',round(bot,2))
+if WAT and 'stumpTop' in WAT:
+    H_=WAT['hull']; stump(H_[0],H_[1],WAT['stumpTop'][0],'stump_ralambshov'); stump(H_[3],H_[2],WAT['stumpTop'][1],'stump_langholmen')
 PARTY_NEON=[(1,0.08,0.18),(0.3,0.6,1),(1,0.85,0.1),(0.4,1,0.4),(1,0.25,0.3),(0.4,0.55,1),(1,0.85,0.1),(0.6,1,0.3)]   # rim colours, S..MP
 BOARD_AIM_M=200   # how far up the track each billboard looks for the racer (m)
 nb=int(L/300); M=MB(); boards=0; slots=[]
