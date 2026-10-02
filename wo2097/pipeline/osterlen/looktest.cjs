@@ -30,7 +30,7 @@ const settle=async(p,ms)=>{ const s=Date.now(); await sleep(120); while(Date.now
         await settle(p,8000); await p.screenshot({path:path.join(OUT,name+'.png')}); console.log(name,JSON.stringify(r)); }
       await p.close(); } }
   if(MODE==='clip'){ const seg=ARG, SECS=+(process.argv[5]||11), V=+(process.argv[6]||70); const {p}=await open(b,seg);
-    const START={ kivik:[[55.6879,14.2278],-470], kaseberga:[[55.382688,14.054328],-700] }[seg];
+    const START={ kivik:[[55.6879,14.2278],-420], kaseberga:[[55.382688,14.054328],-700] }[seg];
     const s0=await p.evaluate(([at,lead])=>__lt.sAt(at[0],at[1])+lead,START); const dir=path.join(OUT,'frames_'+seg); fs.mkdirSync(dir,{recursive:true});
     await p.evaluate(s=>__lt.place(s,70),s0); await settle(p,8000); const N=Math.round(SECS*30);
     for(let i=0;i<N;i++){ const r=await p.evaluate(([s,v])=>__lt.place(s,v),[s0+V*i/30,V]); await settle(p,900);

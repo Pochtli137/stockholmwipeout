@@ -16,7 +16,7 @@ Skärmdumpar och översikt: `~/Projects/_process/2026-10-02/stockholmwipeout-ost
 Glimmingehus (OSM-fotavtryck, 26 m). Resultat i `~/Projects/_process/2026-10-02/stockholmwipeout-osterlen-test/`.
 **Utfall:** havet och fälten håller, byarna läses som en karta och landmärkena som modeller på ett fotografi. Ales stenar syns
 inte från 30 m (stenarna är 1 till 3 m höga), bara när banan går ner till cirka 8 m. Stenshuvud är en slät kulle utan klippor.
-Stockholm från samma höjd har fasader och djup. Inget av detta rör `index.html`.
+Stockholm från samma höjd har fasader och djup. Skyltarna läses i solen på cirka 100 m. Inget av detta rör `index.html`.
 
 ## Läge 2026-10-02
 **Deployat:** grenen `vasterbron` inslagen i `main`: start mitt på Guldbron, ENTERING-titlar, ingen sköld i vila, nedräkningsbandet
