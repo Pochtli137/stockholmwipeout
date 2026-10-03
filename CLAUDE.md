@@ -47,7 +47,7 @@ Publikt repo `Pochtli137/stockholmwipeout`. Live https://stockholmwipeout.vercel
 - **UI-ljud:** titel, ENTER, svep vid byte av skepp, lock-in vid val. Racets ljud är oförändrat.
 - **Musik: nästa steg** (ElevenLabs Music, provlyssning först; kontot behöver credits).
 
-## WIPEOUT KULTURSTOCKHOLM (grenen `kultur`, 2026-10-02, inte deployad)
+## WIPEOUT KULTURSTOCKHOLM (live sedan 2026-10-04)
 - **Andra banan** bakom `?bana=kultur` (Kim: "kör kulturstockholm, nya racers som passar scenariot ... jag vill ha en racer som heter
   'De aderton'"). Samma Google-Stockholm, 8,2 km, start vid Börshuset. Koncept i `kultur/KONCEPT.md`, **all text i
   `wo2097/assets/kultur/copy.json`**, pipeline i `wo2097/pipeline/kultur/` (README: Kulturstockholm).
@@ -67,7 +67,7 @@ Publikt repo `Pochtli137/stockholmwipeout`. Live https://stockholmwipeout.vercel
 - `crafts`: gammal gren, allt ligger på `main`.
 - `blender`: den avvisade OSM-staden. Lokal.
 - `vasterbron`: inslagen i `main` 2026-10-02. `stump`: de avvisade brostumparna. Lokal.
-- `osterlen`: fas 0 och utseendetestet för Österlen (hyllat). `kultur`: Wipeout Kulturstockholm, ovanpå `osterlen`. Lokala, ej pushade.
+- `osterlen`: fas 0 och utseendetestet för Österlen (hyllat). `kultur`: Wipeout Kulturstockholm. Båda inslagna i `main` 2026-10-04.
 
 ## Öppet
 - **Cesium ion-token i `config.js` i det publika repot. Kim roterar den i Cesium ion.**
