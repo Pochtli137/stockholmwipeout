@@ -41,6 +41,12 @@ den). Stockholm är standard och läser sina gamla värden: varje banväxel i in
 - **Farkosterna** (kultur/build_craft.py) döper om sina noder per farkost före export. *Upptäckt på vägen:* Stockholms
   `assets/neon/craft_1..5.glb` exporterar `eng_L.001`, `flap_L.002` osv., så spelet hittar inte dysorna och luftbromsarna på de
   farkosterna (glöden faller tillbaka till en fast punkt). Inte rört, Stockholm ska vara orört.
+- **Musiken** (2026-10-03, `KREC` i index.html): Vivaldis Sommaren, Presto, i John Harrisons livetagning (Wikimedia Commons, CC BY-SA,
+  krediten på titeln ur `copy.json title.musicCredit`), lagd takt för takt på rakt tempo 160 med spelets egna big beat-trummor under.
+  En fil, `assets/kultur/music/vivaldi_sommaren_presto.mp3`, laddas efter första tryckningen, tyst i nedräkningen, från början vid
+  RIDÅ, loopar sömlöst, går in i `musicGain`. Källor och licenser i `assets/kultur/music/sources.json`, provlyssning i
+  `kultur/musikprov/` (deployas inte). Bygg om: `zsh kultur/music/build.sh` (groove i `plan.py`, balans i `mix.py`), kolla
+  beteendet med `node kultur/music/audio_test.cjs` mot en server på 8831.
 
 ## Bygga om
 

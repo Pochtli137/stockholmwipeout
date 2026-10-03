@@ -321,6 +321,8 @@
   body.bana-kultur .tlogo .tsub { color:#efe6d2; text-shadow:0 1px 3px rgba(29,26,22,.8); }
   body.bana-kultur #tpress { color:#fbf7ee; font-family:'KSerif',serif; font-style:italic; text-shadow:0 1px 4px rgba(29,26,22,.8); }
   body.bana-kultur #tpress.ready { color:#f4d77c; } body.bana-kultur .tcred { color:rgba(251,247,238,.75); }
+  body.bana-kultur .tload { width:min(560px,88vw); opacity:.85; } body.bana-kultur .tcred { font-size:10px; letter-spacing:.08em; line-height:1.35; text-shadow:0 1px 2px rgba(29,26,22,.8); }
+  body.bana-kultur .tcred.kmus { margin-top:3px; }
   body.bana-kultur #sweep { background:linear-gradient(90deg,transparent,rgba(244,215,124,.9) 18%,#f6f1e6 34%,#f6f1e6 66%,rgba(142,42,54,.9) 82%,transparent); }
   body.bana-kultur #district .sb { font:700 clamp(11px,1.2vw,16px) 'KSans',sans-serif; letter-spacing:.32em; color:#fbf7ee; margin-top:10px; text-shadow:0 1px 3px rgba(29,26,22,.9); }
   #district .sb:empty { display:none; }
@@ -1636,6 +1638,15 @@ let actx=null,engGain=null,oscs=[],audioOn=true;
 let musicGain=null,mFilter=null,musAnalyser=null,sharedNoise=null,distCurve=null,nextStep=0,mstep=0;
 const BPM=130, STEPDUR=60/BPM/4; // 16-delar, big beat-tempo
 const BUILD_BARS=112, CYCLE_STEPS=2048; // ~4 min stegring (128 takter) innan omstart
+// KULTURSTOCKHOLM'S RACE MUSIC (2026-10-03, Kim: "ändra låt på kulturstockholm till något mer passande"): Vivaldi's Summer,
+// third movement (Presto), John Harrison and the Wichita State University Chamber Players (Wikimedia Commons, CC BY-SA, credited on
+// the title), put on a straight q=160 grid with the game's own big-beat drums under it (wo2097/assets/kultur/music/sources.json).
+// One file, fetched and decoded after the first gesture, never before the title. Silent through the countdown, from the top at RIDÅ;
+// P, M and a hidden tab stop it where it is. It plays into musicGain, so the bus and every duck on it still apply. The file loops
+// from loopStart to loopEnd: after the last chord two bars of drums lead into the opening again, and the seam sits inside a copy of
+// the opening, so it is identical audio on both sides. If the file fails, the synth takes over. Stockholm never gets here (KREC null).
+const KREC=KULTUR?{ url:'wo2097/assets/kultur/music/vivaldi_sommaren_presto.mp3', loopStart:0.35, loopEnd:151.2919, gain:0.31,
+  buf:null, loading:false, failed:false, src:null, g:null, t0:0, off:0 }:null;
 function ensureAudio(){
   if(actx){ if(actx.state==='suspended') actx.resume(); return; }
   if(!audioOn) return;
@@ -1815,7 +1826,32 @@ window.__audio=()=>{ let rms=0; if(sfxMeter){ const a=new Float32Array(sfxMeter.
     voices:aiEng.map(v=>({ f:+v.o1.frequency.value.toFixed(1), d:+v.s.mesh.position.distanceTo(camera.position).toFixed(0) })) }; };
 function toggleAudio(){ audioOn=!audioOn;
   if(!audioOn){ if(engGain) engGain.gain.value=0; if(musicGain) musicGain.gain.value=0; }
-  else ensureAudio(); }
+  else ensureAudio();
+  if(KREC) kmusTick(); }
+// KREC, every frame (and on M and on a tab switch): load once, play in the race and on the results, hold on P, M or a hidden tab
+function kmusTick(){ if(!actx||KREC.failed) return;
+  if(!KREC.buf){ if(!KREC.loading) kmusLoad(); return; }
+  if(state!=='race'&&state!=='done'){ if(KREC.src) kmusStop(false); KREC.off=0; return; }   // title, hangar, countdown: the next RIDÅ starts from the top
+  const run=audioOn&&!paused&&!document.hidden&&actx.state!=='closed';
+  if(run&&!KREC.src) kmusStart(); else if(!run&&KREC.src) kmusStop(true); }
+function kmusLoad(){ KREC.loading=true;
+  fetch(KREC.url).then(r=>{ if(!r.ok) throw new Error('HTTP '+r.status); return r.arrayBuffer(); })
+    .then(ab=>new Promise((res,rej)=>actx.decodeAudioData(ab,res,rej)))   // the callback form: older Safari has no promise
+    .then(b=>{ KREC.buf=b; console.log('[kultur-music] loaded',b.duration.toFixed(2),'s'); })
+    .catch(e=>{ KREC.failed=true; console.warn('[kultur-music] the synth takes over:',e&&e.message||e); }); }
+function kmusStart(){ const t=actx.currentTime+0.03, s=actx.createBufferSource(), g=actx.createGain(), res=KREC.off>0;
+  s.buffer=KREC.buf; s.loop=true; s.loopStart=KREC.loopStart; s.loopEnd=KREC.loopEnd;
+  g.gain.setValueAtTime(res?0:1,t); if(res) g.gain.linearRampToValueAtTime(1,t+0.03);   // a resume fades in, RIDÅ keeps its downbeat
+  s.connect(g); g.connect(musicGain); s.start(t,KREC.off); KREC.src=s; KREC.g=g; KREC.t0=t-KREC.off; }
+function kmusPos(){ const p=actx.currentTime-KREC.t0, L=KREC.loopEnd-KREC.loopStart; return p<KREC.loopEnd?Math.max(0,p):KREC.loopStart+(p-KREC.loopStart)%L; }
+function kmusStop(keep){ const t=actx.currentTime, s=KREC.src, g=KREC.g; KREC.off=keep?kmusPos():0; KREC.src=null; KREC.g=null;
+  g.gain.cancelScheduledValues(t); g.gain.setValueAtTime(g.gain.value,t); g.gain.linearRampToValueAtTime(0,t+0.03);
+  try{ s.stop(t+0.05); }catch(e){} setTimeout(()=>{ try{ g.disconnect(); }catch(e){} },400); }
+if(KREC) document.addEventListener('visibilitychange',()=>kmusTick());
+if(KREC&&location.search.includes('check')) window.__kmusSeek=s=>{ if(KREC.src) kmusStop(false); KREC.off=s; };   // checks only: jump the music, e.g. to the loop seam
+window.__kmus=()=>{ if(!KREC) return null; let rms=0; if(musAnalyser){ const a=new Float32Array(musAnalyser.fftSize); musAnalyser.getFloatTimeDomainData(a); for(const x of a) rms+=x*x; rms=Math.sqrt(rms/a.length); }
+  return { loaded:!!KREC.buf, loading:KREC.loading, failed:KREC.failed, playing:!!KREC.src, pos:actx&&KREC.src?+kmusPos().toFixed(2):+KREC.off.toFixed(2), dur:KREC.buf?+KREC.buf.duration.toFixed(2):null,
+    gain:musicGain?+musicGain.gain.value.toFixed(3):null, lpHz:mFilter?Math.round(mFilter.frequency.value):null, rms:+rms.toFixed(4), ctx:actx?actx.state:null, state, paused, audioOn }; };
 function updateAudio(){ if(!actx||!audioOn||!engGain) return;
   if(actx.state==='suspended') actx.resume();
   const p=player(); if(!p){ engGain.gain.value=0; return; }
@@ -1824,6 +1860,11 @@ function updateAudio(){ if(!actx||!audioOn||!engGain) return;
   engGain.gain.value=(paused||state!=='race'?0.012:0.026+p.speed*0.0004+nb*0.0006)*(1-JB.engDip*bA);
   for(const o of oscs) o.frequency.setTargetAtTime((45+p.speed*1.5+nb*2.4)*(1-0.3*bA),actx.currentTime,0.05);
   windTick(bA);
+  if(musicGain&&KREC&&!KREC.failed){   // KULTURSTOCKHOLM: the recording instead of the synth, the filter open, the same ducks
+    const tc=bA>0.01||musDucked?0.06:0.5; musDucked=bA>0.01;
+    mFilter.frequency.setTargetAtTime(18000+(Math.min(18000,JB.musLP)-18000)*bA, actx.currentTime, tc);
+    musicGain.gain.setTargetAtTime((state==='done'?KREC.gain*0.65:KREC.gain)*Math.pow(10,JB.musDb*bA/20), actx.currentTime, tc);
+    return; }
   if(musicGain){
     const e=musicEnergy();
     // master-filtret öppnar sig med energin (dovt → ljust), volymen växer något
@@ -2043,6 +2084,7 @@ function titlePrompt(){ tpress.textContent=MOBILE?'TAP':'PRESS ENTER'; tpress.cl
 if(KULTUR){ const $=s=>document.querySelector(s), T=COPY.title, Hd=COPY.hud;
   $('.tlogo .t1').textContent=T.t1; $('.tlogo .t2').textContent=T.t2; $('.tlogo .t3').textContent=T.t3; $('.tlogo .trune').textContent=T.latin; $('.tlogo .tsub').textContent=T.sub;
   tpress.textContent=T.loading; document.title='WIPEOUT KULTURSTOCKHOLM 2097';
+  { const mc=document.createElement('div'); mc.className='tcred kmus'; mc.textContent=T.musicCredit; $('.tload').appendChild(mc); }   // CC BY-SA: the music's credit, under the arms'
   $('#lapbox').innerHTML=`<span class="lbl">${Hd.lap}</span><span class="kata">${Hd.lapLatin}</span><br><span class="big orb" id="lap">1</span><span class="of orb">/1</span>
     <div class="row"><span class="lbl">${Hd.time}&nbsp;</span> <span class="t" id="time">0:00.00</span></div><div class="row"><span class="lbl">${Hd.best}&nbsp;</span> <span class="b" id="best">--</span></div>`;
   $('#posbox').innerHTML=`<span class="lbl">${Hd.position}</span><span class="kata">${Hd.positionLatin}</span><br><span class="big orb" id="pos">1</span><span class="ord orb" id="posOrd">st</span><span class="of orb">/6</span>`;
@@ -2630,7 +2672,7 @@ function loop(now){
   skyTick(rdt); flickTick(rdt);
   if(tiles){ camera.updateMatrixWorld();
     tiles.setResolutionFromRenderer(camera,renderer); tiles.update(); }
-  snapTick(now); updateAttrib(now); uiTick();
+  snapTick(now); updateAttrib(now); uiTick(); if(KREC) kmusTick();
   if(MOBILE){ const r=state==='count'||state==='race'; if(r!==document.body.classList.contains('racing')) document.body.classList.toggle('racing',r); }   // touch controls only on the grid and in the race
   if(state==='select'){ updateAudio(); selectTick(dt); return; }
   if(paused){ if(!pauseMsg) pauseMsg={t:msg.textContent,fs:msg.style.fontSize,c:msg.className};   // what the banner said before the pause

@@ -55,6 +55,11 @@ Publikt repo `Pochtli137/stockholmwipeout`. Live https://stockholmwipeout.vercel
   Enda tillägget på Stockholm: raden *DU HAR LÅST UPP WIPEOUT KULTURSTOCKHOLM · KLICKA HÄR* (K) på resultatet.
 - Sex egna farkoster (DE ADERTON är bossen), förmånerna STIPENDIUM, LIVSTIDSSTOL, SÅGNING, depåer vid **Riche** (alla) och
   **Den Gyldene Freden** (bara DE ADERTON), krogskyltar riktade mot gästerna, aldrig verksamheten. Inga partiannonser.
+- **Musiken (2026-10-03, Kim valde variant A):** Vivaldis Sommaren, Presto (John Harrison, Wichita State University Chamber Players,
+  Wikimedia Commons, CC BY-SA) på rakt tempo 160 med spelets egna big beat-trummor under, i stället för syntslingan. Tyst i
+  nedräkningen, från början vid RIDÅ, P/M/dold flik stoppar den. Krediten på titeln (`copy.json title.musicCredit`) får inte tas bort.
+  Källor i `wo2097/assets/kultur/music/sources.json`, bygget i `wo2097/pipeline/kultur/music/`, provsidan (A/B/C) i `kultur/musikprov/`.
+  `/kultur/` står i `.vercelignore`: konceptet och provsidan deployas inte. Titel och hangar har kvar syntens UI-slinga.
 - Österlen är lagt på hyllan: Googles tiles där är 2.5D (fas 0 och utseendetestet, TODO.md).
 
 ## Grenar

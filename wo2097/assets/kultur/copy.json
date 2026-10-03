@@ -1,7 +1,8 @@
 {
- "_om": "WIPEOUT KULTURSTOCKHOLM: ALL TEXT PÅ BANAN. Spelet läser filen direkt (titel, HUD, lag, förmåner, depåer, ENTERING, resultat). Skyltar, vepor, väggar och plattor är bakade: efter ändring i brands, gantry, arches, barrier, pads eller restaurants kör wo2097/pipeline/kultur/build.sh. Riktiga namn på platser och krogar används som platsnamn, aldrig deras logotyper. Satiren gäller typer och institutioner, aldrig verkliga personer, och på krogarna gästerna, aldrig verksamheten.",
+ "_om": "WIPEOUT KULTURSTOCKHOLM: ALL TEXT PÅ BANAN. title.musicCredit är licenskravet för musiken (CC BY-SA) och får inte tas bort, bara formuleras om. Spelet läser filen direkt (titel, HUD, lag, förmåner, depåer, ENTERING, resultat). Skyltar, vepor, väggar och plattor är bakade: efter ändring i brands, gantry, arches, barrier, pads eller restaurants kör wo2097/pipeline/kultur/build.sh. Riktiga namn på platser och krogar används som platsnamn, aldrig deras logotyper. Satiren gäller typer och institutioner, aldrig verkliga personer, och på krogarna gästerna, aldrig verksamheten.",
  "title": { "t1": "WIPEOUT", "t2": "KULTURSTOCKHOLM", "t3": "2097", "latin": "ARS LONGA · BILJETTEN KORT", "sub": "SAKL · STOCKHOLMS AKADEMISKA KULTURLIGA",
-   "loading": "LADDAR KULTURSTOCKHOLM", "loadingSoon": "LADDAR KULTURSTOCKHOLM · STRAX", "press": "PRESS ENTER", "tap": "TAP" },
+   "loading": "LADDAR KULTURSTOCKHOLM", "loadingSoon": "LADDAR KULTURSTOCKHOLM · STRAX", "press": "PRESS ENTER", "tap": "TAP",
+   "musicCredit": "Musik: Vivaldi, Sommaren RV 315, Presto · John Harrison, violin, Wichita State University Chamber Players, dir. Robert Turizziani · Wikimedia Commons, CC BY-SA 4.0 · bearbetad: rakt tempo och trummor" },
  "raceName": "KULTURSTOCKHOLMS STORA PRIS",
  "countdownSub": "KULTURSTOCKHOLMS STORA PRIS · SAKL 2097 · EN AKT",
  "countdownLatin": "ALEA IACTA EST",

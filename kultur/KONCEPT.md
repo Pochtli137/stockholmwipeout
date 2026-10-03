@@ -109,3 +109,10 @@ Titel *WIPEOUT KULTURSTOCKHOLM* med S:t Erik och kreditraden kvar, en vit galler
 Upplåsningen sitter på Stockholmsbanans RACE COMPLETE: *DU HAR LÅST UPP WIPEOUT KULTURSTOCKHOLM · KLICKA HÄR* (K), sparas i
 localStorage och laddar `?bana=kultur`. Kulturstockholms resultat har en länk tillbaka till Stockholm (S).
 Stockholmsbanan ska bete sig exakt som nu; check_lap körs före och efter.
+
+## Musiken (2026-10-03)
+
+Högkulturens kanon i full fart: Vivaldis *Sommaren*, tredje satsen (Presto, sommarstormen), i John Harrisons livetagning med
+Wichita State University Chamber Players, lagd på rakt tempo med spelets egna big beat-trummor under. Stormen ensam i fyra takter
+vid RIDÅ, trumvirvel i fermaten, sedan drop. Nedräkningen är tyst, som salongen före ridån. Inspelningen är CC BY-SA och krediteras
+på titeln. Provsidan med alternativen (orörd Presto, Bachs Brandenburgkonsert nr 3) ligger i `kultur/musikprov/`.

@@ -1,0 +1,43 @@
+{
+ "_om": "WIPEOUT KULTURSTOCKHOLM: MUSIKENS KÄLLOR OCH LICENSER. Kompositionerna är fria (public domain). Inspelningarna är det inte: varje fil nedan bygger på en inspelning vars licens är kontrollerad på själva filsidan på Wikimedia Commons (2026-10-03). Krediten för det som spelas i spelet står på Kulturstockholms titelskärm (copy.json, title.musicCredit) och får inte tas bort.",
+ "ingame": {
+  "file": "wo2097/assets/kultur/music/vivaldi_sommaren_presto.mp3",
+  "variant": "A: Presto med breakbeat",
+  "piece": "Antonio Vivaldi, Le quattro stagioni, Concerto nr 2 g-moll 'L'estate' (Sommaren), op. 8 nr 2, RV 315, sats 3: Presto (tryckt 1725, public domain)",
+  "recording": {
+   "performers": "John Harrison (violin), Wichita State University Chamber Players, dirigent Robert Turizziani",
+   "recorded": "2000-02-06, live, Wiedemann Recital Hall, Wichita State University",
+   "source": "https://commons.wikimedia.org/wiki/File:Vivaldi_-_Four_Seasons_2_Summer_mvt_3_Presto_-_John_Harrison_violin.oga",
+   "license": "CC BY-SA 1.0 eller senare version ({{self|cc-by-sa-1.0+|author=John Harrison}}), tillstånd arkiverat hos Wikimedia VRT, ärende 2007022510020031. Används här under CC BY-SA 4.0.",
+   "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+   "copyright": "John Harrison (JohnHarrisonViolin.com)"
+  },
+  "changes": "Inspelningen är tidsjusterad takt för takt till rakt tempo, fjärdedel = 160 (rubberband R3, takterna spårade mot Mutopias partitur), fermaten i takt 5 är kortad till en takt, slutritardandot och slutackordet ligger kvar i sin naturliga takt. Under ligger spelets egna big beat-trummor (kick, virvel, hi-hat, riser, impact ur index.html), lätt sidechain från kicken, limiter. Efter slutackordet leder två takter trummor tillbaka till början.",
+  "derivativeLicense": "CC BY-SA 4.0 (Share-Alike: den bearbetade ljudfilen får spridas vidare under samma licens, med krediten nedan)",
+  "credit": "Musik: Vivaldi, Sommaren RV 315, Presto · John Harrison, violin, Wichita State University Chamber Players, dir. Robert Turizziani · Wikimedia Commons, CC BY-SA 4.0 · bearbetad: rakt tempo och trummor",
+  "creditShownOn": "Kulturstockholms titelskärm, raden under S:t Eriks kredit",
+  "format": "MP3 160 kbit/s CBR, 44,1 kHz stereo, 151,8 s",
+  "loop": { "loopStart": 0.35, "loopEnd": 151.2919, "note": "Sekunder i den avkodade filen. Partiet efter loopEnd är en kopia av början, så skarven ligger i identiskt ljud." },
+  "loudness": "−16,6 LUFS integrerat över en loop, true peak −1,3 dBTP. I spelet: musicGain 0,31 i loppet ≈ −26,7 LUFS ut, samma nivå som syntmusiken under ett varv (−27,4 LUFS i snitt, −26,7 LUFS under varvets sista tredjedel)."
+ },
+ "audition": {
+  "_om": "Bara för provlyssningssidan kultur/musikprov/ (inte deployad, kultur/ står i .vercelignore). 60 s vardera, nivåmatchade till −16,0 LUFS.",
+  "a": { "file": "kultur/musikprov/a.mp3", "what": "Utdrag ur spelets fil (variant A), de första 60 sekunderna.", "source": "som ingame", "license": "CC BY-SA 4.0 (bearbetning)", "credit": "som ingame" },
+  "b": { "file": "kultur/musikprov/b.mp3", "what": "Samma inspelning utan bearbetning: Harrisons Presto som den spelades, de första 60 sekunderna.",
+   "source": "https://commons.wikimedia.org/wiki/File:Vivaldi_-_Four_Seasons_2_Summer_mvt_3_Presto_-_John_Harrison_violin.oga", "license": "CC BY-SA 1.0+ (VRT 2007022510020031)",
+   "credit": "Vivaldi, Sommaren RV 315, Presto · John Harrison, violin, Wichita State University Chamber Players, dir. Robert Turizziani · Wikimedia Commons, CC BY-SA" },
+  "c": { "file": "kultur/musikprov/c.mp3", "what": "Johann Sebastian Bach, Brandenburgkonsert nr 3 G-dur, BWV 1048, sats 1 (1721, public domain), de första 60 sekunderna, utan trummor.",
+   "performers": "Advent Chamber Orchestra (konsert december 2006)",
+   "source": "https://commons.wikimedia.org/wiki/File:Bach_-_Brandenburg_Concerto_No._3_-_1._Allegro.ogg",
+   "license": "CC BY-SA 2.0 (utgiven under EFF Open Audio License via Pandora Music på ibiblio.org, som Commons anger som utbytbar mot CC BY-SA 2.0)",
+   "licenseUrl": "https://creativecommons.org/licenses/by-sa/2.0/",
+   "credit": "Bach, Brandenburgkonsert nr 3, BWV 1048, sats 1 · Advent Chamber Orchestra · Wikimedia Commons, CC BY-SA 2.0" }
+ },
+ "considered": [
+  { "what": "Vivaldi, Sommaren, Presto · The Modena Chamber Orchestra (Musopen)", "source": "https://commons.wikimedia.org/wiki/File:The_Modena_Chamber_Orchestra_-_Vivaldi%27s_Summer,_RV_315_-_III._Presto.ogg",
+    "license": "Public Domain Mark (ägaren), källa Musopen", "why_not": "Långsammare (fjärdedel ≈ 136 mot Harrisons ≈ 155) och Musopens egen sida gick inte att läsa för en andra kontroll. Harrisons licens har ett VRT-ärende." },
+  { "what": "Johan Helmich Roman, Drottningholmsmusiken (1744)", "why_not": "Ingen inspelning med fri licens hittades på Wikimedia Commons eller Musopen." }
+ ],
+ "analysisOnly": "Mutopia Project, Vivaldi 'Estate / Summer' (LilyPond/MIDI, CC BY-SA 3.0, https://www.mutopiaproject.org/ftp/VivaldiA/O8/summer/) användes bara för att spåra takterna i inspelningen. Ingenting ur den ligger i spelet.",
+ "build": "wo2097/pipeline/kultur/music/ (build.sh)"
+}

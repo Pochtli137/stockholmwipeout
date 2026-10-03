@@ -3,3 +3,5 @@ wo2097/pipeline
 *.md
 .env*
 .claude
+# Kulturstockholm: the concept and the music audition page stay local (anchored: wo2097/assets/kultur is served)
+/kultur/
